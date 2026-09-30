@@ -425,6 +425,8 @@ body.touch #hint { bottom: 84px; }
 
 /* ---------- Closest to the Pin ---------- */
 .gf-info { font-weight: 900; font-size: 13px; }
+.bp-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 800; opacity: 0.85; margin-top: 2px; }
+#bp-q { font-size: 11px; }
 .pb-score { white-space: nowrap; font-size: 20px; font-weight: 900; letter-spacing: 1px; }
 .gf-wind { font-weight: 900; font-size: 14px; color: var(--teal); }
 .gf-wind i { display: inline-block; font-style: normal; }

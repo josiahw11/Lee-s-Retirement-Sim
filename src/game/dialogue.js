@@ -6,6 +6,7 @@ import { testBatchOn } from './chapter2.js';
 import { casinoNode, cabinNode } from './chapter3.js';
 import { karaokeChoice } from './karaoke.js';
 import { pickleballNode } from './pickleball.js';
+import { pongNode } from './beerpong.js';
 
 // ---------------------------------------------------------------- helpers
 const C = (g, stat, diff, label) => ({ label: label || stat.toUpperCase().replace('INTIM', 'INT').replace('STAT', 'STA'), chance: g.chance(stat, diff) });
@@ -537,6 +538,7 @@ export function visit(g, poi) {
   if (id === 'dumpster') return dumpsterNode(g);
   if (id === 'gate') return end('Front Gate', `"Beach is straight ahead, Mr. ${g.state.name}. Boca Beach Club. Rusty Pelican's got two-for-one Bushwackers. Don't drive on the pier. Everybody drives on the pier." — Gate Guard Hector`);
   if (id === 'pickleball') return pickleballNode(g);
+  if (id === 'pong') return pongNode(g);
   if (id === 'shuffle') {
     const play = (bet, skill) => () => { g.startMinigame('shuffle', { bet, skill }); g.ui.closeDialogue(); return 'keep'; };
     return {

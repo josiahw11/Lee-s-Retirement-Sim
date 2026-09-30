@@ -20,6 +20,7 @@ import { GarageSales, sellerNode } from './garagesale.js';
 import { SeniorGames, commishNode } from './seniorgames.js';
 import { Pickleball } from './pickleball.js';
 import { Stunts, STUNTS } from './stunts.js';
+import { BeerPong, buildPongTable } from './beerpong.js';
 import { activitiesTab, bindActivities } from './activities.js';
 import { Soundscape } from './soundscape.js';
 import { Weather } from '../gfx/weather.js';
@@ -113,6 +114,7 @@ const ACH = {
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
   scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
+  pong: ['Pong God', 'Won a game of beer pong at the Tiki Hut. Your liver lost.'],
   stuntman: ['Stuntman', 'Completed a Unique Stunt Jump.'],
   knievel: ['Evel Knievel Jr.', 'Completed every Unique Stunt Jump in Sunset Palms.'],
   spin720: ['Hip Replacement 720', 'Landed a 720 in a golf cart.'],
@@ -477,6 +479,7 @@ export class Game {
     this.soundscape = new Soundscape(this);
     if (this.stunts) this.stunts.clear();
     this.stunts = new Stunts(this);
+    buildPongTable(this);
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -1722,7 +1725,7 @@ export class Game {
   }
 
   startMinigame(kind, opts = {}) {
-    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke, pickle: Pickleball }[kind] || ChugOff;
+    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke, pickle: Pickleball, pong: BeerPong }[kind] || ChugOff;
     if (opts.bet) this.spend(opts.bet);
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();
