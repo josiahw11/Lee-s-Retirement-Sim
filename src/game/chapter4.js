@@ -27,7 +27,7 @@ export const CH4 = [
     id: 'c4_derby', title: 'Beat Buck at the Bumper Brawl (nightly 5PM–1AM, behind the Liquor Barrel)',
     hint: 'Derby Dan runs it from Fairway Dr. Front bumpers are armored — hit them in the SIDE.',
     target: () => ({ x: 205, z: -39 }),
-    start: base('derbyWins'),
+    start: (g) => { base('derbyWins')(g); buckLeaves(g, 'See you in the dirt tonight, grandpa!'); }, // he's at the arena
     done: more('derbyWins'),
     reward: (g) => g.ui.toast('📱 Buck: "Lucky. Real lucky. But the neighbors still think you\'re a menace. I made sure of it."', 'heat', 7),
   },
@@ -35,7 +35,7 @@ export const CH4 = [
     id: 'c4_shuttle', title: 'Win the neighborhood back: deliver 4 fares in one Senior Shuttle shift',
     hint: 'Dispatcher Doris is in the clubhouse lot. Speedy deliveries add time to the clock.',
     target: () => ({ x: -31, z: 47 }),
-    start: base('bigShifts'),
+    start: (g) => { base('bigShifts')(g); spawnBuck(g); },
     done: more('bigShifts'),
     reward: (g) => g.ui.toast('📱 Millie: "Mabel says you drive like a lunatic and she\'s never felt more alive. Buck is FUMING. He says nobody can clear the Duck Pond. Nobody."', 'quest', 8),
   },
@@ -43,16 +43,18 @@ export const CH4 = [
     id: 'c4_stunt', title: 'Buck says nobody can clear the Duck Pond. Clear it.',
     hint: 'The Duck Pond Clearance ramp is on the west bank. You\'ll need Sal\'s governor removal AND nitrous.',
     target: () => ({ x: -140, z: 10 }),
-    done: (g) => (g.state.stunts?.done || []).includes('duck-pond-clearance'),
+    start: (g) => { base('duckClears')(g); spawnBuck(g); },
+    done: more('duckClears'),
     reward: (g) => g.ui.toast('📱 Buck: "...Fine. FINE. One race. Rocket Ron\'s big-money Grand Prix. Winner takes the impound lot. Loser leaves Sunset Palms."', 'heat', 8),
   },
   {
     id: 'c4_race', title: 'Final showdown: beat Buck in Rocket Ron\'s $500 Grand Prix',
     hint: 'Ron is in the clubhouse lot. Nitrous. Governor off. No mercy.',
     target: (g) => g.named.ron,
-    start: base('bigRacesWon'),
+    start: (g) => { base('bigRacesWon')(g); buckLeaves(g, 'Warming up the engine. See you at the start line.'); }, // he's on the grid
     done: more('bigRacesWon'),
     reward: (g) => {
+      spawnBuck(g);
       g.addMoney(1500, 'Buck\'s impound lot, liquidated');
       g.achievement('crashcourse');
       g.celebrate?.(20);
@@ -67,6 +69,23 @@ export const CH4 = [
 export function chapter4Started(g, STEPS) {
   const i = STEPS.findIndex((s) => s.id === 'c4_buck');
   return i >= 0 && g.state.quest.step >= i;
+}
+
+// he says his piece, strolls off toward Palm Blvd, and is gone before you catch up
+function buckLeaves(g, line) {
+  const b = g.named.buck;
+  if (!b || !g.npcs.includes(b)) { g.named.buck = null; return; }
+  g.named.buck = null;
+  b.say(line, 3);
+  b.state = 'walkTo';
+  b.target = { x: b.x + 30, z: 62 };
+  g.after(10, () => { if (g.npcs.includes(b)) g.removeNPC(b); });
+}
+
+// on load: Buck is in the lot unless he's off at the derby or the race
+export function buckAround(g, STEPS) {
+  const id = g.quests.current()?.id;
+  return chapter4Started(g, STEPS) && id !== 'c4_derby' && id !== 'c4_race';
 }
 
 export function spawnBuck(g) {

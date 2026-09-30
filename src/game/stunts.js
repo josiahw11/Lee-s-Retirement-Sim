@@ -173,6 +173,7 @@ export class Stunts {
     const trick = this.trick(pc, true);
     if (!ok) { g.ui.splash('STUNT JUMP FAILED', why, 2, '#ff6b6b'); return; }
     const first = !this.done.includes(s.id);
+    if (s.id === 'duck-pond-clearance') g.state.counters.duckClears = (g.state.counters.duckClears || 0) + 1;
     if (first) {
       this.done.push(s.id);
       g.state.counters.stuntsDone = (g.state.counters.stuntsDone || 0) + 1;

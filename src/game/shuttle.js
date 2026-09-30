@@ -75,9 +75,11 @@ export class Shuttle {
   start() {
     const g = this.g;
     this.on = true;
+    this.prevWaypoint = g.waypoint && !g.waypoint.sticky ? g.waypoint : null;
     this.clock = 75;
     this.started = false; // the clock waits until you're in a cart
     this.stats = { fares: 0, cash: 0, tips: 0 };
+    this.graceT = 20;
     this.fare = null;
     this.refill();
     g.ui.toast('🚐 SENIOR SHUTTLE: you\'re on the clock! Pick up residents under the light pillars (green = short, red = long). Hop in any cart.', 'quest', 7);
@@ -91,7 +93,8 @@ export class Shuttle {
     this.hailers = [];
     this.on = false;
     this.destMark.visible = false;
-    g.waypoint = null;
+    g.waypoint = this.prevWaypoint || null;
+    this.prevWaypoint = null;
     this.hud.classList.add('hidden');
     const s = this.stats;
     const c = g.state.counters;
@@ -114,7 +117,7 @@ export class Shuttle {
     while (this.hailers.length < 4 && pool.length && guard++ < 60) {
       const n = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
       const d = Math.hypot(n.x - px, n.z - pz);
-      if (d < 30 || d > 260) continue;
+      if (d < 30 || d > 260 || Math.hypot(n.x - 205, n.z + 14) < 32) continue;
       const opts = Object.keys(DESTS).filter((k) => g.world.pois[k] && Math.hypot(g.world.pois[k].x - n.x, g.world.pois[k].z - n.z) > 110);
       if (!opts.length) continue;
       const dest = pick(opts), poi = g.world.pois[dest];
@@ -135,13 +138,14 @@ export class Shuttle {
     const g = this.g;
     if (!this.on) return;
     const p = g.player, pc = p.cart;
-    if (pc && !this.started) { this.started = true; g.ui.hint('Shift started! Pick up someone under a light pillar.', 3); }
+    this.graceT = (this.graceT ?? 20) - dt;
+    if ((pc || this.graceT <= 0) && !this.started) { this.started = true; g.ui.hint(pc ? 'Shift started! Pick up someone under a light pillar.' : 'The shift clock is running! Get in a cart!', 3); }
     if (this.started) this.clock -= dt;
     if (this.clock <= 0) return this.end();
     // hailers: drop anyone who got hurt, wandered off, or got spooked
     for (const h of [...this.hailers]) {
       const n = h.n;
-      if (!g.npcs.includes(n) || n.data.hail !== h || n.state === 'ko' || n.hostile || n.cart) { this.unhail(h); this.hailers.splice(this.hailers.indexOf(h), 1); continue; }
+      if (!g.npcs.includes(n) || n.data.hail !== h || n.state !== 'wander' || n.hostile || n.cart) { this.unhail(h); this.hailers.splice(this.hailers.indexOf(h), 1); continue; }
       h.mark.position.set(n.x, heightAt(n.x, n.z), n.z);
       h.mark.children[1].scale.setScalar(1 + (performance.now() % 1000) / 1000 * 0.4); // pulsing ground ring
       // pull up next to them, slow, with a seat free
@@ -156,7 +160,7 @@ export class Shuttle {
         f.t -= dt;
         this.crazy(dt, pc, f);
         const poi = g.world.pois[f.dest];
-        g.waypoint = { x: poi.x, z: poi.z, label: `🚐 ${DESTS[f.dest][0]}` };
+        g.waypoint = { x: poi.x, z: poi.z, label: `🚐 ${DESTS[f.dest][0]}`, sticky: true };
         this.destMark.position.set(poi.x, heightAt(poi.x, poi.z), poi.z);
         if (Math.hypot(pc.x - poi.x, pc.z - poi.z) < 9 && pc.speed < 3.5) this.dropOff(true);
         else if (f.t <= 0) this.dropOff(false, pick(['"I\'ll walk! It\'s faster!"', '"I\'m calling an Uber. What\'s an Uber?"', '"That\'s it. I\'m walking. My hip can\'t take the suspense."']));
@@ -189,7 +193,7 @@ export class Shuttle {
     if (!f) return;
     this.fare = null;
     this.destMark.visible = false;
-    g.waypoint = null;
+    if (g.waypoint && g.waypoint.sticky) g.waypoint = null;
     const n = f.n, c = f.cart;
     delete n.data.riding;
     if (c.passenger === n) c.passenger = null;

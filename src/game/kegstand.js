@@ -50,7 +50,7 @@ export class KegStand {
       n.data.quiet = true;
       return n;
     });
-    this.crowd = g.npcs.filter((n) => (n.role === 'resident' || n.role === 'lady') && !n.cart && !n.hostile && !n.data.hasDog && !n.data.aqua && !n.data.hail && !n.data.riding && !n.talking && Math.hypot(n.x - SPOT.x, n.z - SPOT.z) < 60).slice(0, 5);
+    this.crowd = g.npcs.filter((n) => (n.role === 'resident' || n.role === 'lady') && (n.state === 'wander' || n.role === 'lady') && n.state !== 'ko' && !n.cart && !n.hostile && !n.data.hasDog && !n.data.aqua && !n.data.hail && !n.data.riding && !n.talking && Math.hypot(n.x - SPOT.x, n.z - SPOT.z) < 60).slice(0, 5);
     this.crowd.forEach((n, i) => {
       n.data.prevState = n.state;
       const a = Math.PI - 1 + i * 0.5; // an arc behind the keg, facing the camera
@@ -201,7 +201,7 @@ export class KegStand {
     g.scene.remove(this.group);
     this.group.traverse((o) => { if (o.isMesh) o.geometry.dispose(); });
     for (const n of this.helpers) if (g.npcs.includes(n)) g.removeNPC(n);
-    for (const n of this.crowd) if (g.npcs.includes(n) && !n.hostile) { n.state = n.data.prevState || 'wander'; if (n.state === 'party') n.resumeBase(); }
+    for (const n of this.crowd) { delete n.data.prevState; if (g.npcs.includes(n) && !n.hostile && n.state === 'party') n.resumeBase(); }
     const r = p.char.root;
     r.rotation.set(0, 0, 0);
     p.x = SPOT.x + 1.2; p.z = SPOT.z + 1.5; p.y = heightAt(p.x, p.z);

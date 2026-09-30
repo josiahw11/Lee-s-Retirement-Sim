@@ -85,9 +85,10 @@ export class Fishing {
       <div class="sb-head"><span class="mg-title">🎣 PIER FISHING</span><span class="gf-info" id="fi-log"></span></div>
       <div class="fi-meter"><span id="fi-label">CAST</span><div class="fi-bar"><i id="fi-fill"></i><b class="fi-zone" id="fi-zone"></b></div></div>
       <div class="mg-msg" id="fi-msg"></div>
-      <div class="sb-btns"><button class="btn big" id="fi-go">HOLD: CAST / REEL</button></div>
+      <div class="sb-btns"><button class="btn big" id="fi-go">HOLD: CAST / REEL</button><button class="btn" id="fi-quit">PACK UP</button></div>
       <div class="mg-hint">Hold SPACE to charge a cast • SPACE on the DUNK to hook • hold SPACE to reel, ease off when it surges • ESC to pack up</div>`;
     document.getElementById('minigame').classList.add('mg-3d');
+    document.getElementById('fi-quit').addEventListener('pointerdown', (e) => { e.preventDefault(); this.wantQuit = true; });
     const b = document.getElementById('fi-go');
     b.addEventListener('pointerdown', (e) => { e.preventDefault(); this.btnDown = true; this.btnHit = true; });
     for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { this.btnDown = false; });
@@ -109,7 +110,7 @@ export class Fishing {
     this.t += dt;
     this.cam(dt);
     this.pose();
-    if (input.rawHit('Escape') || input.rawHit('PadB')) return this.quit();
+    if (input.rawHit('Escape') || input.rawHit('PadB') || this.wantQuit) return this.quit();
     const held = input.down.has('Space') || (input.pad && input.pad.held.has('PadA')) || this.btnDown;
     const hit = input.rawHit('Space') || input.rawHit('PadA') || this.btnHit;
     this.btnHit = false;

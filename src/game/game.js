@@ -22,10 +22,10 @@ import { Pickleball } from './pickleball.js';
 import { Stunts, STUNTS } from './stunts.js';
 import { BeerPong, buildPongTable } from './beerpong.js';
 import { Shuttle, dorisNode } from './shuttle.js';
-import { Derby, buildArena, danNode, ARENA } from './derby.js';
+import { Derby, buildArena, danNode, ARENA, DERBY_EXIT } from './derby.js';
 import { Fishing } from './fishing.js';
 import { BluePill } from './bluepill.js';
-import { spawnBuck, buckNode, chapter4Started } from './chapter4.js';
+import { spawnBuck, buckNode, buckAround } from './chapter4.js';
 import { Dealership, abeNode } from './dealer.js';
 import { KegStand } from './kegstand.js';
 import { activitiesTab, bindActivities } from './activities.js';
@@ -442,7 +442,8 @@ export class Game {
     this.playerCart.model = state.cart.model || 'classic';
     this.playerCart.setPaint(state.cart.color);
     this.playerCart.rebuild();
-    const sp = state.pos || { x: ph.frontPos.x, z: ph.frontPos.z, h: ph.facing };
+    let sp = state.pos || { x: ph.frontPos.x, z: ph.frontPos.z, h: ph.facing };
+    if (Math.abs(sp.x - ARENA.x) < ARENA.w / 2 + 1 && Math.abs(sp.z - ARENA.z) < ARENA.d / 2 + 1) sp = { x: DERBY_EXIT.x, z: DERBY_EXIT.z, h: Math.PI };
     const p = this.player;
     p.x = sp.x; p.z = sp.z; p.heading = sp.h ?? 0; p.y = heightAt(sp.x, sp.z);
     if (state.cartPos) {
@@ -506,7 +507,7 @@ export class Game {
     this.derby = new Derby(this);
     if (this.bluePill) this.bluePill.clear();
     this.bluePill = new BluePill(this);
-    if (chapter4Started(this, STEPS)) spawnBuck(this);
+    if (buckAround(this, STEPS)) spawnBuck(this);
     if (this.dealer) this.dealer.clear();
     this.dealer = new Dealership(this);
     this.world.poi('dealer', -214, 49, "Honest Abe's Carts", 0); // map icon only
@@ -532,6 +533,7 @@ export class Game {
     const s = this.state;
     s.heat = this.heat.value;
     s.pos = { x: this.player.x, z: this.player.z, h: this.player.heading };
+    if (this.derby && this.derby.phase !== 'idle') s.pos = { x: DERBY_EXIT.x, z: DERBY_EXIT.z, h: Math.PI }; // not inside the hay bales
     const c = this.playerCart;
     s.cartPos = { x: c.x, z: c.z, h: c.heading };
     try {
@@ -2439,7 +2441,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     const tags = [];
     const q = this.quests.current();
     // a waypoint from the phone's TO DO tab wins until you get there
-    if (this.waypoint && Math.hypot(this.waypoint.x - p.x, this.waypoint.z - p.z) < 6) { this.ui.toast(`📍 Arrived: ${this.waypoint.label}`, 'quest', 2.5); this.waypoint = null; }
+    if (this.waypoint && !this.waypoint.sticky && Math.hypot(this.waypoint.x - p.x, this.waypoint.z - p.z) < 6) { this.ui.toast(`📍 Arrived: ${this.waypoint.label}`, 'quest', 2.5); this.waypoint = null; }
     const tgt = this.race && this.race.running ? this.race.target() : this.waypoint ? this.waypoint : q && q.target ? q.target(this) : null;
     this.markerPos = tgt ? { x: tgt.x, y: tgt.y ?? heightAt(tgt.x, tgt.z), z: tgt.z } : null;
     for (const n of this.npcs) {

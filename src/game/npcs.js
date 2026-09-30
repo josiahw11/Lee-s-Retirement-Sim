@@ -193,6 +193,7 @@ export class NPC {
   update(dt) {
     const g = this.game;
     const p = g.player;
+    if (this.role === 'fisher') this.char.poseRod = this.state === 'fish';
     if (this.data.riding) { // in the back of Lee's shuttle cart
       const c = this.data.riding;
       this.x = c.x; this.z = c.z; this.y = c.y;

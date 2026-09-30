@@ -12,6 +12,7 @@ import { clamp, rand, pick, money, wrapAngle } from '../core/utils.js';
 
 export const ARENA = { x: 205, z: -14, w: 44, d: 40 };
 const DAN = { x: 205, z: -37 };
+export const DERBY_EXIT = { x: DAN.x + 1.5, z: DAN.z - 2.5 };
 const RIVALS = [
   ['"Crash" Carmichael', '#8a2b2b'], ['Wanda the Wrecker', '#3a6b3a'], ['Old Man Pruitt', '#6b5a2a'],
   ['Dolores "Demolition" Diaz', '#5a2a6b'], ['Big Hank', '#2a4a6b'],
@@ -177,7 +178,7 @@ export class Derby {
         return n;
       });
       // the crowd along the north bales
-      const pool = g.npcs.filter((n) => n.role === 'resident' && !n.cart && !n.hostile && !n.data.hasDog && !n.data.aqua && !n.data.hail && !n.data.riding && !n.talking).slice(0, 8);
+      const pool = g.npcs.filter((n) => n.role === 'resident' && n.state === 'wander' && !n.cart && !n.hostile && !n.data.hasDog && !n.data.aqua && !n.data.hail && !n.data.riding && !n.talking).slice(0, 8);
       this.crowd = pool.map((n, i) => {
         n.data.prevState = n.state;
         n.x = A.x - 10 + i * 2.8 + rand(-0.4, 0.4); n.z = A.z - A.d / 2 - 2.2;
@@ -306,11 +307,11 @@ export class Derby {
     const g = this.g, p = g.player;
     this.phase = 'idle';
     if (p.cart && p.cart.derby) p.exitCart();
-    p.x = DAN.x + 1.5; p.z = DAN.z - 2.5; p.heading = Math.PI;
+    p.x = DERBY_EXIT.x; p.z = DERBY_EXIT.z; p.heading = Math.PI;
     for (const n of this.drivers) if (g.npcs.includes(n)) g.removeNPC(n);
-    for (const c of this.carts) { g.scene.remove(c.group); c.paintMat?.dispose(); }
+    for (const c of this.carts) { g.scene.remove(c.group); c.paintMat?.dispose(); c.headMat?.dispose(); }
     g.carts = g.carts.filter((c) => !c.derby);
-    for (const n of this.crowd) if (g.npcs.includes(n) && !n.hostile) { n.state = n.data.prevState || 'wander'; if (n.state === 'party') n.resumeBase(); }
+    for (const n of this.crowd) { delete n.data.prevState; delete n.data.face; if (g.npcs.includes(n) && !n.hostile && n.state === 'party') n.resumeBase(); }
     this.carts = []; this.drivers = []; this.crowd = []; this.mine = null;
     g.camRig.cinematic = null;
   }
@@ -339,7 +340,7 @@ export function danNode(g) {
       ? '"Six carts. One winner. Front bumper\'s reinforced with a church pew — hit \'em in the SIDE. Entry\'s forty bucks, winner takes two-fifty plus a buck for every point of damage you dish out. Your own cart stays safe with me. Mostly."'
       : '"Brawl starts at 5PM, champ. The fellas are still at water aerobics."',
     choices: open
-      ? [{ text: '💥 Enter the Bumper Brawl', tag: `entry ${money(40)}`, disabled: g.state.money < 40 || !!g.minigame, action: () => { d.start(40); return null; } }, { text: 'Maybe later', action: () => null }]
+      ? [{ text: '💥 Enter the Bumper Brawl', tag: g.shuttle?.on ? 'finish your shuttle shift first' : `entry ${money(40)}`, disabled: g.state.money < 40 || !!g.minigame || !!g.shuttle?.on, action: () => { d.start(40); return null; } }, { text: 'Maybe later', action: () => null }]
       : [{ text: 'Fine.', action: () => null }],
   };
 }

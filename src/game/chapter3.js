@@ -304,6 +304,7 @@ export function jumpToChapter(g, n, STEPS) {
   s.counters.beers = Math.max(1, s.counters.beers);
   s.quest.step = idx;
   s.quest.started = {};
+  if (n < 4 && g.named.buck) { if (g.npcs.includes(g.named.buck)) g.removeNPC(g.named.buck); g.named.buck = null; }
   if (n >= 3) s.minutes = 17 * 60 + 40; // just before the boat opens
   if (n >= 4) {
     Object.assign(f, { c3Boarded: true, fingersDeal: true, c3Jackpot: true, beatCaptain: true, vaultOpen: true, vaultChoice: 'return' });
@@ -311,6 +312,7 @@ export function jumpToChapter(g, n, STEPS) {
     s.flags.gazJackpot = true;
     // Chapter 4 is all driving: hand over Sal's governor removal and nitrous
     Object.assign(s.cart.upgrades, { governor: true, turbo: true });
+    if (g.player.cart) g.player.exitCart(); // the rebuild would take Lee's seat (and Lee) with it
     if (g.playerCart) { g.playerCart.upgrades = { ...s.cart.upgrades }; g.playerCart.rebuild?.(); }
     s.money = Math.max(s.money, 2500);
     s.minutes = 16 * 60 + 30; // the Bumper Brawl opens at 5
