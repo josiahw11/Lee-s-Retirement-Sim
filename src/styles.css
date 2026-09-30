@@ -221,3 +221,5 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; fon
 .bingo-side { width: 200px; display: flex; flex-direction: column; gap: 10px; }
 .bingo-call { font-family: var(--display); font-size: 44px; color: var(--navy); background: var(--sun); border-radius: 14px; border: 3px solid var(--navy); padding: 8px; }
 .bingo-called { font-size: 12px; font-weight: 800; min-height: 48px; opacity: .7; }
+
+.settings select { font-family: var(--body); font-weight: 800; padding: 3px 6px; border-radius: 8px; border: 2px solid var(--navy); }

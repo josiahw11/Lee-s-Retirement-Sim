@@ -87,7 +87,7 @@ async function boot() {
   resize();
 
   // ---------------- settings ----------------
-  const settings = Object.assign({ master: 0.8, music: 0.55, sens: 1, speech: true, bloom: true, shadows: true }, JSON.parse(localStorage.getItem('sunset-palms-settings') || '{}'));
+  const settings = Object.assign({ master: 0.8, music: 0.55, sens: 1, speech: true, bloom: true, shadows: true, quality: 'high' }, JSON.parse(localStorage.getItem('sunset-palms-settings') || '{}'));
   const applySettings = () => {
     audio.setVolume('master', settings.master);
     audio.setMusicVolume(settings.music);
@@ -95,6 +95,14 @@ async function boot() {
     camRig.sensitivity = settings.sens;
     post.bloom.enabled = settings.bloom;
     sky.shadowsEnabled = settings.shadows;
+    const q = { low: { pr: 0.85, shadow: 1024, draw: 110 }, medium: { pr: 1.15, shadow: 1536, draw: 140 }, high: { pr: 1.6, shadow: 2048, draw: 170 } }[settings.quality] || {};
+    const pr = Math.min(window.devicePixelRatio, q.pr);
+    if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); post.composer.setPixelRatio(pr); resize(); }
+    if (sky.sun.shadow.mapSize.x !== q.shadow) {
+      sky.sun.shadow.mapSize.set(q.shadow, q.shadow);
+      if (sky.sun.shadow.map) { sky.sun.shadow.map.dispose(); sky.sun.shadow.map = null; }
+    }
+    game.drawDist = q.draw;
     localStorage.setItem('sunset-palms-settings', JSON.stringify(settings));
   };
   $('set-master').value = settings.master;
@@ -102,6 +110,8 @@ async function boot() {
   $('set-sens').value = settings.sens;
   $('set-speech').checked = settings.speech;
   $('set-bloom').checked = settings.bloom;
+  $('set-quality').value = settings.quality;
+  $('set-quality').onchange = (e) => { settings.quality = e.target.value; applySettings(); };
   $('set-shadows').checked = settings.shadows;
   $('set-master').oninput = (e) => { settings.master = +e.target.value; applySettings(); };
   $('set-music').oninput = (e) => { settings.music = +e.target.value; applySettings(); };

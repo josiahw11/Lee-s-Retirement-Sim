@@ -2020,7 +2020,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     const cam = this.camera.position;
     for (const n of this.npcs) {
       const d = Math.hypot(n.x - cam.x, n.z - cam.z);
-      const vis = d < 170 || n.cart;
+      const vis = d < (this.drawDist || 170) || n.cart;
       if (vis !== n.visible) {
         n.visible = vis;
         n.char.root.visible = vis;
