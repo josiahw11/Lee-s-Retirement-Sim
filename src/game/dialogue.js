@@ -249,8 +249,20 @@ export function talkLady(g, npc) {
   return node;
 }
 
+// Signature dates per lady; everyone else gets a random classic.
+const SIGNATURE_DATES = {
+  doris: ['the Golden Coral for the 4:00 early bird', 'She brought her own Tupperware and filled it with shrimp while making direct eye contact with the manager. You have never been more attracted to anyone.'],
+  millie: ['a back-room poker game at the Elks Lodge', 'She cleaned out three retired dentists and a priest, then bought you a round with their money. She calls you "sugar tits." You allow it.'],
+  gloria: ['the Tiki Hut for a Bushwacker crawl', 'She told you about all four ex-husbands in alphabetical order. Husband #3, Sal, "had hands like a surgeon and the morals of a raccoon."'],
+  bev: ['a moonlight pickleball match', 'She beat you 11-0, kissed you at the net, and whispered "Frank bowls on Thursdays." It is Thursday.'],
+  linda: ['the Country Club patio, right under Chip\'s nose', 'You split a $90 bottle of wine on Chip\'s member account. He waved at you from the bar, confused. She squeezed your knee under the table.'],
+  rhonda: ['the Rusty Pelican for dollar-oyster night', 'She ate forty oysters, got into a shouting match with a pelican, and taught you a Jersey hand gesture that got you both banned for a week.'],
+  tammy: ['a midnight cruise in her beverage cart around the back nine', 'She let you drive. At the Lake Serenity ramp she yelled "SEND IT," and you did. As you splashed down, somebody set off fireworks over the clubhouse. It might have been for you. It was definitely for you.'],
+};
+
 function dateNode(g, npc, def, r) {
-  const venue = pick([
+  if (def.id === 'tammy') g.celebrate(14, 52, -112);
+  const venue = SIGNATURE_DATES[def.id] || pick([
     ['the Golden Coral for the 4:00 early bird', 'She ordered the prime rib, then wrapped two dinner rolls in a napkin "for later." A woman after your own heart.'],
     ['a sunset cart ride around the back nine', 'You drove with one hand on the wheel and one on the Geezer Light. She held on for dear life. She loved it.'],
     ['Bingo Night at the clubhouse', 'She won twice. Karen glared the whole time. You held her daubers. It was intimate.'],

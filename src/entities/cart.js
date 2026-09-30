@@ -241,7 +241,7 @@ export class Cart {
     let steerIn = input.steer || 0;
     if (drunk > 0.05) steerIn += Math.sin(this.t * 1.7) * 0.35 * drunk + Math.sin(this.t * 4.3) * 0.15 * drunk;
     steerIn = clamp(steerIn, -1, 1);
-    const maxSteer = 0.55 - clamp(Math.abs(vf) / 30, 0, 0.25);
+    const maxSteer = 0.55 / (1 + Math.abs(vf) * 0.085);
     this.steerAng = damp(this.steerAng, steerIn * maxSteer, drunk > 0.3 ? 5 : 10, dt);
 
     if (this.grounded && !this.sunk) {
@@ -262,6 +262,7 @@ export class Cart {
       if (hb) vf *= Math.exp(-0.9 * dt);
       const wheelbase = 1.7;
       let yaw = (vf * Math.tan(this.steerAng)) / wheelbase;
+      yaw = clamp(yaw, -2.3, 2.3);
       if (hb) yaw *= 1.5;
       this.heading = wrapAngle(this.heading + yaw * dt);
       const grip = (hb ? 1.6 : 9) * (input.wet ? 0.6 : 1);
