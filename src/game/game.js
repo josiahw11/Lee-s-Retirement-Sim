@@ -555,6 +555,7 @@ export class Game {
     this.achievement('conquest');
     if (perkId === 'titanium') this.giveWeapon('titanium');
     if (perkId === 'legend') {
+      this.celebrate(20);
       this.achievement('tammy');
       this.xp('stat', 12);
     }
@@ -826,6 +827,7 @@ export class Game {
       s.hoa.president = true;
       this.xp('stat', 8);
       this.achievement('president');
+      this.celebrate(18, 15, 0);
       this.ui.openDialogue({ name: 'ELECTION RESULTS', title: 'Sunset Palms Clubhouse', text: `${s.name}: ${you} votes\nKaren Whitmore: ${karen} votes\n\nThe room erupts. Someone's oxygen tank falls over. Karen snaps her clipboard in half.\n\nYou are the new HOA PRESIDENT. Visit the HOA Office to issue decrees.`, choices: [{ text: '🎉 "Drinks are on Karen!"', action: () => null }] });
     } else {
       s.hoa.registered = false;
@@ -1607,6 +1609,20 @@ export class Game {
     }
   }
 
+  // Launch a volley of fireworks around a point (defaults to over the Duck Pond / near the player).
+  celebrate(n = 10, x = null, z = null) {
+    const p = this.player;
+    const cx = x ?? p.x, cz = z ?? p.z;
+    for (let i = 0; i < n; i++) {
+      this.after(i * rand(0.25, 0.55), () => {
+        audio.listenerX = this.player.x;
+        audio.listenerZ = this.player.z;
+        audio.tone({ freq: 400, to: 1400, type: 'sine', dur: 0.6, vol: 0.03 });
+        this.particles.firework(cx + rand(-30, 30), cz + rand(-30, 30) - 20, heightAt(cx, cz), audio);
+      });
+    }
+  }
+
   after(seconds, fn) {
     (this.timers ||= []).push({ t: seconds, fn });
   }
@@ -1799,6 +1815,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
   }
 
   chapterComplete() {
+    this.celebrate(16);
     this.ui.splash('CHAPTER 1 COMPLETE', `${this.state.name} runs Sunset Palms now. Karen is weeping into her clipboard. Keep playing — Tammy awaits.`, 6, '#7CFC9A');
     audio.play('levelup');
   }

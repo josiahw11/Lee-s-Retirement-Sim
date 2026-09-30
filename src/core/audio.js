@@ -572,6 +572,14 @@ export class AudioSys {
     this.surfLfo.gain.setTargetAtTime(level * 0.09, t, 0.5);
   }
 
+  fireworkPop(dist = 50) {
+    if (!this.ready) return;
+    const v = Math.max(0.15, 1 - dist / 250);
+    const delay = Math.min(0.6, dist / 340);
+    this.noiseBurst({ dur: 0.35, vol: 0.6 * v, type: 'lowpass', freq: 1800, to: 200, at: delay });
+    for (let i = 0; i < 6; i++) this.noiseBurst({ dur: 0.05, vol: 0.2 * v, type: 'highpass', freq: 4000, at: delay + 0.3 + Math.random() * 0.8 });
+  }
+
   thunder(delay = 0.6) {
     if (!this.ready) return;
     this.noiseBurst({ dur: 2.6, vol: 0.7, type: 'lowpass', freq: 300, to: 60, at: delay, attack: 0.05 });

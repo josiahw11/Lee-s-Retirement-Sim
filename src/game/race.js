@@ -185,6 +185,7 @@ export class Race {
       g.xp('cha', 1);
       g.state.counters.racesWon = (g.state.counters.racesWon || 0) + 1;
       g.achievement('raceWin');
+      g.celebrate(8);
       if (bet >= 500) g.achievement('raceLegend');
       g.ui.splash('YOU WIN!', `${time.toFixed(1)}s. The retirement community will speak of this for days (they'll forget by Thursday).`, 4, '#7CFC9A');
       audio.play('levelup');

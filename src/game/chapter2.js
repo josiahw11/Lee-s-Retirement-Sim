@@ -61,6 +61,7 @@ export const CH2 = [
       g.addMoney(1000, "The Deuce's money clip");
       g.xp('intim', 5);
       g.xp('stat', 6);
+      g.celebrate(20);
       g.ui.splash('CHAPTER 2 COMPLETE', 'The Wainwright dynasty has fallen. The tea flows freely. Sunset Palms bows to you.', 6, '#7CFC9A');
       audio.play('levelup');
     },
