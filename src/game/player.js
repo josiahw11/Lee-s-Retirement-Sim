@@ -36,6 +36,21 @@ export class Player {
     this.speed = 0;
   }
 
+  // Swap in a freshly built character with a new outfit, keeping pose/seat/weapon.
+  setLook(overrides) {
+    const old = this.char;
+    const look = { ...PLAYER_LOOK, ...overrides };
+    const ch = new Character(look);
+    const parent = old.root.parent;
+    ch.root.position.copy(old.root.position);
+    ch.root.rotation.copy(old.root.rotation);
+    ch.mode = old.mode;
+    if (parent) parent.add(ch.root);
+    old.root.removeFromParent();
+    if (old.heldType) ch.setHeld(old.heldType);
+    this.char = ch;
+  }
+
   enterCart(cart) {
     this.cart = cart;
     cart.driver = this;

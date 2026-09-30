@@ -557,8 +557,36 @@ function homeNode(g) {
       { text: late ? 'Sleep until morning (saves game)' : 'Sleep until morning (it\'s early, but you\'re old)', action: () => { g.sleep(); return null; } },
       { text: 'Throw a lawn party (booze & snacks)', tag: g.party ? 'party in progress' : '$250', disabled: !!g.party || g.state.money < 250, action: () => { g.startParty(); return null; } },
       { text: 'Take a nap (2 hours, heal)', action: () => { g.fadeOut(() => { g.advanceTime(120); g.player.hp = g.maxHp(); g.state.buzz = Math.max(0, g.state.buzz - 40); }, 1.5, '💤', 'Power nap. You drooled on the remote.'); return null; } },
+      { text: 'Wardrobe: change your outfit', action: () => wardrobeNode(g) },
       { text: 'Save game', action: () => { g.save(); return end('Home', 'Game saved. Your legacy is secure. Unlike your bladder.'); } },
       { text: 'Leave', action: () => null },
+    ],
+  };
+}
+
+const SHIRT_NAMES = ['Teal Flamingo (lucky)', 'Hibiscus Red', 'Navy Palms', 'Sunshine Orange', 'Flamingo Pink', 'Purple Reign', 'Cream Linen', 'Electric Blue'];
+const HAT_NAMES = { visor: 'White Visor', bucket: 'Bucket Hat', cap: 'Trucker Cap', fedora: 'Straw Fedora', none: 'No Hat' };
+const GLASS_NAMES = { aviator: 'Aviators', big: 'Jackie O Shades', readers: 'Readers', none: 'No Glasses' };
+function wardrobeNode(g) {
+  const st = g.state;
+  const cycle = (key, list) => {
+    const i = list.indexOf(st.look[key]);
+    st.look[key] = list[(i + 1) % list.length];
+    g.player.setLook(st.look);
+    return wardrobeNode(g);
+  };
+  return {
+    name: 'Wardrobe', title: 'Buy more at the clubhouse boutique',
+    text: `Shirt: ${SHIRT_NAMES[st.look.shirt]}
+Hat: ${HAT_NAMES[st.look.hat] || st.look.hat}
+Glasses: ${GLASS_NAMES[st.look.glasses] || st.look.glasses}
+Socks: ${st.look.sock === '#ffffff' ? 'White tube socks' : 'Black dress socks (with sandals, obviously)'}`,
+    choices: [
+      { text: `Next shirt (${st.wardrobe.shirt.length} owned)`, disabled: st.wardrobe.shirt.length < 2, action: () => cycle('shirt', st.wardrobe.shirt) },
+      { text: `Next hat (${st.wardrobe.hat.length} owned)`, disabled: st.wardrobe.hat.length < 2, action: () => cycle('hat', st.wardrobe.hat) },
+      { text: `Next glasses (${st.wardrobe.glasses.length} owned)`, disabled: st.wardrobe.glasses.length < 2, action: () => cycle('glasses', st.wardrobe.glasses) },
+      { text: 'Swap socks', disabled: st.wardrobe.sock.length < 2, action: () => cycle('sock', st.wardrobe.sock) },
+      { text: 'Looking sharp. Done.', action: () => null },
     ],
   };
 }
@@ -569,6 +597,7 @@ function clubhouseNode(g) {
     name: 'Sunset Palms Clubhouse', title: `${fmtTime(g.state.minutes)}`,
     text: 'The clubhouse smells like coffee, chlorine and quiet desperation. A bulletin board advertises: WATER AEROBICS • BINGO WEDNESDAY • GRIEF SUPPORT (BYOB).',
     choices: [
+      { text: 'Browse the Resort Wear Boutique (outfits = STATUS)', action: () => { openShop(g, 'boutique'); g.ui.closeDialogue(); return 'keep'; } },
       { text: 'Water aerobics with the ladies (+STR, +CHA, 1 hour)', disabled: hour > 21 || hour < 6, action: () => {
         g.fadeOut(() => { g.advanceTime(60); g.xp('str', 3); g.xp('cha', 1); }, 1.5, '🏊 AEROBICS', 'You were the only man. You were a god among widows.');
         return null;
@@ -682,6 +711,14 @@ function openShop(g, id) {
       if (it.id === 'polo') return { owned: st.owned.polo, label: st.owned.polo ? 'OWNED' : null, disabled: st.owned.polo };
       if (it.id === 'chain' || it.id === 'rolex') return { owned: st.owned[it.id], label: st.owned[it.id] ? 'OWNED' : null, disabled: st.owned[it.id] };
       if (it.id.startsWith('w_')) { const w = it.id.slice(2); return { owned: st.weapons.includes(w), label: st.weapons.includes(w) ? 'OWNED' : null, disabled: st.weapons.includes(w) }; }
+      if (id === 'boutique') {
+        const [kind, val] = it.id.split('_');
+        const v = kind === 'shirt' ? +val : kind === 'socks' ? '#ffffff' : val;
+        const key = kind === 'socks' ? 'sock' : kind;
+        const has = st.wardrobe[key].includes(v);
+        const wearing = st.look[key] === v;
+        return { owned: has, label: wearing ? 'WEARING' : has ? 'WEAR' : null, price: has ? 0 : it.price };
+      }
       if (id === 'buffet') { const early = st.minutes >= 15 * 60 && st.minutes < 17 * 60; return { price: early ? 9 : 18, label: early ? '$9 EARLY BIRD' : '$18' }; }
       if (id === 'tiki' && st.minutes >= 16 * 60 && st.minutes < 18 * 60) return { price: Math.ceil(it.price / 2), label: `${money(Math.ceil(it.price / 2))} HAPPY HR` };
       if (id === 'doc') return { price: Math.round(it.price * wholesale) };
@@ -698,6 +735,21 @@ function openShop(g, id) {
         st.inv.balls = 0;
         st.counters.ballsSold += n;
         g.addMoney(n * 2, 'golf balls');
+        return;
+      }
+      if (id === 'boutique') {
+        const [kind, val] = it.id.split('_');
+        const v = kind === 'shirt' ? +val : kind === 'socks' ? '#ffffff' : val;
+        const key = kind === 'socks' ? 'sock' : kind;
+        if (!st.wardrobe[key].includes(v)) {
+          if (price > st.money) { audio.play('fail'); g.ui.hint('Pierre does not do layaway.'); return; }
+          if (price) g.spend(price);
+          st.wardrobe[key].push(v);
+          g.xp('stat', price >= 60 ? 2 : price > 0 ? 1 : 0);
+          audio.play('buy');
+        }
+        st.look[key] = v;
+        g.player.setLook(st.look);
         return;
       }
       if (price > st.money) { audio.play('fail'); g.ui.hint("You can't afford that. Fixed income, remember?"); return; }

@@ -39,6 +39,8 @@ export function defaultState(name = 'Lee') {
     weapons: ['fists'], weapon: 'fists',
     cart: { color: '#ffffff', upgrades: {} },
     owned: { polo: false, chain: false, rolex: false },
+    look: { shirt: 0, hat: 'visor', glasses: 'aviator', sock: '#141414' },
+    wardrobe: { shirt: [0], hat: ['visor'], glasses: ['aviator', 'none'], sock: ['#141414'] },
     romance,
     quest: { step: 0, flags: {}, started: {} },
     flags: {},
@@ -345,6 +347,7 @@ export class Game {
       Object.assign(this.playerCart, { x: state.cartPos.x, z: state.cartPos.z, heading: state.cartPos.h, y: heightAt(state.cartPos.x, state.cartPos.z) });
       this.playerCart.syncMesh(0);
     }
+    this.player.setLook(state.look);
     this.player.hp = this.maxHp();
     this.player.char.setHeld(state.weapon === 'fists' ? null : state.weapon);
     this.heat.value = state.heat || 0;

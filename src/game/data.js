@@ -68,6 +68,25 @@ export const SHOPS = {
       { id: 'rolex', name: '"Rolax" Watch', price: 250, icon: '⌚', desc: '+STATUS. Ticks loudly.' },
     ],
   },
+  boutique: {
+    title: 'RESORT WEAR BOUTIQUE', keeper: 'Pierre', greet: ['"Monsieur, zat shirt is... a choice. Let me help you make a better one."', '"Everyzing here is linen, silk, or regret."'],
+    items: [
+      { id: 'shirt_1', name: 'Hibiscus Red Silk Shirt', price: 45, icon: '🌺', desc: 'Says "I own a boat." You do not.' },
+      { id: 'shirt_2', name: 'Navy Palms Shirt', price: 45, icon: '🌴', desc: 'Yacht club energy.' },
+      { id: 'shirt_3', name: 'Sunshine Orange Shirt', price: 45, icon: '🌞', desc: 'Visible from the space station.' },
+      { id: 'shirt_4', name: 'Flamingo Pink Shirt', price: 45, icon: '🦩', desc: 'Real men wear pink. Karen hates it.' },
+      { id: 'shirt_5', name: 'Purple Reign Shirt', price: 60, icon: '👑', desc: 'For the HOA royalty you will become.' },
+      { id: 'shirt_6', name: 'Cream Linen Shirt', price: 60, icon: '🥂', desc: 'Old money. Very old. Like you.' },
+      { id: 'shirt_7', name: 'Electric Blue Shirt', price: 45, icon: '⚡', desc: 'Pairs well with nitrous.' },
+      { id: 'hat_bucket', name: 'Bucket Hat', price: 25, icon: '🪣', desc: 'Fisherman chic.' },
+      { id: 'hat_cap', name: 'Trucker Cap', price: 20, icon: '🧢', desc: 'Says VETERAN. Of what, nobody asks.' },
+      { id: 'hat_fedora', name: 'Straw Fedora', price: 80, icon: '🎩', desc: 'Sinatra, if Sinatra shopped at Costco.' },
+      { id: 'hat_none', name: 'Go Hatless (free)', price: 0, icon: '🦲', desc: 'Let the scalp breathe.' },
+      { id: 'glasses_big', name: 'Jackie O Sunglasses', price: 35, icon: '🕶️', desc: 'Enormous. Mysterious.' },
+      { id: 'glasses_readers', name: 'Drugstore Readers', price: 10, icon: '👓', desc: '+2.50. For reading menus and rap sheets.' },
+      { id: 'socks_white', name: 'Crisp White Tube Socks', price: 8, icon: '🧦', desc: 'Pulled up to the knee. Bold.' },
+    ],
+  },
   buffet: {
     title: 'GOLDEN CORAL', keeper: 'Flo', greet: ['"Table for one? The prime rib is \'prime\' in the legal sense only."'],
     items: [
