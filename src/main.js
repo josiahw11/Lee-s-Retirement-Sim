@@ -280,7 +280,7 @@ async function boot() {
     // hit-stop / slow-mo for big impacts
     if (game.slowmo > 0) {
       game.slowmo -= dt;
-      dt *= 0.3;
+      dt *= game.slowmoScale || 0.3;
     }
     input.enabled = game.running && !ui.modal && !paused && !game.cut;
     touch.update(input.enabled, game.running, ui.modal);

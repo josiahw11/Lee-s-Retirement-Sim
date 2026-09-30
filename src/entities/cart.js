@@ -64,6 +64,8 @@ export class Cart {
     this.grounded = true;
     this.steerAng = 0;
     this.pitch = 0; this.roll = 0;
+    this.spin = 0; // trick spin in the air (body only; the trajectory doesn't care)
+    this.spinLanded = 0;
     this.suspY = 0; this.suspV = 0;
     this.airT = 0;
     this.wheelRot = 0;
@@ -331,7 +333,8 @@ export class Cart {
       const grip = (hb ? 1.6 : 9) * (input.wet ? 0.6 : 1);
       vl *= Math.exp(-grip * dt);
     } else if (!this.sunk) {
-      this.heading = wrapAngle(this.heading + steerIn * 0.9 * dt);
+      if (input.handbrake) this.spin += steerIn * 7.5 * dt;
+      else this.heading = wrapAngle(this.heading + steerIn * 0.9 * dt);
     }
     if (this.sunk) {
       vf *= Math.exp(-3 * dt);
@@ -398,6 +401,14 @@ export class Cart {
         this.vy = 0;
         this.grounded = true;
         this.lastAir = this.airT;
+        if (this.spin) {
+          // whatever way the body points is where you're facing now; land crooked and you scrub speed
+          const r = wrapAngle(this.spin);
+          this.spinLanded = this.spin;
+          this.heading = wrapAngle(this.heading + r);
+          this.spin = 0;
+          if (Math.abs(r) > 0.8) { this.vx *= 0.45; this.vz *= 0.45; this.suspV -= 3; }
+        }
       }
     }
 
@@ -405,14 +416,14 @@ export class Cart {
     const wl = waterLevel(this.x, this.z);
     this.inWater = wl !== null && this.y < wl - 0.1;
     if (this.inWater && !this.sunk && (this.grounded || this.y < wl - 0.5)) this.sunk = true;
-    if (this.sunk) this.y = Math.max(ground, this.y - dt * 0.6);
+    if (this.sunk) { this.y = Math.max(ground, this.y - dt * 0.6); this.spin = 0; }
 
     this.syncMesh(dt, vf);
   }
 
   syncMesh(dt, vf = this.forwardSpeed) {
     this.group.position.set(this.x, this.y, this.z);
-    this.group.rotation.y = this.heading;
+    this.group.rotation.y = this.heading + this.spin;
     if (dt > 0) {
       // pitch/roll from terrain under the wheels
       if (this.grounded) {

@@ -19,6 +19,7 @@ import { Karaoke } from './karaoke.js';
 import { GarageSales, sellerNode } from './garagesale.js';
 import { SeniorGames, commishNode } from './seniorgames.js';
 import { Pickleball } from './pickleball.js';
+import { Stunts, STUNTS } from './stunts.js';
 import { activitiesTab, bindActivities } from './activities.js';
 import { Soundscape } from './soundscape.js';
 import { Weather } from '../gfx/weather.js';
@@ -112,6 +113,9 @@ const ACH = {
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
   scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
+  stuntman: ['Stuntman', 'Completed a Unique Stunt Jump.'],
+  knievel: ['Evel Knievel Jr.', 'Completed every Unique Stunt Jump in Sunset Palms.'],
+  spin720: ['Hip Replacement 720', 'Landed a 720 in a golf cart.'],
   pickle: ['Dink Dynasty', 'Won a real game of pickleball. Your knees filed a formal complaint.'],
   champion: ['Senior Games Champion', 'Stood on the top step of the Senior Games podium.'],
   triplecrown: ['Triple Crown', 'Gold in all three Senior Games events on one Sunday.'],
@@ -471,6 +475,8 @@ export class Game {
     if (this.seniorGames) this.seniorGames.clear();
     this.seniorGames = new SeniorGames(this);
     this.soundscape = new Soundscape(this);
+    if (this.stunts) this.stunts.clear();
+    this.stunts = new Stunts(this);
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -2024,6 +2030,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
         n.update(dt);
       }
       this.updateCarts(dt);
+      if (this.stunts) this.stunts.update(dt);
       this.updateHeat(dt);
       this.updateEvents(dt);
       this.updateDrones(dt);
@@ -2482,7 +2489,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       h += row('stat', '💎 STATUS', 'Cart mods, bling, conquests, power. Gate for high-tier romance.');
       const c = s.counters;
       h += `<h3>Rap Sheet</h3><div class="grid2">
-        <div class="card"><div class="t">🍺 ${c.beers} beers drunk</div><div class="sub">${c.beersToday} today • Max air ${c.maxAir.toFixed(1)}s</div></div>
+        <div class="card"><div class="t">🍺 ${c.beers} beers drunk</div><div class="sub">${c.beersToday} today • Max air ${c.maxAir.toFixed(1)}s • ⭐ ${(s.stunts?.done.length || 0)}/${STUNTS.length} stunt jumps</div></div>
         <div class="card"><div class="t">💊 ${c.pillsSold} Blue Boys / 🍵 ${c.teaSold} teas sold</div><div class="sub">Lifetime earnings ${money(c.earned)}</div></div>
         <div class="card"><div class="t">🦩 ${c.flamingos} flamingos • 📬 ${c.mailboxes} mailboxes</div><div class="sub">🥊 ${c.knockouts} knockouts • 🚨 busted ${c.busted}×</div></div>
         <div class="card"><div class="t">🏆 ${s.achievements.length}/${Object.keys(ACH).length} achievements</div><div class="sub">${s.achievements.map((a) => ACH[a][0]).join(' • ') || 'None yet. Go be terrible.'}</div></div>

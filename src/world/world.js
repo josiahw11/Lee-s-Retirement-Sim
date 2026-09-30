@@ -1186,7 +1186,11 @@ export class World {
       for (const e of EDGES) if (distToSegment(x, z, e.a.x, e.a.z, e.b.x, e.b.z) < e.width / 2 + 4) { ok = false; break; }
       if (!ok) continue;
       for (const p of PONDS) if (Math.hypot(x - p.x, z - p.z) < p.r * 1.3) ok = false;
-      for (const r of RAMPS) if (Math.hypot(x - r.x, z - r.z) < 22) ok = false;
+      for (const r of RAMPS) {
+        const dx = x - r.x, dz = z - r.z, s = Math.sin(r.a), c = Math.cos(r.a);
+        const u = dx * s + dz * c, v = dx * c - dz * s;
+        if (Math.hypot(dx, dz) < 22 || (u > -6 && u < r.len + 34 && Math.abs(v) < 9)) ok = false;
+      }
       for (const h of HOLES) if (Math.hypot(x - h.green[0], z - h.green[1]) < 20 || Math.hypot(x - h.tee[0], z - h.tee[1]) < 10) ok = false;
       if (!ok) continue;
       const k = rnd();

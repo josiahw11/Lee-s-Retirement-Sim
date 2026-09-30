@@ -56,7 +56,7 @@ export function baseHeight(x, z) {
 }
 
 export function heightAt(x, z) {
-  if (x > 300) return Math.max(beachSlope(x), pierHeight(x, z), boatHeight(x, z));
+  if (x > 300) return Math.max(beachSlope(x), pierHeight(x, z), boatHeight(x, z), rampHeight(x, z));
   return Math.max(baseHeight(x, z), rampHeight(x, z));
 }
 

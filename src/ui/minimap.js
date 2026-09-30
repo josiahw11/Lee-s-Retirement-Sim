@@ -84,6 +84,7 @@ export class Minimap {
       }
     }
     for (const [id, poi] of Object.entries(game.world.pois)) if (POI_ICONS[id]) dot(poi.x, poi.z, '#fff', 4, false, POI_ICONS[id]);
+    if (game.stunts) for (const s of game.stunts.pending()) dot(s.x, s.z, '#fff', 4, false, '⭐');
     for (const n of game.npcs) {
       if (Math.abs(n.x - p.x) > this.range || Math.abs(n.z - p.z) > this.range) continue;
       if (n.role === 'security') dot(n.x, n.z, n.cart && n.cart.sirenOn ? (Math.floor(performance.now() / 250) % 2 ? '#ff3030' : '#3050ff') : '#5b7cff', 5);
