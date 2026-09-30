@@ -96,6 +96,7 @@ export class Shuffleboard {
       <div class="mg-msg" id="sb-msg"></div>
       <div class="sb-btns"><button class="btn" id="sb-l">◀</button><button class="btn big" id="sb-shoot">HOLD TO SHOOT</button><button class="btn" id="sb-r">▶</button></div>
       <div class="mg-hint">A/D aim • hold SPACE, release to shoot • ESC to forfeit</div>`;
+    box().onclick = null; // Chug-Off leaves a click handler on the shared box
     document.getElementById('minigame').classList.add('mg-3d');
     // mark the power band that lands in the triangle (and the 10) on a straight shot
     const pw = (x) => (Math.sqrt(2 * DECEL * (this.startX - x)) - V0) / VR * 100;
