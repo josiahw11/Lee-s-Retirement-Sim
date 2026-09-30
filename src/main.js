@@ -6,7 +6,7 @@ import { CameraRig } from './core/camera.js';
 import { SkySystem } from './gfx/sky.js';
 import { Particles } from './gfx/particles.js';
 import { PostFX } from './gfx/postfx.js';
-import { shared, updateNightMaterials } from './gfx/materials.js';
+import { shared, updateNightMaterials, M } from './gfx/materials.js';
 import { World } from './world/world.js';
 import { updateBeach } from './world/beach.js';
 import { updateBoat } from './world/casinoboat.js';
@@ -205,6 +205,7 @@ async function boot() {
   $('btn-save').onclick = () => { game.save(); };
   $('btn-ch2').onclick = () => { game.jumpToChapter(2); resume(); };
   $('btn-ch3').onclick = () => { game.jumpToChapter(3); resume(); };
+  $('btn-hurricane').onclick = () => { game.hurricane.summon(); resume(); };
   $('btn-quit').onclick = () => { if (confirm('Quit to title? Unsaved progress will be lost.')) location.reload(); };
   $('bigmap').onclick = closeMap;
   ui.onModalClose = () => { if (game.running && !ui.modal) input.requestLock(); };
@@ -341,6 +342,7 @@ async function boot() {
     sky.applyStorm(game.weather.intensity, flash);
     night = sky.night;
     updateNightMaterials(night);
+    if (game.hurricane && game.hurricane.outage) { M.lamp.emissiveIntensity = 0.05; M.glass.emissiveIntensity *= 0.12; } // candles only
     for (const m of world.waterMats) {
       m.uniforms.uSky.value.copy(sky.fogColor);
       m.uniforms.uSunDir.value.copy(sky.uniforms.sunDir.value);

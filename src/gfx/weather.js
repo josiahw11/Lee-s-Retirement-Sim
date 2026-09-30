@@ -8,6 +8,7 @@ export class Weather {
   constructor(scene) {
     this.intensity = 0;
     this.target = 0;
+    this.windX = 5; // horizontal drift (m/s); hurricanes push it way up
     this.flash = 0;
     this.nextBolt = 8;
     const pos = new Float32Array(N * 6);
@@ -37,7 +38,7 @@ export class Weather {
     const active = Math.floor(N * k);
     const p = this.geo.attributes.position.array;
     const cx = cam.position.x, cy = cam.position.y, cz = cam.position.z;
-    const fall = 32 * dt, wind = 5 * dt;
+    const fall = 32 * dt, wind = this.windX * dt, slant = this.windX * 0.024;
     for (let i = 0; i < active; i++) {
       const j = i * 3;
       this.drops[j + 1] -= fall;
@@ -53,7 +54,7 @@ export class Weather {
       const z = cz + this.drops[j + 2];
       const o = i * 6;
       p[o] = x; p[o + 1] = y; p[o + 2] = z;
-      p[o + 3] = x - 0.12; p[o + 4] = y + 0.9; p[o + 5] = z;
+      p[o + 3] = x - slant; p[o + 4] = y + 0.9; p[o + 5] = z;
     }
     this.geo.setDrawRange(0, active * 2);
     this.geo.attributes.position.needsUpdate = true;

@@ -48,6 +48,9 @@ export function gazette(g) {
   else if (qf.vaultChoice === 'keep') once('gazVault', `$48,211 PENSION HEIST ROCKS BOCA WATERFRONT`, `Police baffled. Residents furious. A local man was seen buying a gold-plated recliner "in cash, from a duffel bag."`);
   else if (qf.vaultChoice === 'split') once('gazVault', `HALF OF STOLEN PENSIONS "JUST SHOW UP" IN MAILBOXES`, `Residents grateful, confused, and doing math. "Where's the other half?" asks everyone.`);
   if (qf.c3Jackpot) once('gazJackpot', `GOLDEN GAM-GAM PAYS OUT FOR FIRST TIME SINCE 1979`, `Machine #3 played "Wind Beneath My Wings." Three nearby grandmothers fainted. Mechanic "Fingers" Fanucci: "Beats me."`);
+  const hur = g.state.hurricane;
+  if (hur && hur.day === g.state.day) once(`gazHur${hur.day}`, 'HURRICANE MILDRED BEARS DOWN ON SUNSET PALMS', 'Residents urged to secure flamingos, boxed wine, and grandchildren, in that order. Clubhouse hurricane party "definitely happening."');
+  else if (hur && hur.day === g.state.day - 1) once(`gazHurAfter${hur.day}`, 'MILDRED LEAVES HUNDREDS OF FLAMINGOS HOMELESS', 'HOA offers $25 bounty per bird. Karen: "Half of those were mine and I want them back BEFORE the Hendersons."');
   if (d('overboard') >= 1) add(`MAN THROWN OFF CASINO BOAT, WASHES UP ON BOCA BEACH`, `"The Captain cheats," the man told a seagull. The seagull took his shoe.`);
   if (g.state.hoa.president && !g.state.flags.gazPres) { g.state.flags.gazPres = true; add(`${name} ELECTED HOA PRESIDENT IN SHOCK UPSET`, 'Karen demands recount, is escorted from clubhouse clutching a clipboard.'); }
   while (stories.length < 3) {

@@ -13,6 +13,7 @@ import { Blackjack, Slots, SafeCrack } from './casino.js';
 import { AerobicsClass, AquaAerobics, talkChad } from './aerobics.js';
 import { Grandr, talkDate } from './grandr.js';
 import { ClosestToPin, golferChallenge } from './golf.js';
+import { Hurricane, hurricanePartyNode } from './hurricane.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
@@ -104,6 +105,9 @@ const ACH = {
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
   scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
+  stormchaser: ['Storm Chaser', 'Caught 2.4+ seconds of air in hurricane winds.'],
+  conga: ['Conga Through Mildred', 'Led a conga line at a hurricane party.'],
+  flamingoRescue: ['Flamingo Rescue', 'Returned 10 hurricane-scattered flamingos to the HOA.'],
   ace: ['Ace!', 'Made a hole in one in a closest-to-the-pin bet.'],
   grandr: ['Swipe Right on Life', 'Had a five-star Grandr date.'],
   aquaking: ['Aqua King', 'Scored 90%+ in Aqua Jazz. Chad has never been so threatened.'],
@@ -444,6 +448,8 @@ export class Game {
     this.aerobicsClass = new AerobicsClass(this);
     if (this.grandr) this.grandr.clear();
     this.grandr = new Grandr(this);
+    if (this.hurricane) this.hurricane.clear();
+    this.hurricane = new Hurricane(this);
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -769,8 +775,9 @@ export class Game {
     const h = this.state.minutes / 60;
     const s = this.storm;
     const on = !!s && h >= s.start && h < s.start + s.dur;
-    this.weather.target = on ? 1 : 0;
-    if (on && !s.warned && this.running) {
+    const hk = this.hurricane ? this.hurricane.k : 0;
+    this.weather.target = Math.max(on ? 1 : 0, hk);
+    if (on && !s.warned && this.running && hk <= 0) {
       s.warned = true;
       this.ui.toast('⛈️ Afternoon thunderstorm! Roads are slick and the ladies are worried about their perms.', 'quest', 5);
     }
@@ -791,6 +798,7 @@ export class Game {
     const s = this.state;
     s.day++;
     s.dow = (s.dow + 1) % 7;
+    if (this.hurricane) this.hurricane.newDay();
     s.counters.beersToday = 0;
     for (const n of this.npcs) {
       this.assignWants(n);
@@ -1279,6 +1287,7 @@ export class Game {
   }
 
   visitPOI(poi) {
+    if (poi.id === 'hurricaneParty') { this.ui.openDialogue(hurricanePartyNode(this)); return; }
     const r = D.visit(this, poi);
     if (r && r !== 'shop') this.ui.openDialogue(r);
   }
@@ -2037,6 +2046,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (this.litter) this.litter.update(dt);
       if (this.aerobicsClass) this.aerobicsClass.update(dt);
       if (this.grandr) this.grandr.update();
+      if (this.hurricane) this.hurricane.update(dt);
       if (this.skids) {
         this.skids.update(dt);
         // AI carts leave rubber too (race rivals, fleeing drivers)
@@ -2388,7 +2398,8 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
         L.position.set(e.l.x, e.l.y, e.l.z);
       });
     }
-    for (const L of this.lampLights) L.intensity = night * 55;
+    const powerOut = this.hurricane && this.hurricane.outage;
+    for (const L of this.lampLights) L.intensity = powerOut ? 0 : night * 55;
     const lightsOn = night > 0.35;
     for (const c of this.carts) if (c.driver) c.setLights(lightsOn);
     const pc = p.cart;

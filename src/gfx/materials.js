@@ -6,22 +6,26 @@ import { makeShirtTexture, makeRoofTileTexture } from './textures.js';
 export const shared = {
   time: { value: 0 },
   night: { value: 0 },
+  gust: { value: 1 }, // wind thrash multiplier (hurricanes crank it)
+  lean: { value: new THREE.Vector2(0, 0) }, // steady downwind bend
 };
 
 function addWind(mat) {
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = shared.time;
+    shader.uniforms.uGust = shared.gust;
+    shader.uniforms.uLean = shared.lean;
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float wind;\nuniform float uTime;')
+      .replace('#include <common>', '#include <common>\nattribute float wind;\nuniform float uTime;\nuniform float uGust;\nuniform vec2 uLean;')
       .replace(
         '#include <begin_vertex>',
         `#include <begin_vertex>
         if (wind > 0.0) {
           vec4 wp = modelMatrix * vec4(position, 1.0);
           float ph = wp.x * 0.13 + wp.z * 0.11;
-          transformed.x += sin(uTime * 1.7 + ph) * wind * 0.22;
-          transformed.z += cos(uTime * 1.3 + ph * 1.3) * wind * 0.18;
-          transformed.y += sin(uTime * 2.1 + ph) * wind * 0.06;
+          transformed.x += sin(uTime * 1.7 * uGust + ph) * wind * 0.22 * uGust + uLean.x * wind * 6.0;
+          transformed.z += cos(uTime * 1.3 * uGust + ph * 1.3) * wind * 0.18 * uGust + uLean.y * wind * 6.0;
+          transformed.y += sin(uTime * 2.1 + ph) * wind * 0.06 * uGust - length(uLean) * wind * 2.0;
         }`
       );
   };

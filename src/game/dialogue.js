@@ -701,6 +701,15 @@ function dumpsterNode(g) {
 function hoaNode(g) {
   const h = g.state.hoa;
   const choices = [];
+  const fl = g.state.inv.flamingos || 0;
+  if (fl > 0) choices.push({ text: `Turn in ${fl} stray flamingo${fl > 1 ? 's' : ''} from the hurricane`, tag: `+$${fl * 25}`, action: () => {
+    g.state.inv.flamingos = 0;
+    g.addMoney(fl * 25, 'flamingo bounty');
+    g.state.hurricane.returned = (g.state.hurricane.returned || 0) + fl;
+    if (g.state.hurricane.returned >= 10) g.achievement('flamingoRescue');
+    g.xp('stat', 1);
+    return end('HOA Office', `*Deb counts ${fl} muddy lawn flamingos, sighs, and pays out $${fl * 25}.* "Do NOT tell Karen where these came from. Half of them were hers."`);
+  } });
   const days = (6 - g.state.dow + 7) % 7;
   if (!h.president && !h.puppet) {
     if (!h.registered) choices.push({ text: 'Register as a candidate for HOA President ($250 filing fee)', disabled: g.state.money < 250, action: () => { g.spend(250); h.registered = true; g.toast('🗳️ You\'re running for HOA President! Campaign by talking to residents.', 'quest', 6); return end('HOA Office', '"Filing accepted." Deb stamps your form with visible disgust. "The election is Sunday at 7 PM in the clubhouse. Good luck. You\'ll need it."'); } });
