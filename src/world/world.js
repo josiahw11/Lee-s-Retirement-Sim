@@ -1197,12 +1197,16 @@ export class World {
       const out = 320 + rnd() * 120;
       const x = side === 0 ? along : side === 1 ? along : side === 2 ? -out : out;
       const z = side === 0 ? -out : side === 1 ? out : along;
+      // the east side is Boca Beach and the ocean now: keep the scenery off the sand and out of the water
+      const onBeach = x > BEACH.x0 - 12 && (x > BEACH.shore - 4 || (z > BEACH.z0 - 20 && z < BEACH.z1 + 20));
       if (rnd() < 0.6) {
         const w = 10 + rnd() * 6;
-        this.box(x, 0, z, w, 3.2, 10, ['#f6c6a8', '#fbe7a1', '#bde0fe', '#f7cad0', '#fff1e0'][Math.floor(rnd() * 5)]);
+        const col = ['#f6c6a8', '#fbe7a1', '#bde0fe', '#f7cad0', '#fff1e0'][Math.floor(rnd() * 5)];
+        if (onBeach) continue;
+        this.box(x, 0, z, w, 3.2, 10, col);
         const r = this.roofGeo(w + 1, 11, 2.2);
         this.batch.add(M.roof, r.geo, '#c65a3e', mat4(x, 3.2, z, r.ry));
-      } else this.palm(x, z, 1.1, false);
+      } else if (!onBeach) this.palm(x, z, 1.1, false);
     }
   }
 
