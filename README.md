@@ -36,7 +36,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 ## What's in the demo
 
 **The map.** A 600×600 m gated community:
-- Palmetto Links, a 6-hole golf course with 3 ponds (one has a gator warning), bunkers, rolling mounds and 4 plywood jump ramps
+- Palmetto Links, a 6-hole golf course with 3 ponds (one has a gator warning), bunkers, rolling mounds and plywood jump ramps (9 ramps in total around town)
 - Clubhouse with pool, tiki bar, shuffleboard and pickleball
 - A commercial strip: Liquor Barrel, Golden Coral buffet, HOA Office
 - The shady maintenance lot: Sal's Cart Customs, and Doc's van
@@ -46,6 +46,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 
 **Core loops**
 - **Golf carts.** Arcade handling with drift, suspension, speed-bump hops, jump ramps and pond splashdowns. Hop into any cart, or yank a senior out of theirs, GTA-style. 10 visual mods at Sal's: lift kit, chrome spinners, neon underglow, bass speakers, nitrous, La Cucaracha horn, and truck nuts with pendulum physics.
+- **Unique Stunt Jumps.** Nine ramps around town, from the Grandkids Ramp to clearing the whole Duck Pond, a leap over Palm Blvd, porta-potties on the beach and a Pool Party Plunge (land it *in* the pool). Each has a slow-motion side camera, a verdict (short, clipped, in the drink, crooked) and a cash reward. They come in three tiers: stock cart, governor removed, governor plus nitrous. Hold Space and steer in the air to spin the cart, and land a clean 360 or 720 for a bonus.
 - **Beer.** Buzz raises CHA and STR as liquid courage, then you start to slur. The screen wobbles, doubles and tilts. At 100 you black out and wake up somewhere embarrassing. Your bladder fills; press P.
 - **Legal money.** Golf balls go from pockets (1 ball) to a bucket (20) to a cart vacuum hopper (200) to autonomous drones. Gus buys them at $2 each. Golfers keep slicing new ones into the ponds.
 - **Illegal money.** Doc sells Blue Boys and Rhino Horn Tea wholesale. Sell them to residents marked 💊/🍵. Stat checks show their odds up front: upsell with CHA, strong-arm with INT.
@@ -68,6 +69,8 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
   - the power goes out, and the neighbors throw a hurricane party at the clubhouse
   - afterwards, the HOA pays a bounty for every stray flamingo you bring back
 - **The Lucky Lady casino boat** (moored off the Boca pier, 6PM–2AM): blackjack at Bernadette's table (charm her and she flashes her hole card; drink and you fumble), the Golden Gam-Gam slots with a progressive jackpot, and a bar.
+- **Pickleball Hustle.** A real rally on the community courts: move and swing, dinks and smashes, outs, double bounces and kitchen violations. The opponent reads your shots, places the ball where you aren't and makes skill-scaled errors. Game to 5, win by 2, and the club champion is a coin flip.
+- **Beer Pong at the Tiki Hut** (11AM–2AM): six solo cups a side with real ball physics (rim-outs, rim-ins, bounce shots worth two cups). Your aim sways with your buzz: shaky when sober, dead steady at the **Ballmer Peak**, chaos when hammered. Sink three in a row and you're ON FIRE. Every cup you lose, you drink.
 - **Closest to the Pin.** Bet the golfers on any tee. Three-press swing, real ball flight with wind and sidespin, and it bounces and rolls differently on green, fringe, rough, sand and water. A hole-in-one pays $500 extra.
 - **Aqua Jazz with Chad** (10AM daily at the pool): a 71-year-old former Chippendale leads water aerobics. Join in for a rhythm game over the live class to earn STR, and the ladies notice.
 - **GRANDR** on your phone. It's a senior dating app:
@@ -90,7 +93,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
   - face Captain Dom Moretti: a blackjack duel where the loser goes overboard, a boss brawl, or a bluff
   - crack his safe, then decide the fate of $48,211 in stolen pensions: return them, split them, or keep them all
 - Free-roam goals follow.
-- 40+ achievements, graphics quality presets (Low/Medium/High), auto-save when you sleep, and three procedural radio stations plus a text-to-speech talk-radio station.
+- 55+ achievements, graphics quality presets (Low/Medium/High), auto-save when you sleep, and three procedural radio stations plus a text-to-speech talk-radio station.
 
 **Characters.** Every resident is a skinned mesh on an 18-bone skeleton (knees, elbows, ankles, blinking eyes, head tracking), with a sculpted lathe torso, pot bellies, set-and-curl bobs, horseshoe fringes, pearls, readers, and socks with sandals. Near and far LODs share one skeleton.
 
