@@ -85,6 +85,10 @@ export class UI {
       this.el['hud-obj'].classList.remove('hidden');
       this.el['obj-text'].textContent = h.title;
       this.el['obj-dist'].textContent = h.sub;
+    } else if (g.waypoint) {
+      this.el['hud-obj'].classList.remove('hidden');
+      this.el['obj-text'].textContent = `📍 ${g.waypoint.label}`;
+      this.el['obj-dist'].textContent = `${Math.round(Math.hypot(g.waypoint.x - p.x, g.waypoint.z - p.z))} m`;
     } else if (obj) {
       this.el['hud-obj'].classList.remove('hidden');
       this.el['obj-text'].textContent = obj.title;

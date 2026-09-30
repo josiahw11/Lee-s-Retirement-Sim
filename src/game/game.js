@@ -18,6 +18,7 @@ import { Wildlife } from './wildlife.js';
 import { Karaoke } from './karaoke.js';
 import { GarageSales, sellerNode } from './garagesale.js';
 import { SeniorGames, commishNode } from './seniorgames.js';
+import { activitiesTab, bindActivities } from './activities.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
@@ -2377,7 +2378,9 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     const p = this.player;
     const tags = [];
     const q = this.quests.current();
-    const tgt = this.race && this.race.running ? this.race.target() : q && q.target ? q.target(this) : null;
+    // a waypoint from the phone's TO DO tab wins until you get there
+    if (this.waypoint && Math.hypot(this.waypoint.x - p.x, this.waypoint.z - p.z) < 6) { this.ui.toast(`📍 Arrived: ${this.waypoint.label}`, 'quest', 2.5); this.waypoint = null; }
+    const tgt = this.race && this.race.running ? this.race.target() : this.waypoint ? this.waypoint : q && q.target ? q.target(this) : null;
     this.markerPos = tgt ? { x: tgt.x, y: tgt.y ?? heightAt(tgt.x, tgt.z), z: tgt.z } : null;
     for (const n of this.npcs) {
       if (!n.visible) continue;
@@ -2450,7 +2453,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
   // ================================================================ menu (TAB)
   renderMenu(tab) {
     const s = this.state;
-    const tabs = [['status', 'STATUS'], ['bag', 'BAG'], ['romance', 'ROMANCE'], ['grandr', 'GRANDR 💘'], ['empire', 'EMPIRE'], ['hoa', 'HOA'], ['help', 'HELP']];
+    const tabs = [['status', 'STATUS'], ['activities', 'TO DO 📍'], ['bag', 'BAG'], ['romance', 'ROMANCE'], ['grandr', 'GRANDR 💘'], ['empire', 'EMPIRE'], ['hoa', 'HOA'], ['help', 'HELP']];
     const tabEl = document.getElementById('menu-tabs');
     tabEl.innerHTML = tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('');
     tabEl.querySelectorAll('button').forEach((b) => (b.onclick = () => this.renderMenu(b.dataset.tab)));
@@ -2525,8 +2528,10 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       </div>`;
     }
     if (tab === 'grandr') h = this.grandr.renderTab();
+    if (tab === 'activities') h = activitiesTab(this);
     body.innerHTML = h;
     if (tab === 'grandr') this.grandr.bindTab(() => this.renderMenu('grandr'));
+    if (tab === 'activities') bindActivities(this, () => this.renderMenu('activities'));
     const ub = document.getElementById('use-blue');
     if (ub) ub.onclick = () => { s.inv.pills--; s.buffs.blue = 150; this.ui.toast('💊 You took a Blue Boy. Flirting bonus active. Walking is... different.', 'love', 4); this.renderMenu('bag'); };
     const ur = document.getElementById('use-rhino');

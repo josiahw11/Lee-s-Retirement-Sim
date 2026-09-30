@@ -446,3 +446,19 @@ body.touch #hint { bottom: 84px; }
 .kk-line span.miss { color: #ff6b6b; text-decoration: line-through; }
 .kk-ball { position: absolute; top: -8px; left: 0; margin-left: -6px; color: #ff4fa3; font-style: normal; font-size: 14px; text-shadow: 0 0 6px #ff4fa3; pointer-events: none; }
 .kk-next { color: #8fa3c7; font-size: 13px; font-weight: 800; margin-top: 6px; min-height: 18px; }
+
+/* ---------- phone: TO DO (activities) ---------- */
+.acts { display: flex; flex-direction: column; gap: 6px; }
+.act { display: flex; gap: 10px; align-items: center; background: #fff; border: 2px solid rgba(29,43,83,.2); border-radius: 12px; padding: 6px 10px; }
+.act.open { border-color: #2e9a5a; box-shadow: inset 4px 0 0 #2e9a5a; }
+.act-ic { font-size: 26px; width: 36px; text-align: center; }
+.act-body { flex: 1; min-width: 0; text-align: left; }
+.act-name { font-weight: 900; }
+.act-when { font-weight: 800; font-size: 11px; opacity: .6; margin-left: 6px; }
+.act-desc { font-size: 12px; opacity: .8; }
+.act-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.act-st { font-size: 10px; font-weight: 900; letter-spacing: 1px; opacity: .5; }
+.act.open .act-st { color: #2e9a5a; opacity: 1; }
+.act-go { padding: 4px 10px; font-size: 12px; }
+.act-wp { background: #fff5d6; border-radius: 10px; padding: 6px 10px; margin-bottom: 8px; font-weight: 800; }
+.act-wp .btn { padding: 2px 8px; font-size: 11px; margin-left: 6px; }
