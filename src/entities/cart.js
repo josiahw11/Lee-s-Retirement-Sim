@@ -2,6 +2,10 @@
 import * as THREE from 'three';
 import { mergeParts, mat4 } from '../gfx/batch.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { M } from '../gfx/materials.js';
+import { GEO } from '../world/world.js';
+import { heightAt, waterLevel, rampHeight } from '../world/terrain.js';
+import { clamp, damp, lerp, wrapAngle } from '../core/utils.js';
 
 // Shared cart primitives (rounded fiberglass panels, fender arcs, tires)
 const RB = new Map();
@@ -27,10 +31,6 @@ function tireGeo(r, w) {
 }
 const TIRE_MAT = new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.92 });
 const HUB_MAT = new THREE.MeshStandardMaterial({ color: 0xa8adb2, roughness: 0.35, metalness: 0.6 });
-import { M } from '../gfx/materials.js';
-import { GEO } from '../world/world.js';
-import { heightAt, waterLevel, rampHeight } from '../world/terrain.js';
-import { clamp, damp, lerp, wrapAngle } from '../core/utils.js';
 
 const G = 16; // arcade gravity - carts get real air but still land hard
 
@@ -38,6 +38,7 @@ export const CART_COLORS = ['#ffffff', '#f2f0e6', '#1f8a8a', '#e84a5f', '#f2c94c
 
 export class Cart {
   constructor(opts = {}) {
+    this.id = Cart.nextId = (Cart.nextId || 0) + 1;
     this.opts = opts;
     this.kind = opts.kind || 'resident'; // player | resident | security | concession | rival | club
     this.color = opts.color || CART_COLORS[Math.floor(Math.random() * CART_COLORS.length)];
@@ -322,6 +323,10 @@ export class Cart {
       vf *= Math.exp(-3 * dt);
       vl *= Math.exp(-3 * dt);
     }
+    // how hard the tires are scrubbing (skid marks + squeal): sideways slip, handbrake, hard braking
+    this.skid = this.grounded && !this.sunk
+      ? clamp((Math.abs(vl) - 1.1) / 3, 0, 1) + (input.handbrake && Math.abs(vf) > 3 ? 0.6 : 0) + ((input.throttle || 0) < -0.1 && vf > 4.5 ? 0.5 : 0)
+      : 0;
 
     const nfx = Math.sin(this.heading), nfz = Math.cos(this.heading);
     this.vx = nfx * vf + nfz * vl;

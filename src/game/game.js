@@ -13,6 +13,7 @@ import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
 import { Life } from './life.js';
 import { Litter } from './litter.js';
+import { SkidMarks } from '../gfx/skids.js';
 import { BEACH, OCEAN, onSand } from '../world/beach.js';
 import { updateTooth, deuceConfront, spawnTooth, spawnDeuce } from './chapter2.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
@@ -412,6 +413,8 @@ export class Game {
     this.life = new Life(this);
     if (this.litter) this.litter.clear();
     this.litter = new Litter(this);
+    if (this.skids) this.skids.clear();
+    else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
     if (isNew) {
       this.ui.toast(`Welcome to Sunset Palms, ${state.name}.`, 'quest', 6);
@@ -1827,6 +1830,20 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     audio.play('levelup');
   }
 
+  // Rear tires lay rubber (or dirt / sand ruts) while the cart scrubs; the player's cart squeals.
+  tireMarks(c, dt, player) {
+    const k = c.skid || 0;
+    if (player) audio.setSkid(k > 0.25 && c.speed > 3 && this.onRoad(c.x, c.z) ? Math.min(1, k) : 0);
+    if (k < 0.25 || c.speed < 2.5) return;
+    const h = c.heading, cs = Math.cos(h), sn = Math.sin(h);
+    for (const lx of [0.55, -0.55]) {
+      const x = c.x + lx * cs - 0.85 * sn, z = c.z - lx * sn - 0.85 * cs;
+      if (waterAt(x, z)) continue;
+      const surface = onSand(x, z) ? 'sand' : this.onRoad(x, z) ? 'road' : 'grass';
+      this.skids.mark(`${c.id}:${lx}`, x, heightAt(x, z), z, k, surface);
+    }
+  }
+
   onRoad(x, z) {
     for (const e of EDGES) {
       if (Math.abs(x - (e.a.x + e.b.x) / 2) > Math.abs(e.a.x - e.b.x) / 2 + 8) continue;
@@ -1967,6 +1984,12 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (this.worldEvents) this.worldEvents.update(dt);
       if (this.life) this.life.update(dt);
       if (this.litter) this.litter.update(dt);
+      if (this.skids) {
+        this.skids.update(dt);
+        // AI carts leave rubber too (race rivals, fleeing drivers)
+        const cam = this.camera.position;
+        for (const c of this.carts) if (c !== this.player.cart && c.skid > 0.3 && Math.abs(c.x - cam.x) + Math.abs(c.z - cam.z) < 120) this.tireMarks(c, dt, false);
+      }
       if (this.timers && this.timers.length) {
         for (const tm of this.timers) tm.t -= dt;
         const due = this.timers.filter((tm) => tm.t <= 0);
@@ -2109,6 +2132,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       }
       // dust + nitrous flames
       const spd = pc.speed;
+      this.tireMarks(pc, dt, true);
       if (spd > 6 && !this.onRoad(pc.x, pc.z) && Math.random() < dt * 20) this.particles.emit('dust', pc.x - Math.sin(pc.heading) * 1.2, pc.y + 0.2, pc.z - Math.cos(pc.heading) * 1.2, { vy: 0.6, life: 0.9, size: 0.5, grow: 0.8, drag: 1 });
       if (pc.upgrades.turbo && (this.input.key('ShiftLeft') || this.input.key('ShiftRight')) && spd > 2) {
         for (let i = 0; i < 2; i++) this.particles.emit('spark', pc.x - Math.sin(pc.heading) * 1.4, pc.y + 0.45, pc.z - Math.cos(pc.heading) * 1.4, { vx: -Math.sin(pc.heading) * 4 + rand(-0.5, 0.5), vy: rand(0, 1), vz: -Math.cos(pc.heading) * 4 + rand(-0.5, 0.5), life: 0.3, size: 0.5, grow: -1 });
@@ -2328,6 +2352,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     const p = this.player;
     const c = p.cart;
     audio.setEngine(!!c && !this.ui.modal, c ? clamp(c.speed / 16, 0, 1) : 0, c ? this.input.axis(['KeyS'], ['KeyW']) : 0);
+    if (!c || this.ui.modal) audio.setSkid(0);
     const partyNear = this.party && Math.hypot(p.x - this.party.center.x, p.z - this.party.center.z) < 45;
     audio.setRadio(((!!c && audio.station !== 0) || partyNear) && !this.ui.modal);
     if (c) c.bass = c.upgrades.speakers && audio.station !== 0;

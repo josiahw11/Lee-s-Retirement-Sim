@@ -557,6 +557,31 @@ export class AudioSys {
     this.rainGain.gain.setTargetAtTime(level * 0.16, this.ctx.currentTime, 0.4);
   }
 
+  // tire squeal: band-passed noise with a little wobble, gain follows how hard the tires scrub
+  setSkid(level) {
+    if (!this.ready) return;
+    if (!this.skidGain) {
+      const s = this.ctx.createBufferSource();
+      s.buffer = this.noise;
+      s.loop = true;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = 1500;
+      f.Q.value = 7;
+      const lfo = this.ctx.createOscillator();
+      lfo.frequency.value = 9;
+      const lg = this.ctx.createGain();
+      lg.gain.value = 180;
+      lfo.connect(lg).connect(f.frequency);
+      lfo.start();
+      this.skidGain = this.ctx.createGain();
+      this.skidGain.gain.value = 0;
+      s.connect(f).connect(this.skidGain).connect(this.sfx);
+      s.start();
+    }
+    this.skidGain.gain.setTargetAtTime(level * 0.22, this.ctx.currentTime, level > 0 ? 0.04 : 0.12);
+  }
+
   setSurf(level) {
     if (!this.ready) return;
     if (!this.surfGain) {

@@ -198,7 +198,7 @@ async function boot() {
   const closeMenu = () => { $('menu').classList.add('hidden'); ui.modal = null; input.requestLock(); };
   const openMap = () => { ui.modal = 'map'; minimap.drawBig(game); $('bigmap').classList.remove('hidden'); input.releaseLock(); };
   const closeMap = () => { $('bigmap').classList.add('hidden'); ui.modal = null; input.requestLock(); };
-  const pause = () => { paused = true; ui.modal = 'pause'; $('pause').classList.remove('hidden'); input.releaseLock(); audio.setRadio(false); audio.setEngine(false, 0, 0); };
+  const pause = () => { paused = true; ui.modal = 'pause'; $('pause').classList.remove('hidden'); input.releaseLock(); audio.setRadio(false); audio.setEngine(false, 0, 0); audio.setSkid(0); };
   const resume = () => { paused = false; $('pause').classList.add('hidden'); ui.modal = null; input.requestLock(); };
   $('btn-resume').onclick = resume;
   $('btn-save').onclick = () => { game.save(); };
@@ -239,6 +239,7 @@ async function boot() {
       photo.yaw = Math.atan2(d.x, d.z);
       photo.pitch = Math.asin(Math.max(-1, Math.min(1, d.y)));
       audio.setEngine(false, 0, 0);
+      audio.setSkid(0);
     }
   };
   const updatePhoto = (dt) => {
