@@ -957,6 +957,7 @@ export class Game {
     p.hp = Math.min(this.maxHp(), p.hp + 4);
     s.counters.beers++;
     s.counters.beersToday++;
+    this.camRig.addShake(0.25); // *crunch*
     this.achievement('firstBeer');
     if (s.counters.beersToday >= 6) this.achievement('sixpack');
     p.char.setHeld(s.weapon === 'fists' ? null : s.weapon);
@@ -2042,6 +2043,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       x: p.x, y: p.y, z: p.z, heading: p.heading, inCart: !!c, speed: c ? c.speed : p.speed,
       boost: c && c.upgrades.turbo && (input.key('ShiftLeft') || input.key('ShiftRight')),
       reversing: c && c.forwardSpeed < -1,
+      drinking: this.drinkT > 0,
     });
     this.updateVisibility();
     this.updateTagsAndMarker();

@@ -40,7 +40,9 @@ export class CameraRig {
       this.yaw = dampAngle(this.yaw, behind, 2.5, dt);
       this.pitch = damp(this.pitch, 0.26, 1.5, dt);
     }
-    let dist = this.dist * (f.inCart ? 1.25 : 1);
+    // chug cam: ease in and tilt up with Lee while he drains the can
+    this.chug = damp(this.chug || 0, f.drinking ? 1 : 0, f.drinking ? 3.5 : 5, dt);
+    let dist = this.dist * (f.inCart ? 1.25 : 1) * (1 - this.chug * 0.28);
     this.target.x = damp(this.target.x, f.x, 14, dt);
     this.target.y = damp(this.target.y, f.y + (f.inCart ? 1.6 : 1.5), 10, dt);
     this.target.z = damp(this.target.z, f.z, 14, dt);
@@ -91,9 +93,9 @@ export class CameraRig {
       this.cam.lookAt(c.look);
     } else {
       this.cam.position.set(px, py, pz);
-      this.cam.lookAt(this.target.x, this.target.y + 0.2, this.target.z);
+      this.cam.lookAt(this.target.x, this.target.y + 0.2 + this.chug * 0.55, this.target.z);
     }
-    const wantFov = this.baseFov + clamp((f.speed - 6) * 1.1, 0, 16) + (f.boost ? 8 : 0);
+    const wantFov = this.baseFov + clamp((f.speed - 6) * 1.1, 0, 16) + (f.boost ? 8 : 0) - (this.chug || 0) * 6;
     this.fov = damp(this.fov, wantFov, 3, dt);
     if (Math.abs(this.cam.fov - this.fov) > 0.05) {
       this.cam.fov = this.fov;
