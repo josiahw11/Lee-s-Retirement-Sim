@@ -1,0 +1,19 @@
+{
+  "name": "sunset-palms",
+  "version": "0.1.0",
+  "description": "Sunset Palms - a 55+ community retirement sim where you are the worst resident.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "vite": "^8.3.1",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}

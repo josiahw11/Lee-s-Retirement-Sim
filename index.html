@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sunset Palms — Retirement Is a Crime</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Monoton&family=Nunito:wght@600;800;900&family=Pacifico&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="loading">
+    <div class="load-logo">Sunset Palms</div>
+    <div class="load-bar"><div id="load-fill"></div></div>
+    <div id="load-msg">Applying sunscreen...</div>
+  </div>
+
+  <div id="title" class="hidden">
+    <div class="title-wrap">
+      <div class="logo">Sunset Palms</div>
+      <div class="logo-sub">RETIREMENT IS A CRIME</div>
+      <div class="tagline">A 55+ Active Adult Community. Zero Standards.</div>
+      <div class="title-menu">
+        <label class="name-row">Your name, old timer:
+          <input id="name-input" maxlength="16" value="Lee" spellcheck="false" />
+        </label>
+        <button id="btn-new" class="btn big">NEW GAME</button>
+        <button id="btn-continue" class="btn big alt hidden">CONTINUE</button>
+        <button id="btn-controls" class="btn">CONTROLS</button>
+      </div>
+      <div class="title-foot">Built with three.js • Mature humor • No actual seniors were harmed</div>
+    </div>
+  </div>
+
+  <div id="intro" class="hidden">
+    <div class="intro-card">
+      <div class="intro-kicker">BOCA RATON, FLORIDA — THREE WEEKS AGO</div>
+      <div id="intro-text"></div>
+      <button id="btn-intro" class="btn big">MOVE IN ▸</button>
+    </div>
+  </div>
+
+  <div id="hud" class="hidden">
+    <div id="hud-tl" class="panel dark">
+      <div id="hud-money">$0</div>
+      <div id="hud-time">FRI 8:00 AM</div>
+      <div id="hud-loc">Sunset Palms</div>
+    </div>
+    <div id="hud-meters" class="panel dark">
+      <div class="meter"><span>❤️</span><div class="bar"><i id="m-hp"></i></div></div>
+      <div class="meter"><span>🍺</span><div class="bar buzz"><i id="m-buzz"></i></div><em id="m-buzz-l"></em></div>
+      <div class="meter"><span>💧</span><div class="bar bladder"><i id="m-bladder"></i></div></div>
+      <div class="meter"><span>🦵</span><div class="bar stam"><i id="m-stam"></i></div></div>
+      <div id="hud-buffs"></div>
+    </div>
+    <div id="hud-tr">
+      <div id="hud-heat" class="panel dark"><div class="heat-label">HOA HEAT</div><div id="heat-icons"></div></div>
+      <div id="hud-stats" class="panel dark"></div>
+    </div>
+    <div id="hud-obj" class="panel"><div class="obj-kicker">OBJECTIVE</div><div id="obj-text"></div><div id="obj-dist"></div></div>
+    <div id="radio" class="hidden"></div>
+    <canvas id="minimap" width="200" height="200"></canvas>
+    <div id="hud-br" class="panel dark">
+      <div id="hud-weapon"></div>
+      <div id="hud-inv"></div>
+    </div>
+    <div id="speedo" class="hidden"><b id="speed-n">0</b><span>MPH</span></div>
+    <div id="prompt" class="hidden"></div>
+    <div id="toasts"></div>
+    <div id="splash" class="hidden"></div>
+    <div id="hint" class="hidden"></div>
+  </div>
+
+  <div id="world-ui"></div>
+
+  <div id="dialogue" class="hidden">
+    <div class="dlg-box">
+      <div class="dlg-head"><span id="dlg-name"></span><span id="dlg-title"></span></div>
+      <div id="dlg-text"></div>
+      <div id="dlg-choices"></div>
+    </div>
+  </div>
+
+  <div id="shop" class="hidden">
+    <div class="shop-box">
+      <div class="shop-head"><span id="shop-title"></span><span id="shop-money"></span></div>
+      <div id="shop-greet"></div>
+      <div id="shop-items"></div>
+      <button class="btn" id="shop-close">LEAVE [ESC]</button>
+    </div>
+  </div>
+
+  <div id="menu" class="hidden">
+    <div class="menu-box">
+      <div class="menu-tabs" id="menu-tabs"></div>
+      <div id="menu-body"></div>
+      <div class="menu-foot">[TAB] close • [M] map</div>
+    </div>
+  </div>
+
+  <div id="bigmap" class="hidden">
+    <div class="bigmap-box">
+      <canvas id="bigmap-canvas" width="900" height="900"></canvas>
+      <div class="bigmap-legend" id="bigmap-legend"></div>
+    </div>
+  </div>
+
+  <div id="pause" class="hidden">
+    <div class="pause-box">
+      <div class="logo small">Sunset Palms</div>
+      <div class="pause-title">PAUSED — taking a nap</div>
+      <button class="btn big" id="btn-resume">RESUME</button>
+      <button class="btn" id="btn-save">SAVE GAME</button>
+      <div class="settings">
+        <label>Master volume <input type="range" id="set-master" min="0" max="1" step="0.05" /></label>
+        <label>Radio volume <input type="range" id="set-music" min="0" max="1" step="0.05" /></label>
+        <label>Mouse sensitivity <input type="range" id="set-sens" min="0.3" max="2.5" step="0.1" /></label>
+        <label class="chk"><input type="checkbox" id="set-speech" /> Talk radio voice (text-to-speech)</label>
+        <label class="chk"><input type="checkbox" id="set-bloom" /> Bloom / glow effects</label>
+        <label class="chk"><input type="checkbox" id="set-shadows" /> Shadows</label>
+      </div>
+      <div class="controls-grid" id="controls-grid"></div>
+      <button class="btn alt" id="btn-quit">QUIT TO TITLE</button>
+    </div>
+  </div>
+
+  <div id="controls-modal" class="hidden">
+    <div class="pause-box">
+      <div class="pause-title">HOW TO BE A TERRIBLE RESIDENT</div>
+      <div class="controls-grid" id="controls-grid2"></div>
+      <button class="btn big" id="btn-controls-close">GOT IT</button>
+    </div>
+  </div>
+
+  <div id="click-to-play" class="hidden">Click to take control 🖱️</div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
