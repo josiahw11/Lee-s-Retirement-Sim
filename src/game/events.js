@@ -48,10 +48,19 @@ export function gazette(g) {
   else if (qf.vaultChoice === 'keep') once('gazVault', `$48,211 PENSION HEIST ROCKS BOCA WATERFRONT`, `Police baffled. Residents furious. A local man was seen buying a gold-plated recliner "in cash, from a duffel bag."`);
   else if (qf.vaultChoice === 'split') once('gazVault', `HALF OF STOLEN PENSIONS "JUST SHOW UP" IN MAILBOXES`, `Residents grateful, confused, and doing math. "Where's the other half?" asks everyone.`);
   if (qf.c3Jackpot) once('gazJackpot', `GOLDEN GAM-GAM PAYS OUT FOR FIRST TIME SINCE 1979`, `Machine #3 played "Wind Beneath My Wings." Three nearby grandmothers fainted. Mechanic "Fingers" Fanucci: "Beats me."`);
-  const hur = g.state.hurricane;
+  const hur = g.state.hurricane && g.state.hurricane.day >= 0 ? g.state.hurricane : null; // day -1 = no storm yet
   if (hur && hur.day === g.state.day) once(`gazHur${hur.day}`, 'HURRICANE MILDRED BEARS DOWN ON SUNSET PALMS', 'Residents urged to secure flamingos, boxed wine, and grandchildren, in that order. Clubhouse hurricane party "definitely happening."');
   else if (hur && hur.day === g.state.day - 1) once(`gazHurAfter${hur.day}`, 'MILDRED LEAVES HUNDREDS OF FLAMINGOS HOMELESS', 'HOA offers $25 bounty per bird. Karen: "Half of those were mine and I want them back BEFORE the Hendersons."');
   if (d('overboard') >= 1) add(`MAN THROWN OFF CASINO BOAT, WASHES UP ON BOCA BEACH`, `"The Captain cheats," the man told a seagull. The seagull took his shoe.`);
+  // the new sports pages
+  if (d('derbyWins') >= 1) add(`${name} WINS BUMPER BRAWL, ${d('derbyKills') || 'SEVERAL'} CARTS "NO LONGER CARTS"`, `Derby Dan: "Never seen a man T-bone like that. And I was in Korea."`);
+  else if (d('derbyKills') >= 2) add(`CART CARNAGE AT THE BUMPER BRAWL: ${d('derbyKills')} WRECKED`, 'Crowd describes the action as "better than cable." Hay bales "traumatized."');
+  if (d('stuntsDone') >= 1) add(`GOLF CART SEEN "FLYING" OVER ${pick(['THE DUCK POND', 'PALM BLVD', 'A ROW OF PORTA-POTTIES', 'THE LIQUOR BARREL DUMPSTERS', 'LAKE SERENITY'])}`, 'HOA drafting a ban on "unauthorized aviation." The ducks have filed a complaint.');
+  if (d('fares') >= 3) add(`SENIOR SHUTTLE REVIEWS: "TERRIFYING. FIVE STARS."`, `Mabel Crenshaw: "He got me to the early bird in forty seconds. I'll never be the same. I've booked him for Thursday."`);
+  if (d('pongWins') >= 1) add(`LOCAL SENIOR DESTROYS FRAT-BOY GRANDSON AT BEER PONG`, `Tyler, 20, "needs a minute." The Tiki Hut has retired the ball.`);
+  if (d('pickleWins') >= 1) add(`PICKLEBALL UPSET ROCKS COMMUNITY COURTS`, 'A paddle was later recovered from the retention pond. Its owner declined to comment, loudly.');
+  if (d('gamesWon') >= 1) add(`${name} TAKES GOLD AT THE SENIOR GAMES`, 'The anthem was played. Off-key. Someone cried. It was the winner.');
+  if (d('karaoke') >= 1) add(`TIKI HUT KARAOKE: ${name} "MURDERED IT"`, 'Reviews split on whether that was a compliment.');
   if (g.state.hoa.president && !g.state.flags.gazPres) { g.state.flags.gazPres = true; add(`${name} ELECTED HOA PRESIDENT IN SHOCK UPSET`, 'Karen demands recount, is escorted from clubhouse clutching a clipboard.'); }
   while (stories.length < 3) {
     const f = pick(FILLER);

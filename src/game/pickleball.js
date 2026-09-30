@@ -319,6 +319,7 @@ export class Pickleball {
       g.xp('str', 2);
       g.xp('stat', 1);
       g.achievement('pickle');
+      g.state.counters.pickleWins = (g.state.counters.pickleWins || 0) + 1;
       audio.play('levelup');
       this.msg = `YOU WIN ${this.score.me}–${this.score.them}! ${this.oppFirst} throws ${this.her} paddle into the retention pond. +${money(this.bet * 2)}`;
     } else {

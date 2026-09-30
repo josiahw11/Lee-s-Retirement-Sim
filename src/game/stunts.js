@@ -171,6 +171,7 @@ export class Stunts {
     const first = !this.done.includes(s.id);
     if (first) {
       this.done.push(s.id);
+      g.state.counters.stuntsDone = (g.state.counters.stuntsDone || 0) + 1;
       g.addMoney(s.pay, 'Unique stunt jump');
       g.xp('stat', 2);
       g.achievement('stuntman');

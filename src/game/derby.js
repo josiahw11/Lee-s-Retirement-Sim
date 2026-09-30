@@ -293,7 +293,7 @@ export class Derby {
     let pay = bonus + purse;
     if (how === 'bail') pay = 0;
     if (pay) g.addMoney(pay, 'Bumper Brawl');
-    if (place === 1 && !mutual && how !== 'bail') { g.achievement('derby'); g.xp('stat', 2); g.xp('str', 1); }
+    if (place === 1 && !mutual && how !== 'bail') { g.achievement('derby'); g.xp('stat', 2); g.xp('str', 1); g.state.counters.derbyWins = (g.state.counters.derbyWins || 0) + 1; }
     const title = how === 'bail' ? 'YOU BAILED' : mutual ? 'MUTUAL DESTRUCTION!' : place === 1 ? 'LAST CART STANDING!' : `WRECKED • ${place}${['st', 'nd', 'rd'][place - 1] || 'th'} PLACE`;
     g.ui.splash(title, how === 'bail' ? 'The crowd throws Ensure bottles at you.' : `+${money(pay)} (${money(bonus)} for damage dealt${purse ? `, ${money(purse)} ${mutual ? 'split ' : ''}purse` : ''})`, 3.4, place === 1 ? '#ffd23f' : '#ff6b1a');
     audio.play(place === 1 ? 'levelup' : 'sadTrombone');

@@ -420,6 +420,7 @@ export class BeerPong {
       g.xp('cha', 1);
       g.xp('stat', 1);
       g.achievement('pong');
+      g.state.counters.pongWins = (g.state.counters.pongWins || 0) + 1;
       audio.play('levelup');
       this.msg = `YOU WIN! ${this.oppFirst} has to drink the last cup AND the rack water. +${money(this.bet * 2)}`;
       g.celebrate?.(6, TABLE.x, TABLE.z);
