@@ -38,6 +38,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 - A commercial strip: Liquor Barrel, Golden Coral buffet, HOA Office
 - The shady maintenance lot: Sal's Cart Customs, and Doc's van
 - 72 pastel stucco houses with flamingos, gnomes, mailboxes and parked carts
+- **Boca Beach Club** (second map, through the front gate): sand, ocean, a drivable pier you can launch off, the Rusty Pelican beach bar, a bait & tackle shack, a lifeguard tower, seagulls
 - A full day/night cycle (one day is 12 real minutes) with street lamps, neon and headlights
 
 **Core loops**
@@ -46,7 +47,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 - **Legal money.** Golf balls go from pockets (1 ball) to a bucket (20) to a cart vacuum hopper (200) to autonomous drones. Gus buys them at $2 each. Golfers keep slicing new ones into the ponds.
 - **Illegal money.** Doc sells Blue Boys and Rhino Horn Tea wholesale. Sell them to residents marked 💊/🍵. Stat checks show their odds up front: upsell with CHA, strong-arm with INT.
 - **Beverage cart empire.** Take over Chip's 3 course carts by undercutting him ($) or intimidating the operator. Keep them stocked and they pay out every hour.
-- **Romance.** Six ladies across 3 tiers, each with likes, hates, pickup lines, dates and perks. Married ones come with jealous husbands: stare them down for loot, or brawl. The top tier is Tammy the Cart Girl.
+- **Romance.** Seven ladies across 3 tiers, each with likes, hates, pickup lines, dates and perks. Married ones come with jealous husbands: stare them down for loot, or brawl. The top tier is Tammy the Cart Girl.
 - **Brawling.** Fists, putter, sand wedge (with pocket sand), 7-iron, driver, and Frank's titanium driver. Knockback, launches, hit-stop, KO stars. Nobody dies; they nap. You can loot their wallets.
 - **HOA heat.** Witnesses (Security, Karen, snitchy neighbors) report you. Officer Dale chases you in his cart, bails out to pursue on foot, and busts you for a fine and confiscation. Deputy Earl joins at 3 heat.
 - **Gang.** Recruit 4 geezer enforcers: an ex-boxer, a man with two titanium hips, a Korean War vet, and a guy whose walker is a weapon. They follow you, fight for you, or guard turf.
@@ -56,6 +57,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 - **Mini-games.** Chug-Off at the Tiki Hut (or vs. Millie), interactive Bingo at the clubhouse (Karen calls it, it's rigged, and a false bingo is an HOA violation), and a Rhino Tea brewing thermostat.
 - **Lawn parties.** Throw one from your front door: neighbors dance under string lights, you earn Status and votes, and Karen shows up with a noise complaint.
 - **Wardrobe.** The clubhouse boutique sells 7 Hawaiian shirts, hats, shades and white tube socks. Change outfits at home; style adds Status.
+- **Metal detecting.** A second legal hustle on the beach: the signal meter and beeps speed up near buried loot (quarters, wedding rings, a real Rolex, dentures, a 1715 doubloon).
 - **Weather.** Florida afternoon thunderstorms bring rain, lightning, thunder, slick roads and residents panicking about their perms.
 - **Voices.** Every resident mumbles in Animal Crossing-style old-folks gibberish.
 - **Chapter 1 story** runs through 12 quest steps, then **Chapter 2: Rhino Rising** (7 steps): a tea shortage, a night-time antler heist, stealing a tooth from Mr. Chompers the gator, home brewing, and a boss fight with Chip's father "The Deuce". Free-roam goals follow.
