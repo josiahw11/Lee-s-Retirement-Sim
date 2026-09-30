@@ -48,7 +48,9 @@ export class CameraRig {
     this.target.z = damp(this.target.z, f.z, 14, dt);
     const cp = Math.cos(this.pitch);
     const dx = Math.sin(this.yaw) * cp, dz = Math.cos(this.yaw) * cp, dy = Math.sin(this.pitch);
-    // pull the camera in front of walls/buildings
+    // pull the camera in front of walls/buildings; backed right up against one, rise over his head
+    // instead (the 1.2 m minimum would otherwise park the camera inside the house)
+    let tight = false;
     if (this.col) {
       const steps = Math.ceil(dist / 0.4);
       const tx = this.target.x, ty = this.target.y, tz = this.target.z;
@@ -60,14 +62,15 @@ export class CameraRig {
           if (o.t === 'b' && o.h > y - 0.4 && x > o.x0 - 0.35 && x < o.x1 + 0.35 && z > o.z0 - 0.35 && z < o.z1 + 0.35) { hit = true; break; }
           if (o.t === 'c' && o.tag === 'tree' && y < 9 && Math.hypot(x - o.x, z - o.z) < o.r + 0.35) { hit = true; break; }
         }
-        if (hit) { dist = Math.max(1.2, d - 0.5); break; }
+        if (hit) { tight = d - 0.5 < 1.2; dist = tight ? 0.3 : d - 0.5; break; }
       }
     }
     this.curDist = this.curDist === undefined ? dist : dist < this.curDist ? dist : damp(this.curDist, dist, 3, dt);
     dist = this.curDist;
     let px = this.target.x + dx * dist;
     let pz = this.target.z + dz * dist;
-    let py = this.target.y + dy * dist;
+    this.lift = damp(this.lift || 0, tight ? 1.4 : 0, tight ? 10 : 3, dt);
+    let py = this.target.y + dy * dist + this.lift;
     // opening swoop: start high over the neighborhood and glide down to the player
     if (this.introT > 0) {
       this.introT -= dt;
