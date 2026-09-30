@@ -440,6 +440,11 @@ export class NPC {
       if (this.state === 'wander' && this.distTo(p.x, p.z) < 14 && chance(0.4) && !this.data.quiet) this.say(pick(this.female ? IDLE_BARKS_F : IDLE_BARKS_M), 3.5);
     }
 
+    // heads turn toward the player (or whoever they're chatting with)
+    const lookable = this.state === 'wander' || this.state === 'static' || this.state === 'idle' || this.state === 'party' || this.state === 'golf' || this.state === 'lounge';
+    if (this.state === 'chat' && this.data.chatWith) this.char.lookAt = this.data.chatWith;
+    else this.char.lookAt = lookable && this.distTo(p.x, p.z) < 9 ? p : null;
+
     this.sync();
     if (this.visible) this.char.update(dt);
   }

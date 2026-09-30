@@ -23,7 +23,13 @@ export class CameraRig {
   }
 
   update(dt, input, f) {
-    if (input.locked || input.pad) {
+    // keyboard camera: Z / C rotate, works with no mouse at all
+    const kr = (input.key('KeyC') ? 1 : 0) - (input.key('KeyZ') ? 1 : 0);
+    if (kr) {
+      this.yaw -= kr * dt * 2.4;
+      input.lastMouseMove = performance.now();
+    }
+    if (input.looking || input.pad) {
       this.yaw -= input.dx * 0.0024 * this.sensitivity;
       this.pitch = clamp(this.pitch + input.dy * 0.0019 * this.sensitivity * (this.invertY ? -1 : 1), -0.15, 1.25);
     }

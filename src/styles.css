@@ -254,3 +254,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; fon
 
 #photo-hint { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 9; background: rgba(0,0,0,.55); color: #fff; font-weight: 900; padding: 6px 14px; border-radius: 10px; font-size: 13px; pointer-events: none; }
 body.photo #hud > *:not(#photo-hint), body.photo #world-ui, body.photo #click-to-play { display: none !important; }
+
+/* controls reference: sections of key/description rows (no overlap at any width) */
+.controls-grid { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 8px 22px; }
+.ctl-sec h4 { margin: 4px 0 6px; font-family: var(--display); font-size: 13px; color: var(--coral); letter-spacing: .5px; }
+.ctl-row { display: flex; align-items: center; gap: 10px; margin: 4px 0; font-size: 13px; line-height: 1.2; }
+.ctl-row .kbd { flex: 0 0 auto; min-width: 86px; text-align: center; white-space: nowrap; margin: 0; font-size: 12px; padding: 2px 8px; }
+.ctl-row span:last-child { flex: 1; min-width: 0; }

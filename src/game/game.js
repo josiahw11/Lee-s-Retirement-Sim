@@ -2223,9 +2223,19 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
 
   updateVisibility() {
     const cam = this.camera.position;
+    // frustum test so off-screen people don't cost draw calls
+    this.camera.updateMatrixWorld();
+    this._pm ||= new THREE.Matrix4();
+    this._frustum ||= new THREE.Frustum();
+    this._sph ||= new THREE.Sphere(new THREE.Vector3(), 1.7);
+    this._pm.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
+    this._frustum.setFromProjectionMatrix(this._pm);
     for (const n of this.npcs) {
       const d = Math.hypot(n.x - cam.x, n.z - cam.z);
-      const vis = d < (this.drawDist || 170) || n.cart;
+      this._sph.center.set(n.x, n.y + 1, n.z);
+      const inView = d < 22 || this._frustum.intersectsSphere(this._sph);
+      const vis = (d < (this.drawDist || 170) || !!n.cart) && inView;
+      n.char.setNear(d < 40);
       if (vis !== n.visible) {
         n.visible = vis;
         n.char.root.visible = vis;

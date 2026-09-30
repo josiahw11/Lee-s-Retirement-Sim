@@ -23,16 +23,30 @@ export class Input {
     window.addEventListener('keyup', (e) => this.down.delete(e.code));
     window.addEventListener('blur', () => this.down.clear());
 
+    // Mouse look works two ways: pointer lock (click the game) where the browser allows it,
+    // and right-button (or middle) drag everywhere else. A quick right-click still counts as a click.
+    this.drag = { down: false, moved: 0, t: 0 };
+    this.lockFailed = false;
     canvas.addEventListener('mousedown', (e) => {
       this.mouseDown[e.button] = true;
-      this.mousePressed[e.button] = true;
+      if (e.button === 2 || e.button === 1) {
+        this.drag = { down: true, moved: 0, t: performance.now(), button: e.button };
+      } else this.mousePressed[e.button] = true;
     });
-    window.addEventListener('mouseup', (e) => (this.mouseDown[e.button] = false));
+    window.addEventListener('mouseup', (e) => {
+      this.mouseDown[e.button] = false;
+      if ((e.button === 2 || e.button === 1) && this.drag.down) {
+        const quick = this.drag.moved < 8 && performance.now() - this.drag.t < 350;
+        if (quick && e.button === 2) this.mousePressed[2] = true;
+        this.drag.down = false;
+      }
+    });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('mousemove', (e) => {
-      if (this.locked) {
+      if (this.locked || this.drag.down) {
         this.dx += e.movementX;
         this.dy += e.movementY;
+        if (this.drag.down) this.drag.moved += Math.abs(e.movementX) + Math.abs(e.movementY);
         if (Math.abs(e.movementX) + Math.abs(e.movementY) > 1) this.lastMouseMove = performance.now();
       }
     });
@@ -40,9 +54,19 @@ export class Input {
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === canvas;
     });
+    document.addEventListener('pointerlockerror', () => {
+      this.lockFailed = true;
+      if (this.onLockFailed) this.onLockFailed();
+    });
+  }
+
+  // true when mouse movement should steer the camera
+  get looking() {
+    return this.locked || this.drag.down;
   }
 
   requestLock() {
+    if (this.lockFailed) return;
     if (!this.locked && this.canvas.requestPointerLock) {
       try {
         const p = this.canvas.requestPointerLock();
