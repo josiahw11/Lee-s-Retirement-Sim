@@ -343,6 +343,9 @@ export class NPC {
         this.char.play('swing', 0.9);
         this.data.shotT = 0.45;
       }
+    } else if (st === 'party') {
+      // just vibing; dancing is triggered by the party
+      if (this.distTo(p.x, p.z) < 6) this.faceTo(p.x, p.z, dt, 2);
     } else if (st === 'idle') {
       this.wait -= dt;
       if (this.wait <= 0) this.resumeBase();

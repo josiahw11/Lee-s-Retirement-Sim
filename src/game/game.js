@@ -9,6 +9,7 @@ import { Quests } from './quests.js';
 import { Race, RACE_TIERS, TRACK } from './race.js';
 import { ChugOff, Bingo } from './minigames.js';
 import { Weather } from '../gfx/weather.js';
+import { Party } from './party.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
 import * as D from './dialogue.js';
 import { NODES, EDGES, HOLES, PONDS, ZONES, STREETS, HOUSES, PLAYER_HOUSE, BUILDINGS } from '../world/layout.js';
@@ -73,6 +74,7 @@ const ACH = {
   gator: ['Gator Bait', 'Got bitten by Mr. Chompers. The sign warned you.'],
   raceWin: ['Geriatric Grand Prix', 'Won a golf cart race.'],
   chug: ['Bottoms Up', 'Won a chug-off.'],
+  party: ['Animal House', 'Threw a lawn party at your place.'],
   bingo: ['Beat the System', "Won Karen's rigged bingo."],
   raceLegend: ['Senior Speed Demon', 'Won a $500 race against The Widow Maker.'],
 };
@@ -1535,6 +1537,12 @@ export class Game {
     }
   }
 
+  startParty() {
+    if (this.party) return;
+    this.spend(250);
+    this.party = new Party(this);
+  }
+
   startMinigame(kind, opts = {}) {
     const Cls = kind === 'bingo' ? Bingo : ChugOff;
     if (opts.bet) this.spend(opts.bet);
@@ -1746,6 +1754,10 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       this.updateDrones(dt);
       this.updateGator(dt);
       this.updateRace(dt);
+      if (this.party) {
+        this.party.update(dt, dt * TIME_SCALE);
+        if (!this.party.active) this.party = null;
+      }
       this.props.update(dt, p.x, p.z);
       this.balls.update(dt, this.scene);
       this.pickups.update(dt, p.x, p.z, (pk) => { this.addMoney(pk.amount, ''); });
@@ -2079,7 +2091,9 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     const p = this.player;
     const c = p.cart;
     audio.setEngine(!!c && !this.ui.modal, c ? clamp(c.speed / 16, 0, 1) : 0, c ? this.input.axis(['KeyS'], ['KeyW']) : 0);
-    audio.setRadio(!!c && audio.station !== 0 && !this.ui.modal);
+    const partyNear = this.party && Math.hypot(p.x - this.party.center.x, p.z - this.party.center.z) < 45;
+    if (partyNear && audio.station === 0) audio.setStation(1);
+    audio.setRadio(((!!c && audio.station !== 0) || partyNear) && !this.ui.modal);
     if (c) c.bass = c.upgrades.speakers && audio.station !== 0;
     audio.ambientTick(dt, this.sky.night > 0.6);
   }

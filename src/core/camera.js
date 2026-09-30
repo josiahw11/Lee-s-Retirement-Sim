@@ -48,6 +48,7 @@ export class CameraRig {
         let hit = false;
         for (const o of this.col.query(x, z, 0.4)) {
           if (o.t === 'b' && o.h > y - 0.4 && x > o.x0 - 0.35 && x < o.x1 + 0.35 && z > o.z0 - 0.35 && z < o.z1 + 0.35) { hit = true; break; }
+          if (o.t === 'c' && o.tag === 'tree' && y < 9 && Math.hypot(x - o.x, z - o.z) < o.r + 0.35) { hit = true; break; }
         }
         if (hit) { dist = Math.max(1.2, d - 0.5); break; }
       }

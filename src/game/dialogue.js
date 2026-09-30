@@ -555,6 +555,7 @@ function homeNode(g) {
     text: pick(['Your recliner has a butt-shaped dent that fits you like a glove. The TV is still on Matlock.', 'Home. It smells like Bengay and ambition.']),
     choices: [
       { text: late ? 'Sleep until morning (saves game)' : 'Sleep until morning (it\'s early, but you\'re old)', action: () => { g.sleep(); return null; } },
+      { text: 'Throw a lawn party (booze & snacks)', tag: g.party ? 'party in progress' : '$250', disabled: !!g.party || g.state.money < 250, action: () => { g.startParty(); return null; } },
       { text: 'Take a nap (2 hours, heal)', action: () => { g.fadeOut(() => { g.advanceTime(120); g.player.hp = g.maxHp(); g.state.buzz = Math.max(0, g.state.buzz - 40); }, 1.5, '💤', 'Power nap. You drooled on the remote.'); return null; } },
       { text: 'Save game', action: () => { g.save(); return end('Home', 'Game saved. Your legacy is secure. Unlike your bladder.'); } },
       { text: 'Leave', action: () => null },
