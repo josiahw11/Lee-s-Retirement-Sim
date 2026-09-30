@@ -2541,6 +2541,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       h += `<h3>Rap Sheet</h3><div class="grid2">
         <div class="card"><div class="t">🍺 ${c.beers} beers drunk</div><div class="sub">${c.beersToday} today • Max air ${c.maxAir.toFixed(1)}s • ⭐ ${(s.stunts?.done.length || 0)}/${STUNTS.length} stunt jumps</div></div>
         <div class="card"><div class="t">💊 ${c.pillsSold} Blue Boys / 🍵 ${c.teaSold} teas sold</div><div class="sub">Lifetime earnings ${money(c.earned)}</div></div>
+        <div class="card"><div class="t">🏆 Personal records</div><div class="sub">🍺 Keg stand ${(c.kegBest || 0).toFixed(1)}s • 🎣 Biggest fish ${(c.bigFish || 0).toFixed(1)} lb • 🚐 Best shift ${money(c.bestShift || 0)} (${c.fares || 0} fares) • 💥 Derby wins ${c.derbyWins || 0} • 🌀 Best spin ${(c.bestSpin || 0) * 360}° • 🏁 Races won ${c.racesWon || 0} • 🥤 Pong wins ${c.pongWins || 0}</div></div>
         <div class="card"><div class="t">🦩 ${c.flamingos} flamingos • 📬 ${c.mailboxes} mailboxes</div><div class="sub">🥊 ${c.knockouts} knockouts • 🚨 busted ${c.busted}×</div></div>
         <div class="card"><div class="t">🏆 ${s.achievements.length}/${Object.keys(ACH).length} achievements</div><div class="sub">${s.achievements.map((a) => ACH[a][0]).join(' • ') || 'None yet. Go be terrible.'}</div></div>
       </div>`;
