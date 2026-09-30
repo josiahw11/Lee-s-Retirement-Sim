@@ -666,6 +666,14 @@ export class Character {
         P.knL = P.knR = 0.25 + Math.abs(Math.sin(a.t * 8)) * 0.3;
         P.hipL = P.hipR = -0.15;
         P.hipsY -= Math.abs(Math.sin(a.t * 8)) * 0.05;
+      } else if (a.type === 'aqua') {
+        // water aerobics: reach, lean left/right, squat — with a bounce on the beat
+        const k = Math.sin(Math.min(1, p * 1.6) * Math.PI * 0.5);
+        const bob = Math.sin(p * Math.PI) * 0.06;
+        if (a.move === 'up') { P.shL = P.shR = -2.9 * k; P.elL = P.elR = -0.15; P.hipsY += bob; }
+        else if (a.move === 'left') { P.shLz = 1.9 * k; P.shRz = -2.4 * k; P.shL = P.shR = 0; P.elR = -0.5; P.spineZ = 0.28 * k; }
+        else if (a.move === 'right') { P.shRz = -1.9 * k; P.shLz = 2.4 * k; P.shL = P.shR = 0; P.elL = -0.5; P.spineZ = -0.28 * k; }
+        else { P.shL = P.shR = -1.45 * k; P.elL = P.elR = 0; P.hipL = P.hipR = -0.9 * k; P.knL = P.knR = 1.1 * k; P.hipsY -= 0.22 * k; P.spine = 0.3; }
       } else if (a.type === 'pee') {
         P.shL = P.shR = -0.35;
         P.elL = P.elR = -0.95;
@@ -708,6 +716,7 @@ export class Character {
     R(b.elL, 'x', P.elL, fk); R(b.elR, 'x', P.elR, fk);
     R(b.spine, 'x', P.spine);
     R(b.spine, 'y', P.spineY, fast ? 30 : k);
+    R(b.spine, 'z', P.spineZ);
     R(b.hips, 'y', P.hipsYaw);
     R(b.neck, 'x', P.neck);
     R(b.head, 'x', P.head);

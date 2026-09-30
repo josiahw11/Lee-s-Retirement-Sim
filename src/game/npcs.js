@@ -1,7 +1,7 @@
 // NPC entity + behavior. Behaviors are simple state machines tuned for slapstick.
 import { Character, randomLook, randomName } from '../entities/character.js';
 import { seatCharacter } from '../entities/cart.js';
-import { heightAt, waterLevel } from '../world/terrain.js';
+import { heightAt, waterLevel, POOL } from '../world/terrain.js';
 import { clamp, damp, dampAngle, rand, pick, chance, wrapAngle } from '../core/utils.js';
 import { audio } from '../core/audio.js';
 import { routineZone, ROUTINE_ZONES } from './life.js';
@@ -189,6 +189,16 @@ export class NPC {
   update(dt) {
     const g = this.game;
     const p = g.player;
+    if (this.data.aqua) {
+      // water aerobics: chest-deep in the pool, facing the instructor; the class drives the poses
+      this.char.mode = 'idle';
+      this.char.speed = 0;
+      this.y = POOL.y - 1.15;
+      this.char.root.position.set(this.x, this.y, this.z);
+      this.char.root.rotation.y = this.data.face || 0;
+      if (this.visible) this.char.update(dt);
+      return;
+    }
     if (this.cart) {
       this.updateDriving(dt);
       this.char.speed = 0;

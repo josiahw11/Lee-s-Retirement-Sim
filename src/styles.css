@@ -378,3 +378,16 @@ body.touch #hint { bottom: 84px; }
 .safe-time { font-weight: 900; }
 .chapter-jump { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; font-size: 12px; font-weight: 900; opacity: .85; }
 .chapter-jump .btn { padding: 5px 12px; font-size: 12px; }
+
+/* ---------- Aqua Jazz rhythm track ---------- */
+.aq-score { font-family: var(--display); font-size: 24px; color: var(--teal); }
+.aq-combo { font-family: var(--display); font-size: 16px; color: var(--coral); min-width: 110px; text-align: right; }
+.aq-track { position: relative; height: 150px; margin-top: 6px; background: linear-gradient(180deg, #bfeaf5, #7cc8de); border: 3px solid var(--navy); border-radius: 12px; overflow: hidden; }
+.aq-lane { height: 25%; border-bottom: 1px dashed rgba(29,43,83,.25); display: flex; align-items: center; }
+.aq-key { width: 40px; text-align: center; font-weight: 900; font-size: 20px; color: rgba(29,43,83,.45); }
+.aq-hit { position: absolute; top: 0; bottom: 0; left: 12%; width: 4px; margin-left: -2px; background: var(--coral); box-shadow: 0 0 10px var(--coral); }
+.aq-note { position: absolute; width: 30px; height: 30px; margin-left: -15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; color: #fff; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,.3); }
+.aq-note.m-up { background: #e84a5f; } .aq-note.m-left { background: #23408e; } .aq-note.m-right { background: #2e9a5a; } .aq-note.m-down { background: #d9a520; }
+.aq-note.perfect, .aq-note.good { transform: scale(1.6); opacity: 0; transition: transform .2s, opacity .2s; }
+.aq-note.miss { opacity: .25; filter: grayscale(1); }
+.aq-btns .btn { min-width: 64px; font-size: 20px; }

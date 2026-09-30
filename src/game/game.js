@@ -10,6 +10,7 @@ import { Race, RACE_TIERS, TRACK } from './race.js';
 import { ChugOff, Bingo, Brew } from './minigames.js';
 import { Shuffleboard } from './shuffleboard.js';
 import { Blackjack, Slots, SafeCrack } from './casino.js';
+import { AerobicsClass, AquaAerobics, talkChad } from './aerobics.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
@@ -100,6 +101,7 @@ const ACH = {
   safecracker: ['Cracked It', "Opened the Captain's safe with nothing but a hearing aid and patience."],
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
+  aquaking: ['Aqua King', 'Scored 90%+ in Aqua Jazz. Chad has never been so threatened.'],
 };
 
 export class Game {
@@ -424,6 +426,8 @@ export class Game {
     this.life = new Life(this);
     if (this.litter) this.litter.clear();
     this.litter = new Litter(this);
+    if (this.aerobicsClass) this.aerobicsClass.stop();
+    this.aerobicsClass = new AerobicsClass(this);
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -1224,6 +1228,7 @@ export class Game {
     else if (n.role === 'raceboss') node = this.talkRon(n);
     else if (n.role === 'racer') node = { name: n.name, title: 'Racer', text: `"Not now, I'm in the zone."`, choices: [] };
     else if (n.role === 'goon') node = { name: n.name, title: "Chip's Crew", text: pick(['"Chip says you\'re \'nouveau riche.\' I don\'t know what that means but I\'m offended."', '"Do you have a tee time? No? Then beat it."']), choices: [] };
+    else if (n.role === 'instructor') node = talkChad(this, n);
     else if (n.role === 'captain') node = talkCaptain(this, n);
     else if (n.role === 'mechanic') node = talkFingers(this, n);
     else if (n.role === 'deckhand') node = talkDeckhand(this, n);
@@ -1661,7 +1666,7 @@ export class Game {
   }
 
   startMinigame(kind, opts = {}) {
-    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack }[kind] || ChugOff;
+    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics }[kind] || ChugOff;
     if (opts.bet) this.spend(opts.bet);
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();
@@ -2013,6 +2018,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (this.worldEvents) this.worldEvents.update(dt);
       if (this.life) this.life.update(dt);
       if (this.litter) this.litter.update(dt);
+      if (this.aerobicsClass) this.aerobicsClass.update(dt);
       if (this.skids) {
         this.skids.update(dt);
         // AI carts leave rubber too (race rivals, fleeing drivers)
@@ -2058,8 +2064,9 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       this.checkAchievements();
     } else {
       if (modal === 'minigame' && this.minigame) this.minigame.update(dt, input);
-      // keep animating characters in dialogue so the world doesn't look frozen
-      for (const n of this.npcs) if (n.talking || n.visible) n.char.update(dt * 0.5);
+      // keep animating characters in dialogue so the world doesn't look frozen (full speed in Aqua Jazz)
+      const ak = this.minigame && this.minigame.aqua ? 1 : 0.5;
+      for (const n of this.npcs) if (n.talking || n.visible) n.char.update(dt * ak);
       p.char.update(dt);
     }
 
