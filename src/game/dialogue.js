@@ -2,6 +2,7 @@
 import { SHOPS, LADIES, PICKUP_LINES, LADY_REACTIONS, RECRUITS, CART_MODS, PAINTS, WEAPONS, DECREES, CONCESSION } from './data.js';
 import { pick, rand, randInt, chance, money, DAYS, fmtTime } from '../core/utils.js';
 import { audio } from '../core/audio.js';
+import { testBatchOn } from './chapter2.js';
 
 // ---------------------------------------------------------------- helpers
 const C = (g, stat, diff, label) => ({ label: label || stat.toUpperCase().replace('INTIM', 'INT').replace('STAT', 'STA'), chance: g.chance(stat, diff) });
@@ -400,6 +401,16 @@ export function talkOperator(g, npc) {
 // ---------------------------------------------------------------- gang
 export function talkRecruit(g, npc) {
   const def = npc.data.recruit;
+  if (def.id === 'walker' && g.state.quest.flags.homebrew && !g.state.quest.flags.testBatch) {
+    return {
+      name: def.name, title: 'Volunteer (unaware)',
+      text: `"What's in the thermos? Smells like a petting zoo."`,
+      choices: [
+        { text: '"Home-brewed Rhino Tea. On the house, Wally."', disabled: g.state.inv.tea <= 0, tag: `🍵 ${g.state.inv.tea}`, action: () => { testBatchOn(g, npc); return end(def.name, '*He drinks the whole thermos. His walker begins to smoke.* "OH. OH MY. WHERE ARE MY SNEAKERS?"'); } },
+        { text: 'Never mind', action: () => null },
+      ],
+    };
+  }
   if (npc.role === 'gang') {
     const guarding = npc.state === 'guard';
     return {
@@ -557,11 +568,32 @@ function homeNode(g) {
       { text: late ? 'Sleep until morning (saves game)' : 'Sleep until morning (it\'s early, but you\'re old)', action: () => { g.sleep(); return null; } },
       { text: 'Throw a lawn party (booze & snacks)', tag: g.party ? 'party in progress' : '$250', disabled: !!g.party || g.state.money < 250, action: () => { g.startParty(); return null; } },
       { text: 'Take a nap (2 hours, heal)', action: () => { g.fadeOut(() => { g.advanceTime(120); g.player.hp = g.maxHp(); g.state.buzz = Math.max(0, g.state.buzz - 40); }, 1.5, '💤', 'Power nap. You drooled on the remote.'); return null; } },
+      ...brewChoices(g),
       { text: 'Wardrobe: change your outfit', action: () => wardrobeNode(g) },
       { text: 'Save game', action: () => { g.save(); return end('Home', 'Game saved. Your legacy is secure. Unlike your bladder.'); } },
       { text: 'Leave', action: () => null },
     ],
   };
+}
+
+function brewChoices(g) {
+  const st = g.state;
+  const f = st.quest.flags;
+  if (f.homebrew) {
+    return [{ text: 'Brew a batch of Rhino Tea (5 teas)', tag: '$60 materials', disabled: st.money < 60, action: () => {
+      g.spend(60);
+      g.startMinigame('brew', { onWin: () => { st.inv.tea += 5; g.xp('str', 1); }, onLose: () => g.ui.toast('Ruined batch. The materials are gone.', 'heat', 3) });
+      g.ui.closeDialogue();
+      return 'keep';
+    } }];
+  }
+  if (!f.c2Doc) return [];
+  const have = st.inv.teabags > 0 && st.inv.antler > 0 && st.inv.tooth > 0;
+  return [{ text: `Brew Doc's secret Rhino Tea recipe`, disabled: !have, tag: have ? 'first batch' : `need: ${[st.inv.teabags ? '' : 'tea bags', st.inv.antler ? '' : 'antler', st.inv.tooth ? '' : 'gator tooth'].filter(Boolean).join(', ')}`, tagCls: have ? 'good' : 'bad', action: () => {
+    g.startMinigame('brew', { onWin: () => { f.homebrew = true; st.inv.tea += 5; st.inv.teabags--; st.inv.antler = 0; st.inv.tooth = 0; g.xp('str', 2); } });
+    g.ui.closeDialogue();
+    return 'keep';
+  } }];
 }
 
 const SHIRT_NAMES = ['Teal Flamingo (lucky)', 'Hibiscus Red', 'Navy Palms', 'Sunshine Orange', 'Flamingo Pink', 'Purple Reign', 'Cream Linen', 'Electric Blue'];
@@ -597,6 +629,13 @@ function clubhouseNode(g) {
     name: 'Sunset Palms Clubhouse', title: `${fmtTime(g.state.minutes)}`,
     text: 'The clubhouse smells like coffee, chlorine and quiet desperation. A bulletin board advertises: WATER AEROBICS • BINGO WEDNESDAY • GRIEF SUPPORT (BYOB).',
     choices: [
+      ...(g.state.quest.flags.teaShortage && !g.state.inv.antler ? [{ text: 'Sneak into the Grill Room and shave the moose antlers', disabled: hour > 5 && hour < 21, tag: hour > 5 && hour < 21 ? 'night only (9PM–5AM)' : 'heist', tagCls: 'bad', action: () => {
+        g.state.inv.antler = 1;
+        g.advanceTime(15);
+        g.crime(g.player.x, g.player.z, 1.2, 'Defacing the clubhouse moose', 20, true);
+        audio.play('pocketSand');
+        return end('The Grill Room', 'You tiptoe past a sleeping bingo volunteer, climb onto a bar stool, and shave a generous pile of antler dust into a Ziploc. The moose watches. The moose judges.\n\n(Got ANTLER SHAVINGS)');
+      } }] : []),
       { text: 'Browse the Resort Wear Boutique (outfits = STATUS)', action: () => { openShop(g, 'boutique'); g.ui.closeDialogue(); return 'keep'; } },
       { text: 'Water aerobics with the ladies (+STR, +CHA, 1 hour)', disabled: hour > 21 || hour < 6, action: () => {
         g.fadeOut(() => { g.advanceTime(60); g.xp('str', 3); g.xp('cha', 1); }, 1.5, '🏊 AEROBICS', 'You were the only man. You were a god among widows.');
@@ -691,6 +730,22 @@ function openShop(g, id) {
       choices: [{ text: 'Browse the shop', action: () => { openShop(g, id); g.ui.closeDialogue(); return 'keep'; } }, { text: 'Leave', action: () => null }],
     };
   }
+  if (id === 'doc' && st.quest.flags.teaShortage && !st.quest.flags.c2Doc) {
+    st.quest.flags.c2Doc = true;
+    return {
+      name: 'Doc Pratt', title: 'Mobile Wellness Provider (panicking)',
+      text: `"They raided my guy in Hialeah. Feds, fish & wildlife, a very angry botanist. The Rhino Tea pipeline is DRY, and what's left costs double.
+
+But. I have the original recipe. Three ingredients:
+
+1. Earl Grey tea bags. Liquor Barrel, four bucks.
+2. Antler shavings. There's a moose head in the clubhouse Grill Room. Nobody's looked at it since 1994. Go at night.
+3. A tooth. From Mr. Chompers. He sheds 'em on his sunning rock at Gator Pond. He does NOT like people touching his rock.
+
+Brew it at your place. Low heat. Patience. Then we never pay retail again."`,
+      choices: [{ text: '"A gator tooth. Sure. Totally normal Tuesday."', action: () => null }, { text: 'Browse the van anyway', action: () => { openShop(g, id); g.ui.closeDialogue(); return 'keep'; } }],
+    };
+  }
   if (id === 'doc' && !st.quest.flags.metDoc) {
     st.quest.flags.metDoc = true;
     st.inv.pills += 5;
@@ -721,14 +776,14 @@ function openShop(g, id) {
       }
       if (id === 'buffet') { const early = st.minutes >= 15 * 60 && st.minutes < 17 * 60; return { price: early ? 9 : 18, label: early ? '$9 EARLY BIRD' : '$18' }; }
       if (id === 'tiki' && st.minutes >= 16 * 60 && st.minutes < 18 * 60) return { price: Math.ceil(it.price / 2), label: `${money(Math.ceil(it.price / 2))} HAPPY HR` };
-      if (id === 'doc') return { price: Math.round(it.price * wholesale) };
+      if (id === 'doc') return { price: Math.round(it.price * wholesale * (it.id.startsWith('tea') && st.quest.flags.teaShortage && !st.quest.flags.homebrew ? 2 : 1)) };
       return {};
     },
     buy: (it) => {
       let price = it.price;
       if (id === 'buffet') price = st.minutes >= 15 * 60 && st.minutes < 17 * 60 ? 9 : 18;
       if (id === 'tiki' && st.minutes >= 16 * 60 && st.minutes < 18 * 60) price = Math.ceil(price / 2);
-      if (id === 'doc') price = Math.round(price * wholesale);
+      if (id === 'doc') price = Math.round(price * wholesale * (it.id.startsWith('tea') && st.quest.flags.teaShortage && !st.quest.flags.homebrew ? 2 : 1));
       if (it.id === 'sellballs') {
         const n = st.inv.balls;
         if (!n) return;
@@ -762,6 +817,7 @@ function openShop(g, id) {
         case 'beer1': add('beer', 1); st.quest.flags.boughtBeer = true; break;
         case 'wine': add('wine', 1); break;
         case 'flowers': add('flowers', 1); break;
+        case 'teabags': add('teabags', 1); break;
         case 'lotto': {
           const r = Math.random();
           const win = r < 0.004 ? 1000 : r < 0.05 ? 50 : r < 0.2 ? 10 : 0;

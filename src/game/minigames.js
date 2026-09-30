@@ -122,6 +122,88 @@ export class ChugOff {
   }
 }
 
+// ---------------------------------------------------------------- Brewing
+// Keep the kettle in the green: tap to add heat, it cools on its own, boiling over costs progress.
+export class Brew {
+  constructor(game, { onWin, onLose } = {}) {
+    this.g = game;
+    this.onWin = onWin;
+    this.onLose = onLose;
+    this.temp = 0.35;
+    this.progress = 0;
+    this.need = 8;
+    this.t = 0;
+    this.limit = 32;
+    this.zone = { a: 0.56, b: 0.74 };
+    this.done = false;
+    this.msg = 'Tap SPACE to heat. Keep it in the GREEN.';
+    box().innerHTML = `
+      <div class="mg-title">🍵 RHINO TEA BREWERY 🦏</div>
+      <div class="mg-sub">Doc's secret recipe • Steep at exactly "hot enough"</div>
+      <div class="brew-wrap">
+        <div class="brew-therm"><div id="brew-zone"></div><div id="brew-fill"></div></div>
+        <div class="brew-side">
+          <div class="brew-pot" id="brew-pot">🫖</div>
+          <div class="brew-prog"><i id="brew-prog"></i></div>
+          <div id="brew-time" class="mg-sub"></div>
+        </div>
+      </div>
+      <div class="mg-msg" id="brew-msg"></div>
+      <div class="mg-hint">SPACE / CLICK to add heat • ESC to give up</div>`;
+    box().onclick = () => this.heat();
+    const z = document.getElementById('brew-zone');
+    z.style.bottom = `${this.zone.a * 100}%`;
+    z.style.height = `${(this.zone.b - this.zone.a) * 100}%`;
+  }
+
+  heat() {
+    if (this.done) return;
+    this.temp = Math.min(1, this.temp + 0.085);
+    audio.tone({ freq: 180 + this.temp * 200, type: 'triangle', dur: 0.08, vol: 0.06 });
+  }
+
+  update(dt, input) {
+    if (this.done) return;
+    if (input.rawHit('Space') || input.rawHit('Enter')) this.heat();
+    if (input.rawHit('Escape')) return this.finish(false);
+    this.t += dt;
+    this.temp = Math.max(0, this.temp - dt * (0.1 + this.temp * 0.12));
+    const inZone = this.temp >= this.zone.a && this.temp <= this.zone.b;
+    if (inZone) {
+      this.progress += dt;
+      this.msg = pick(['Steeping nicely...', 'Smells like victory and wet horn.', 'Perfect. Doc would weep.']);
+    } else if (this.temp > 0.93) {
+      this.progress = Math.max(0, this.progress - 2);
+      this.temp = 0.62;
+      this.msg = 'BOILED OVER! Scalded your thumb.';
+      audio.play('splash', { vol: 0.4 });
+    } else this.msg = this.temp < this.zone.a ? 'Too cold... add heat.' : 'Too hot! Let it cool.';
+    document.getElementById('brew-fill').style.height = `${this.temp * 100}%`;
+    document.getElementById('brew-prog').style.width = `${Math.min(1, this.progress / this.need) * 100}%`;
+    document.getElementById('brew-time').textContent = `${Math.max(0, this.limit - this.t).toFixed(0)}s left`;
+    document.getElementById('brew-msg').textContent = this.msg;
+    document.getElementById('brew-pot').style.transform = `scale(${1 + (inZone ? Math.sin(this.t * 20) * 0.05 : 0)}) rotate(${(this.temp - 0.5) * 20}deg)`;
+    if (this.progress >= this.need) this.finish(true);
+    else if (this.t >= this.limit) this.finish(false);
+  }
+
+  finish(win) {
+    if (this.done) return;
+    this.done = true;
+    const el = document.getElementById('brew-msg');
+    if (win) {
+      el.textContent = '🦏 A PERFECT BATCH. It glows faintly. That is probably fine.';
+      audio.play('levelup');
+      if (this.onWin) this.onWin();
+    } else {
+      el.textContent = 'The batch is ruined. It smells like a zoo. Try again.';
+      audio.play('sadTrombone');
+      if (this.onLose) this.onLose();
+    }
+    setTimeout(() => this.g.endMinigame(), 2200);
+  }
+}
+
 // ---------------------------------------------------------------- Bingo
 // Daub the called numbers and yell BINGO before Karen's "friend" does. It's rigged.
 const COLS = 'BINGO';

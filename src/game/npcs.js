@@ -114,11 +114,12 @@ export class NPC {
     const d = Math.hypot(dx, dz) || 1;
     this.vx += (dx / d) * knock;
     this.vz += (dz / d) * knock;
-    if (knock > 12) {
+    this.hp -= dmg;
+    // big swings launch people who are already hurting (landing = nap time). Bosses keep their feet.
+    if (knock > 12 && !this.data.boss && this.hp < this.maxHp * 0.5) {
       this.vy = 4 + knock * 0.25;
       this.air = true;
     }
-    this.hp -= dmg;
     this.recentlyHit = 1.5;
     this.char.play('flinch', 0.4);
     this.windup = 0;
@@ -289,7 +290,7 @@ export class NPC {
             // strike!
             const nd = Math.hypot(tx - this.x, tz - this.z);
             if (nd < (this.weapon ? 2.1 : 1.6)) g.npcHits(this, t);
-            this.attackCd = rand(0.7, 1.2);
+            this.attackCd = this.data.boss ? rand(0.45, 0.75) : rand(0.7, 1.2);
           }
         } else if (d > (this.weapon ? 1.8 : 1.3)) {
           moveX = dx / d; moveZ = dz / d;

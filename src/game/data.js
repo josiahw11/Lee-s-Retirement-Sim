@@ -34,6 +34,7 @@ export const SHOPS = {
       { id: 'wine', name: 'Box Wine (Franzia-ish)', price: 18, icon: '🍷', desc: 'The ladies go wild for it.' },
       { id: 'flowers', name: 'Gas Station Flowers', price: 9, icon: '💐', desc: 'Slightly wilted. Still romantic.' },
       { id: 'lotto', name: 'Scratch-Off Ticket', price: 5, icon: '🎟️', desc: "Your retirement plan." },
+      { id: 'teabags', name: 'Earl Grey Tea Bags (box)', price: 4, icon: '🫖', desc: 'For tea. Obviously. Just tea.' },
     ],
   },
   tiki: {

@@ -1,5 +1,6 @@
 // Chapter 1 story chain + free-roam goals afterwards.
 import { money } from '../core/utils.js';
+import { CH2 } from './chapter2.js';
 
 const poi = (id) => (g) => g.world.pois[id];
 
@@ -80,6 +81,8 @@ export const STEPS = [
     reward: (g) => g.chapterComplete(),
   },
 ];
+
+STEPS.push(...CH2);
 
 const FREE = [
   { id: 'tammy', title: 'LEGEND: Win over Tammy the Cart Girl', done: (g) => g.state.romance.tammy.conquest, target: (g) => g.named.tammy },

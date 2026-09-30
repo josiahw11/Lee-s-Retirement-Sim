@@ -223,3 +223,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; fon
 .bingo-called { font-size: 12px; font-weight: 800; min-height: 48px; opacity: .7; }
 
 .settings select { font-family: var(--body); font-weight: 800; padding: 3px 6px; border-radius: 8px; border: 2px solid var(--navy); }
+
+.brew-wrap { display: flex; gap: 26px; justify-content: center; align-items: center; }
+.brew-therm { position: relative; width: 46px; height: 220px; border-radius: 23px; border: 3px solid var(--navy); background: #e8f4ff; overflow: hidden; cursor: pointer; }
+#brew-zone { position: absolute; left: 0; right: 0; background: rgba(60,207,110,.55); border-top: 2px solid #1e8a44; border-bottom: 2px solid #1e8a44; }
+#brew-fill { position: absolute; left: 8px; right: 8px; bottom: 0; border-radius: 12px 12px 0 0; background: linear-gradient(0deg, #ff4d4d, #ff9f1c); }
+.brew-side { width: 220px; }
+.brew-pot { font-size: 84px; transition: transform .05s; }
+.brew-prog { height: 16px; border-radius: 8px; border: 2px solid var(--navy); background: #fff; overflow: hidden; margin-top: 8px; }
+.brew-prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3ccf6e, #7CFC9A); }

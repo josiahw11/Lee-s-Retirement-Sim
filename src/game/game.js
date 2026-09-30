@@ -7,9 +7,10 @@ import { Player } from './player.js';
 import { Driver, COURSE_LOOPS, PATROL_LOOP, nearestNode } from './traffic.js';
 import { Quests } from './quests.js';
 import { Race, RACE_TIERS, TRACK } from './race.js';
-import { ChugOff, Bingo } from './minigames.js';
+import { ChugOff, Bingo, Brew } from './minigames.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
+import { updateTooth, deuceConfront, spawnTooth, spawnDeuce } from './chapter2.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
 import * as D from './dialogue.js';
 import { NODES, EDGES, HOLES, PONDS, ZONES, STREETS, HOUSES, PLAYER_HOUSE, BUILDINGS } from '../world/layout.js';
@@ -34,7 +35,7 @@ export function defaultState(name = 'Lee') {
     money: 180,
     day: 0, dow: 4, minutes: 8 * 60 + 30,
     stats: { str: { lvl: 2, xp: 0 }, cha: { lvl: 2, xp: 0 }, intim: { lvl: 1, xp: 0 }, stat: { lvl: 1, xp: 0 } },
-    inv: { beer: 0, wine: 0, flowers: 0, pills: 0, tea: 0, balls: 0 },
+    inv: { beer: 0, wine: 0, flowers: 0, pills: 0, tea: 0, balls: 0, teabags: 0, antler: 0, tooth: 0 },
     ballCap: 1, hopper: false, drones: 0, droneBank: 0,
     weapons: ['fists'], weapon: 'fists',
     cart: { color: '#ffffff', upgrades: {} },
@@ -357,6 +358,9 @@ export class Game {
       if (n) this.recruit(n, true);
     }
     this.spawnDrones();
+    const qid = this.quests.current()?.id;
+    if (qid === 'c2_tooth') spawnTooth(this);
+    if (qid === 'c2_deuce') spawnDeuce(this);
     if (state.quest.flags.beatChip) {
       // Chip keeps his distance now
       this.named.chip.data.retreatAfterKO = true;
@@ -1154,6 +1158,7 @@ export class Game {
       if (r && r !== 'shop') node = r;
       else { n.talking = false; return; }
     } else if (n.role === 'karen') node = D.talkKaren(this, n);
+    else if (n === this.named.deuce) node = this.state.quest.flags.beatDeuce ? { name: n.name, title: 'Humbled Patriarch', text: `"Go away. I'm calling my lawyer. And my other lawyer."`, choices: [] } : deuceConfront(this);
     else if (n.role === 'rival') node = D.talkChip(this, n);
     else if (n.role === 'golfer') node = D.talkGolfer(this, n);
     else if (n.role === 'recruit' || n.role === 'gang') node = D.talkRecruit(this, n);
@@ -1196,7 +1201,7 @@ export class Game {
   npcHits(npc, target) {
     const dmg = npc.dmg * (npc.weapon ? 1.4 : 1);
     audio.play(npc.weapon ? 'bonk' : 'hit', { vol: 0.8 });
-    if (target === this.player) this.damagePlayer(dmg, npc.x, npc.z, npc.weapon ? 6 : 4);
+    if (target === this.player) this.damagePlayer(dmg, npc.x, npc.z, npc.data.boss ? 12 : npc.weapon ? 6 : 4);
     else target.takeHit(dmg, npc.x, npc.z, 4, npc);
   }
 
@@ -1231,28 +1236,37 @@ export class Game {
     if (npc.state === 'ko') this.achievement('splash');
   }
 
-  chipBrawl(chip) {
-    this.brawlGroup = [chip, ...this.chipGoons];
-    for (const n of this.brawlGroup) {
+  startBrawl(group, title, sub, onWin) {
+    this.brawlGroup = group;
+    this.brawlOnWin = onWin;
+    for (const n of group) {
       n.hostile = true;
       n.aggro = this.player;
       n.state = 'fight';
       n.hp = n.maxHp;
     }
-    this.ui.splash('BRAWL!', "Chip & the Country Club Boys", 2, '#ff9f1c');
+    this.ui.splash(title, sub, 2, '#ff9f1c');
     audio.play('whistle');
+  }
+
+  chipBrawl(chip) {
+    this.startBrawl([chip, ...this.chipGoons], 'BRAWL!', 'Chip & the Country Club Boys', () => {
+      this.state.quest.flags.beatChip = true;
+      this.named.chip.data.retreatAfterKO = true;
+      for (const g of this.chipGoons) g.data.retreatAfterKO = true;
+      setTimeout(() => this.named.chip.say('Father will hear about this!', 3), 1500);
+    });
   }
 
   checkBrawls() {
     if (this.brawlGroup && this.brawlGroup.every((n) => n.state === 'ko')) {
+      const win = this.brawlOnWin;
+      for (const n of this.brawlGroup) n.hostile = false;
       this.brawlGroup = null;
-      this.state.quest.flags.beatChip = true;
-      this.named.chip.data.retreatAfterKO = true;
-      for (const g of this.chipGoons) g.data.retreatAfterKO = true;
-      this.named.chip.hostile = false;
-      setTimeout(() => this.named.chip.say('Father will hear about this!', 3), 1500);
-      this.ui.splash('VICTORY', 'The Country Club Boys have been humbled.', 2.5);
+      this.brawlOnWin = null;
+      this.ui.splash('VICTORY', 'Another bunch of blue-bloods, napping on the lawn.', 2.5);
       audio.play('success');
+      if (win) win();
     }
     // rival sabotage events
     for (const ev of this.events) {
@@ -1491,9 +1505,11 @@ export class Game {
     const pond = gt.pond;
     let prey = null, bd = Infinity;
     const cands = [this.player, ...this.npcs];
+    gt.rampage = Math.max(0, (gt.rampage || 0) - dt);
     for (const c of cands) {
       if (c !== this.player && c.cart) continue;
-      if (waterAt(c.x, c.z) !== pond) continue;
+      const onLand = gt.rampage > 0 && c === this.player && Math.hypot(c.x - gt.x, c.z - gt.z) < 30;
+      if (!onLand && waterAt(c.x, c.z) !== pond) continue;
       const d = Math.hypot(c.x - gt.x, c.z - gt.z);
       if (d < bd) { bd = d; prey = c; }
     }
@@ -1516,8 +1532,9 @@ export class Game {
       gt.z += Math.cos(gt.heading) * speed * dt;
     }
     const pd = Math.hypot(gt.x - pond.x, gt.z - pond.z), lim = pond.r * 0.85;
-    if (pd > lim) { gt.x = pond.x + ((gt.x - pond.x) / pd) * lim; gt.z = pond.z + ((gt.z - pond.z) / pd) * lim; }
-    const y = WATER_Y - (gt.mode === 'hunt' ? 0.02 : 0.14) + Math.sin(gt.t * 1.4) * 0.03;
+    if (pd > lim && !(gt.rampage > 0)) { gt.x = pond.x + ((gt.x - pond.x) / pd) * lim; gt.z = pond.z + ((gt.z - pond.z) / pd) * lim; }
+    const wet = waterAt(gt.x, gt.z) === pond;
+    const y = wet ? WATER_Y - (gt.mode === 'hunt' ? 0.02 : 0.14) + Math.sin(gt.t * 1.4) * 0.03 : heightAt(gt.x, gt.z) + 0.2;
     gt.m.position.set(gt.x, y, gt.z);
     gt.m.rotation.y = gt.heading + Math.sin(gt.t * (gt.mode === 'hunt' ? 9 : 2)) * 0.07;
     if (prey && bd < 2.3 && gt.biteCd <= 0) {
@@ -1547,7 +1564,7 @@ export class Game {
   }
 
   startMinigame(kind, opts = {}) {
-    const Cls = kind === 'bingo' ? Bingo : ChugOff;
+    const Cls = kind === 'bingo' ? Bingo : kind === 'brew' ? Brew : ChugOff;
     if (opts.bet) this.spend(opts.bet);
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();
@@ -1790,6 +1807,17 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (this.pendingElection && !this.ui.modal) {
         this.pendingElection = false;
         this.election();
+      }
+      updateTooth(this, dt);
+      const walker = this.named.walker;
+      if (walker && walker.data.zoomT > 0) {
+        walker.data.zoomT -= dt;
+        if (Math.random() < dt * 8) this.particles.emit('dust', walker.x, walker.y + 0.2, walker.z, { vy: 0.5, life: 0.6, size: 0.4, grow: 0.6 });
+        if (walker.data.zoomT <= 0) { walker.walkSpeed = 0.6; walker.runSpeed = 2.3; walker.resumeBase(); walker.say('...I need a nap.', 2.5); }
+      }
+      const cq = this.quests.current();
+      if (cq && cq.id === 'c2_deuce' && this.named.deuce && !s.quest.flags.deuceIntro && !p.cart && Math.hypot(this.named.deuce.x - p.x, this.named.deuce.z - p.z) < 14) {
+        this.ui.openDialogue(deuceConfront(this));
       }
       // Chip confrontation trigger
       const qs = this.quests.current();
