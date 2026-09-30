@@ -17,6 +17,11 @@ const TALK_LINES = [
   "Traffic report. A golf cart is on fire near the seventh hole. Another is in the pond. Nobody's hurt, just embarrassed.",
   "Ladies, if a man in a Hawaiian shirt offers you rhino horn tea, you say yes. That's not medical advice. That's life advice.",
   "HOA President Karen Whitmore has announced a new rule. Laughter above sixty decibels is now prohibited after eight PM.",
+  "Bumper Brawl! Nightly behind the Liquor Barrel! Six golf carts enter, one leaves, and it's usually on a tow rope. Derby Dan says: no refunds, no hips.",
+  "The Senior Shuttle is hiring. Requirements: a golf cart, a pulse, and a flexible relationship with stop signs. See Dispatcher Doris.",
+  "Beer pong at the Tiki Hut, eleven AM till two. Doctors agree you should not do this. Doctors are not invited.",
+  "Reminder: the plywood ramps on the golf course are not, I repeat NOT, an invitation. The HOA is looking into it. From the air, apparently.",
+  "Pickleball league standings: Deb 'The Dinker' Delgado remains undefeated, unbearable, and unavailable for comment.",
 ];
 
 export class AudioSys {
