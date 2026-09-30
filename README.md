@@ -73,6 +73,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
   - the power goes out, and the neighbors throw a hurricane party at the clubhouse
   - afterwards, the HOA pays a bounty for every stray flamingo you bring back
 - **The Lucky Lady casino boat** (moored off the Boca pier, 6PM–2AM): blackjack at Bernadette's table (charm her and she flashes her hole card; drink and you fumble), the Golden Gam-Gam slots with a progressive jackpot, and a bar.
+- **Keg stands at the Tiki Hut.** Two regulars hoist you upside-down over the keg while the crowd counts. Balance with A/D; it gets twitchier as the buzz climbs. Every second is a real gulp. Beat Manny's house record for a free tab.
 - **Senior Shuttle.** Crazy Taxi, but it's a golf cart and everyone is 80. Dispatcher Doris puts you on a shift clock. Residents wave you down under green, yellow and red light pillars (short, medium and long fares). Race them to the Golden Coral or Doc's van before they bail ("I'll walk! It's faster!"). Air, drifts and near misses earn tips, and the back seat reviews your driving.
 - **Bumper Brawl** (nightly, 5PM–1AM): a golf-cart demolition derby in a floodlit hay-bale arena. Five rivals try to T-bone you. Front bumpers are armored and sides crumple. Damaged carts smoke, then burn, and the last cart running takes the purse.
 - **Pier fishing.** Borrow a rod from Fishin' Phil and cast off Boca Pier. Set the hook on the dunk, then work the tension meter. Catches range from mullet to grouper, and the legendary Tarpon bites at night; there's also junk, including somebody's dentures. Captain Roy buys it all.
@@ -91,7 +92,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 - **Garage Sale Saturdays** (8AM–2PM): four driveways full of junk. Buy it, haggle, or pocket it. Some of it is useful: a club, shirts, free cart speakers, a detector.
 - **The Senior Games** (Sundays): Shuffleboard, Closest to the Pin and a Chug-Off, then a medal ceremony on a podium with fireworks.
 - **Florida wildlife.** Ibis flocks forage on the lawns and scatter when you approach. Residents walk poodles, chihuahuas and dachshunds, and the chihuahuas defend their owners.
-- **The phone's TO DO tab** lists every activity, shows what's open right now, and sets waypoints.
+- **The phone's TO DO tab** lists every activity, filters them by category, puts what's open right now at the top, and sets waypoints.
 - **Voices.** Every resident mumbles in Animal Crossing-style old-folks gibberish.
 - **Chapter 1 story** runs through 12 quest steps.
 - **Chapter 2: Rhino Rising** (7 steps): a tea shortage, a night-time antler heist, stealing a tooth from Mr. Chompers the gator, home brewing, and a boss fight with Chip's father "The Deuce".
