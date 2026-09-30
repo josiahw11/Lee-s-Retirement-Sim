@@ -6,6 +6,7 @@ import { NPC } from './npcs.js';
 import { Player } from './player.js';
 import { Driver, COURSE_LOOPS, PATROL_LOOP, nearestNode } from './traffic.js';
 import { Quests } from './quests.js';
+import { Race, RACE_TIERS, TRACK } from './race.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
 import * as D from './dialogue.js';
 import { NODES, EDGES, HOLES, PONDS, ZONES, STREETS, HOUSES, PLAYER_HOUSE, BUILDINGS } from '../world/layout.js';
@@ -68,6 +69,8 @@ const ACH = {
   drunkDrive: ['Designated Driver? Never Heard Of Her', 'Drove hammered for 30 seconds straight.'],
   carjack: ['Grand Theft Golf Cart', 'Yanked a senior out of their own cart.'],
   gator: ['Gator Bait', 'Got bitten by Mr. Chompers. The sign warned you.'],
+  raceWin: ['Geriatric Grand Prix', 'Won a golf cart race.'],
+  raceLegend: ['Senior Speed Demon', 'Won a $500 race against The Widow Maker.'],
 };
 
 export class Game {
@@ -245,6 +248,12 @@ export class Game {
       n.data.quiet = true;
       this.named[r.id] = n;
     }
+
+    // Rocket Ron runs the cart races out of the clubhouse lot
+    this.named.ron = this.spawnNPC({ name: '"Rocket" Ron Delvecchio', female: false, role: 'raceboss', x: -6, z: 47, state: 'static', hp: 70, look: { hat: 'cap', hatColor: '#ff6b1a', shirt: 7, glasses: 'aviator', mustache: true, skin: '#e0ac8a', hair: '#1c1c1c', belly: 1.1 }, homePt: { x: -6, z: 47 } });
+    this.named.ron.data.face = Math.PI;
+    this.named.ron.data.quiet = true;
+    this.addCart({ x: -2.5, z: 44, ry: Math.PI, kind: 'resident', color: '#ff6b1a', upgrades: { governor: true, rims: true, neon: true, flag: true } });
 
     // golfers at tees
     for (const i of [0, 2, 3, 5]) {
@@ -1019,7 +1028,7 @@ export class Game {
       const drv = c.driver;
       if (drv && drv !== p) {
         if (drv.role === 'lady' || drv.role === 'operator') continue; // talk instead
-        if (drv.role === 'security') continue;
+        if (drv.role === 'security' || drv.role === 'racer') continue;
         consider(d + 0.3, { label: `Yank ${drv.name.split(' ')[0]} out of the cart`, cls: 'bad', action: () => this.carjack(c) });
       } else {
         const own = c === this.playerCart;
@@ -1103,6 +1112,8 @@ export class Game {
     else if (n.role === 'golfer') node = D.talkGolfer(this, n);
     else if (n.role === 'recruit' || n.role === 'gang') node = D.talkRecruit(this, n);
     else if (n.role === 'security') node = this.talkSecurity(n);
+    else if (n.role === 'raceboss') node = this.talkRon(n);
+    else if (n.role === 'racer') node = { name: n.name, title: 'Racer', text: `"Not now, I'm in the zone."`, choices: [] };
     else if (n.role === 'goon') node = { name: n.name, title: "Chip's Crew", text: pick(['"Chip says you\'re \'nouveau riche.\' I don\'t know what that means but I\'m offended."', '"Do you have a tee time? No? Then beat it."']), choices: [] };
     else if (n.role === 'husband') node = { name: n.name, title: 'Resident', text: '"You lookin\' at my wife? Everybody looks at my wife. Don\'t look at my wife."', choices: [] };
     else node = D.talkResident(this, n);
@@ -1483,6 +1494,49 @@ export class Game {
     }
   }
 
+  talkRon(n) {
+    const inRace = this.race && this.race.running;
+    const won = this.state.counters.racesWon || 0;
+    return {
+      name: n.name, title: `Cart Race Bookie • ${won} win${won === 1 ? '' : 's'}`,
+      text: inRace ? `"You're already racing! Go go go!"` : `"They call me Rocket. Partly 'cause I'm fast. Mostly 'cause of my colonoscopy.
+
+One lap of the Back Nine Grand Prix: Fairway Drive, down the west path, across the course, up the east side and home. Hit every checkpoint. Winner takes three times the bet."
+
+${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mph. Sal can fix that.)'}`,
+      choices: inRace ? [] : [
+        ...RACE_TIERS.map((t) => ({ text: `Race: ${t.label} vs ${t.rivals.join(' & ')}`, tag: `win ${money(t.bet * 3)}`, disabled: this.state.money < t.bet, action: () => { this.startRace(t); return null; } })),
+        { text: 'Maybe later', action: () => null },
+      ],
+    };
+  }
+
+  startRace(tier) {
+    const p = this.player;
+    if (!p.cart) {
+      const c = this.playerCart;
+      if (c.sunk || c.driver) this.recoverCart();
+      p.enterCart(c);
+    }
+    this.spend(tier.bet);
+    this.race = new Race(this, tier);
+  }
+
+  updateRace(dt) {
+    const r = this.race;
+    if (!r) return;
+    if (r.running) {
+      for (const x of r.racers) x.npc.data.chase = x.done ? null : { x: TRACK[Math.min(x.cp, TRACK.length - 1)][0], z: TRACK[Math.min(x.cp, TRACK.length - 1)][1] };
+      r.update(dt);
+    } else {
+      r.cleanupT -= dt;
+      if (r.cleanupT <= 0) {
+        r.dispose();
+        this.race = null;
+      }
+    }
+  }
+
   recoverCart() {
     const c = this.playerCart;
     c.sunk = false;
@@ -1634,6 +1688,7 @@ export class Game {
       this.updateEvents(dt);
       this.updateDrones(dt);
       this.updateGator(dt);
+      this.updateRace(dt);
       this.props.update(dt, p.x, p.z);
       this.balls.update(dt, this.scene);
       this.pickups.update(dt, p.x, p.z, (pk) => { this.addMoney(pk.amount, ''); });
@@ -1907,7 +1962,7 @@ export class Game {
     const p = this.player;
     const tags = [];
     const q = this.quests.current();
-    const tgt = q && q.target ? q.target(this) : null;
+    const tgt = this.race && this.race.running ? this.race.target() : q && q.target ? q.target(this) : null;
     this.markerPos = tgt ? { x: tgt.x, y: tgt.y ?? heightAt(tgt.x, tgt.z), z: tgt.z } : null;
     for (const n of this.npcs) {
       if (!n.visible) continue;

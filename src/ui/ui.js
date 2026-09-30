@@ -80,7 +80,12 @@ export class UI {
     this.el['hud-inv'].innerHTML = `<span>🍺 ${inv.beer}</span><span>💊 ${inv.pills}</span><span>🍵 ${inv.tea}</span><span>⛳ ${inv.balls}/${cap}</span><span>🍷 ${inv.wine}</span><span>💐 ${inv.flowers}</span>`;
     // objective
     const obj = g.quests.current();
-    if (obj) {
+    if (g.race && g.race.running) {
+      const h = g.race.hud();
+      this.el['hud-obj'].classList.remove('hidden');
+      this.el['obj-text'].textContent = h.title;
+      this.el['obj-dist'].textContent = h.sub;
+    } else if (obj) {
       this.el['hud-obj'].classList.remove('hidden');
       this.el['obj-text'].textContent = obj.title;
       const t = obj.target ? obj.target(g) : null;

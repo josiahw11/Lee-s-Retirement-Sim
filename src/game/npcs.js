@@ -442,7 +442,7 @@ export class NPC {
     const g = this.game;
     const c = this.cart;
     const d = this.driver;
-    let chase = null;
+    let chase = this.data.chase || null;
     if (this.role === 'security' && g.heat.level > 0 && !g.player.ko) {
       c.sirenOn = true;
       const p = g.player;
