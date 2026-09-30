@@ -322,3 +322,7 @@ body.touch #hint { bottom: 84px; }
 .sb-btns .btn { padding: 6px 14px; font-size: 14px; }
 .sb-btns .btn { touch-action: none; user-select: none; -webkit-user-select: none; }
 .sb-btns .btn.big { min-width: 190px; }
+
+/* the controls reference opens from the title screen too, so it must sit above it */
+#controls-modal { z-index: 30; background: rgba(5,8,20,.75); }
+#controls-modal .pause-box { max-height: 92vh; overflow-y: auto; }
