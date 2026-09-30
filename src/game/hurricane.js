@@ -90,7 +90,6 @@ export class Hurricane {
   // reviewer shortcut: bring Mildred right now
   summon() {
     const s = this.g.state;
-    this.st.day = s.day;
     this.st.warned = false;
     const want = START * 60 + 50;
     if (s.minutes < want) this.g.advanceTime(want - s.minutes);

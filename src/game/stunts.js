@@ -52,6 +52,7 @@ export class Stunts {
       [GEO.cone, '#ffe98a', mat4(0, 0.35, 0, 0, 0.3, 0.55, 0.3)],
       [GEO.cone, '#ffe98a', mat4(0, -0.35, 0, 0, 0.3, 0.55, 0.3, Math.PI)],
     ]);
+    this.starGeo = starGeo;
     this.stars = STUNTS.map((s) => {
       const m = new THREE.Mesh(starGeo, STAR_MAT);
       m.position.set(s.x - s.sx * 3, heightAt(s.x, s.z) + 4.2, s.z - s.sz * 3);
@@ -105,7 +106,9 @@ export class Stunts {
     const pc = p.cart;
     if (this.hold > 0) {
       this.hold -= dt;
-      if (this.hold <= 0 && !this.active) { g.camRig.cinematic = null; g.slowmoScale = null; }
+      const cin = g.camRig.cinematic;
+      if (cin && cin === this.cin && p.cart) cin.look.lerp(new cin.look.constructor(p.cart.x, p.cart.y + 0.6, p.cart.z), 0.2);
+      if (this.hold <= 0 && !this.active) { if (g.camRig.cinematic === this.cin) g.camRig.cinematic = null; this.cin = null; g.slowmoScale = null; }
     }
     if (!pc || g.ui.modal) { if (this.active) this.abort(); this.wasGrounded = true; return; }
 
@@ -129,7 +132,7 @@ export class Stunts {
       g.slowmo = Math.max(g.slowmo || 0, 0.05);
       g.slowmoScale = 0.42;
       const cin = g.camRig.cinematic;
-      if (cin) cin.look.lerp(new cin.look.constructor(pc.x, pc.y + 0.6, pc.z), 0.35); // something else may have cut away
+      if (cin && cin === this.cin) cin.look.lerp(new cin.look.constructor(pc.x, pc.y + 0.6, pc.z), 0.35); // only steer our own camera
       if (pc.grounded || pc.sunk || a.t > 5) this.land(pc);
     }
     if (pc.landed && !a) this.trick(pc); // ordinary jumps still score tricks
@@ -144,7 +147,8 @@ export class Stunts {
     const side = 11 + (s.need || 10) * 0.3;
     const cx = s.lip.x + s.sx * mid + s.sz * side, cz = s.lip.z + s.sz * mid - s.sx * side;
     const V = g.camRig.cam.position.constructor;
-    g.camRig.cinematic = { pos: new V(cx, heightAt(cx, cz) + 3.4, cz), look: new V(pc.x, pc.y + 0.6, pc.z) };
+    if (g.camRig.cinematic && g.camRig.cinematic !== this.cin) { this.cin = null; return; } // something else has the camera: no stunt cam
+    this.cin = g.camRig.cinematic = { pos: new V(cx, heightAt(cx, cz) + 3.4, cz), look: new V(pc.x, pc.y + 0.6, pc.z) };
     g.camRig.cam.position.set(cx, heightAt(cx, cz) + 3.4, cz); // cut, don't pan
     const n = this.done.includes(s.id) ? '' : 'UNIQUE ';
     g.ui.splash(`${n}STUNT JUMP`, s.ramp, 1.2, '#ffd23f');
@@ -185,7 +189,8 @@ export class Stunts {
 
   abort() {
     this.active = null;
-    this.g.camRig.cinematic = null;
+    if (this.g.camRig.cinematic === this.cin) this.g.camRig.cinematic = null;
+    this.cin = null;
     this.g.slowmoScale = null;
   }
 
@@ -218,6 +223,7 @@ export class Stunts {
   clear() {
     for (const m of this.stars) this.g.scene.remove(m);
     this.stars = [];
+    this.starGeo?.dispose();
     if (this.active) this.abort();
   }
 }

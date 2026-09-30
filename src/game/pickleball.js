@@ -59,16 +59,19 @@ export class Pickleball {
     box().innerHTML = `
       <div class="sb-head"><span class="mg-title">🏓 PICKLEBALL HUSTLE</span><span class="gf-info">vs ${oname} • Bet ${money(bet)}</span><span class="pb-score" id="pb-score"></span></div>
       <div class="mg-msg" id="pb-msg"></div>
-      <div class="sb-btns"><button class="btn" id="pb-l">◀</button><button class="btn big" id="pb-hit">SWING</button><button class="btn" id="pb-r">▶</button></div>
+      <div class="sb-btns"><button class="btn" id="pb-l">◀</button><button class="btn" id="pb-u">▲</button><button class="btn big" id="pb-hit">SWING</button><button class="btn" id="pb-d">▼</button><button class="btn" id="pb-r">▶</button></div>
       <div class="mg-hint">WASD move • SPACE swing (hold A/D to aim) • swing from the kitchen line to DINK • ESC to forfeit</div>`;
     document.getElementById('minigame').classList.add('mg-3d');
     this.btnX = 0;
-    const hold = (el, v) => {
-      el.addEventListener('pointerdown', (e) => { e.preventDefault(); this.btnX = v; });
-      for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) el.addEventListener(ev, () => { this.btnX = 0; });
+    this.btnZ = 0;
+    const hold = (el, k, v) => {
+      el.addEventListener('pointerdown', (e) => { e.preventDefault(); this[k] = v; });
+      for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) el.addEventListener(ev, () => { this[k] = 0; });
     };
-    hold(document.getElementById('pb-l'), -1);
-    hold(document.getElementById('pb-r'), 1);
+    hold(document.getElementById('pb-l'), 'btnX', -1);
+    hold(document.getElementById('pb-r'), 'btnX', 1);
+    hold(document.getElementById('pb-u'), 'btnZ', -1);
+    hold(document.getElementById('pb-d'), 'btnZ', 1);
     document.getElementById('pb-hit').addEventListener('pointerdown', (e) => { e.preventDefault(); this.wantSwing = true; });
     this.render();
   }
@@ -144,6 +147,8 @@ export class Pickleball {
 
   point(winner, why) {
     this.score[winner]++;
+    this.pressure = 0;
+    this.timingErr = 0;
     this.msg = `${why} ${winner === 'me' ? 'Point Lee!' : `Point ${this.oppFirst}.`}`;
     audio.play(winner === 'me' ? 'success' : 'fail', { vol: 0.5 });
     this.server = winner;
@@ -167,8 +172,9 @@ export class Pickleball {
     const drunk = g.state.buzz / 100;
     // Lee moves around his half
     const pad = input.pad ? input.pad.axes : [0, 0];
-    const mx = (input.down.has('KeyD') || input.down.has('ArrowRight') ? 1 : 0) - (input.down.has('KeyA') || input.down.has('ArrowLeft') ? 1 : 0) + this.btnX + (pad[0] || 0);
-    const mz = (input.down.has('KeyS') || input.down.has('ArrowDown') ? 1 : 0) - (input.down.has('KeyW') || input.down.has('ArrowUp') ? 1 : 0) + (pad[1] || 0);
+    const k = (c) => input.down.has(c);
+    const mx = (k('KeyD') || k('ArrowRight') || k('PadRight') ? 1 : 0) - (k('KeyA') || k('ArrowLeft') || k('PadLeft') ? 1 : 0) + this.btnX + (pad[0] || 0);
+    const mz = (k('KeyS') || k('ArrowDown') || k('PadDown') ? 1 : 0) - (k('KeyW') || k('ArrowUp') || k('PadUp') ? 1 : 0) + this.btnZ + (pad[1] || 0);
     const sp = 3.6 * (1 - drunk * 0.35);
     const m = this.me;
     m.x = clamp(m.x + clamp(mx, -1, 1) * sp * dt, -HALF_W - 1, HALF_W + 1);
@@ -180,7 +186,7 @@ export class Pickleball {
       this.waitT -= dt;
       if (this.server === 'me') {
         if (this.waitT <= 0 && !this.msgServe) { this.msgServe = true; this.msg = 'Your serve. SPACE.'; this.render(); }
-        if (want && this.waitT <= 0) { this.msgServe = false; this.ball = { x: m.x, y: 0.9, z: m.z - 0.4 }; this.hit('me'); this.phase = 'rally'; this.msg = pick(["Serve's in play.", '"Nice serve, grandpa."', 'Here we go.']); this.render(); }
+        if (want && this.waitT <= 0) { this.msgServe = false; this.timingErr = 0; this.ball = { x: m.x, y: 0.9, z: m.z - 0.4 }; this.hit('me'); this.phase = 'rally'; this.msg = pick(["Serve's in play.", '"Nice serve, grandpa."', 'Here we go.']); this.render(); }
       } else if (this.waitT <= 0) {
         this.ball = { x: this.them.x, y: 0.9, z: this.them.z + 0.4 };
         this.hit('them');

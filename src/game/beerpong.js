@@ -246,8 +246,8 @@ export class BeerPong {
     if (input.rawHit('Escape') || input.rawHit('PadB')) return this.finish(true);
     // aim
     const k = (c) => input.down.has(c);
-    const ax = (k('KeyS') || k('ArrowDown') ? 1 : 0) - (k('KeyW') || k('ArrowUp') ? 1 : 0) + this.btn.x + (input.pad ? input.pad.axes[1] || 0 : 0);
-    const az = (k('KeyA') || k('ArrowLeft') ? 1 : 0) - (k('KeyD') || k('ArrowRight') ? 1 : 0) + this.btn.z - (input.pad ? input.pad.axes[0] || 0 : 0);
+    const ax = (k('KeyS') || k('ArrowDown') || k('PadDown') ? 1 : 0) - (k('KeyW') || k('ArrowUp') || k('PadUp') ? 1 : 0) + this.btn.x + (input.pad ? input.pad.axes[1] || 0 : 0);
+    const az = (k('KeyA') || k('ArrowLeft') || k('PadLeft') ? 1 : 0) - (k('KeyD') || k('ArrowRight') || k('PadRight') ? 1 : 0) + this.btn.z - (input.pad ? input.pad.axes[0] || 0 : 0);
     const T = TABLE;
     this.aim.x = clamp(this.aim.x + clamp(ax, -1, 1) * 0.5 * dt, T.x - T.len / 2 + 0.02, T.x - T.len / 2 + 0.5);
     this.aim.z = clamp(this.aim.z + clamp(az, -1, 1) * 0.5 * dt, T.z - 0.24, T.z + 0.24);

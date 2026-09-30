@@ -331,7 +331,7 @@ async function boot() {
           game.renderMenu(MENU_TABS[(i + step + MENU_TABS.length) % MENU_TABS.length][0]);
         } else if (game.menuTab === 'grandr') {
           const click = (id) => { const el = $(id); if (el) el.click(); };
-          if ($('gr-ok')) { if (input.rawHit('PadA')) click('gr-ok'); }
+          if ($('gr-ok')) { if (input.rawHit('PadA') || input.rawHit('Enter') || input.rawHit('Space')) click('gr-ok'); }
           else if (input.rawHit('PadLeft') || input.rawHit('ArrowLeft')) click('gr-no');
           else if (input.rawHit('PadRight') || input.rawHit('ArrowRight')) click('gr-yes');
         }

@@ -128,7 +128,7 @@ const ACH = {
   crazyshuttle: ['Crazy Shuttle', 'Earned $400+ in a single Senior Shuttle shift.'],
   pong: ['Pong God', 'Won a game of beer pong at the Tiki Hut. Your liver lost.'],
   stuntman: ['Stuntman', 'Completed a Unique Stunt Jump.'],
-  knievel: ['Evel Knievel Jr.', 'Completed every Unique Stunt Jump in Sunset Palms.'],
+  knievel: ['Stunt Jump Legend', 'Completed every Unique Stunt Jump in Sunset Palms.'],
   spin720: ['Hip Replacement 720', 'Landed a 720 in a golf cart.'],
   pickle: ['Dink Dynasty', 'Won a real game of pickleball. Your knees filed a formal complaint.'],
   champion: ['Senior Games Champion', 'Stood on the top step of the Senior Games podium.'],
@@ -2212,7 +2212,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       for (let j = i + 1; j < list.length; j++) {
         const b = list[j];
         const dx = b.x - a.x, dz = b.z - a.z;
-        if (Math.abs(dx) > 2.6 || Math.abs(dz) > 2.6) continue;
+        if (Math.abs(dx) > 2.6 || Math.abs(dz) > 2.6 || Math.abs(a.y - b.y) > 1.2) continue; // one's flying over the other
         const d = Math.hypot(dx, dz), rr = a.radius + b.radius - 0.1; // 2.4 for two carts, less for skinny scooters
         if (d >= rr || d < 0.001) continue;
         const nx = dx / d, nz = dz / d, pen = rr - d;
@@ -2289,8 +2289,9 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
         if (this.sinkExitT <= 0 && p.cart === pc) p.exitCart();
       }
 
-      // run over props
-      if (spd > 2.5) {
+      // run over props (and people) — unless you're sailing over their heads
+      const flying = pc.y - heightAt(pc.x, pc.z) > 1;
+      if (spd > 2.5 && !flying) {
         for (const pr of this.props.near(pc.x, pc.z)) {
           if (pr.state !== 'idle') continue;
           if (Math.hypot(pr.x - pc.x, pr.z - pc.z) < 1.4) this.knockProp(pr, pc.vx * 1.1, pc.vz * 1.1, 3 + spd * 0.35);
@@ -2298,7 +2299,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       }
       // run over people
       for (const n of this.npcs) {
-        if (n.cart || n.air || n.role === 'gang' || n.data.aqua || n.data.riding) continue;
+        if (flying || n.cart || n.air || n.role === 'gang' || n.data.aqua || n.data.riding) continue;
         const d = Math.hypot(n.x - pc.x, n.z - pc.z);
         if (d < 1.45 && spd > 3) {
           const wasHostile = n.hostile;

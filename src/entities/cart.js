@@ -333,7 +333,7 @@ export class Cart {
       const grip = (hb ? 1.6 : 9) * (input.wet ? 0.6 : 1);
       vl *= Math.exp(-grip * dt);
     } else if (!this.sunk) {
-      if (input.handbrake) this.spin += steerIn * 7.5 * dt;
+      if (input.handbrake) this.spin += steerIn * 9.5 * dt;
       else this.heading = wrapAngle(this.heading + steerIn * 0.9 * dt);
     }
     if (this.sunk) {
@@ -401,10 +401,10 @@ export class Cart {
         this.vy = 0;
         this.grounded = true;
         this.lastAir = this.airT;
+        this.spinLanded = this.spin; // 0 for a plain jump, so nothing stale carries into the next landing
         if (this.spin) {
           // whatever way the body points is where you're facing now; land crooked and you scrub speed
           const r = wrapAngle(this.spin);
-          this.spinLanded = this.spin;
           this.heading = wrapAngle(this.heading + r);
           this.spin = 0;
           if (Math.abs(r) > 0.8) { this.vx *= 0.45; this.vz *= 0.45; this.suspV -= 3; }
