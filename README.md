@@ -13,6 +13,8 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 
 **Shareable build:** `npm run build` produces `dist/index.html`, one self-contained ~850 KB file. Double-click it and it runs, no server needed.
 
+**Play online / releases:** publishing a GitHub Release (Releases → Draft a new release → pick a tag like `v0.2.0` → Publish) runs `.github/workflows/release.yml`, which builds the game, attaches `sunset-palms-<tag>.html` to the release, and deploys it to GitHub Pages. One-time setup: Settings → Pages → Source: **GitHub Actions**.
+
 ## Controls
 
 | Key | Action | Key | Action |
