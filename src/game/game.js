@@ -11,6 +11,7 @@ import { ChugOff, Bingo, Brew } from './minigames.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
+import { Life } from './life.js';
 import { BEACH, OCEAN, onSand } from '../world/beach.js';
 import { updateTooth, deuceConfront, spawnTooth, spawnDeuce } from './chapter2.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
@@ -406,6 +407,7 @@ export class Game {
     }
     this.quests.begin();
     this.worldEvents = new Events(this);
+    this.life = new Life(this);
     this.yesterday = { ...state.counters };
     if (isNew) {
       this.ui.toast(`Welcome to Sunset Palms, ${state.name}.`, 'quest', 6);
@@ -1958,6 +1960,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       updateTooth(this, dt);
       this.updateDetector(dt);
       if (this.worldEvents) this.worldEvents.update(dt);
+      if (this.life) this.life.update(dt);
       if (this.timers && this.timers.length) {
         for (const tm of this.timers) tm.t -= dt;
         const due = this.timers.filter((tm) => tm.t <= 0);

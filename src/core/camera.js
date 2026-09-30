@@ -12,6 +12,8 @@ export class CameraRig {
     this.target = new THREE.Vector3();
     this.shake = 0;
     this.fov = 62;
+    this.baseFov = 62;
+    this.invertY = false;
     this.sensitivity = 1;
     this.cinematic = null; // {pos, look, t}
   }
@@ -23,7 +25,7 @@ export class CameraRig {
   update(dt, input, f) {
     if (input.locked || input.pad) {
       this.yaw -= input.dx * 0.0024 * this.sensitivity;
-      this.pitch = clamp(this.pitch + input.dy * 0.0019 * this.sensitivity, -0.15, 1.25);
+      this.pitch = clamp(this.pitch + input.dy * 0.0019 * this.sensitivity * (this.invertY ? -1 : 1), -0.15, 1.25);
     }
     this.dist = clamp(this.dist + input.wheel * 0.9, 3.5, 18);
     const idle = performance.now() - input.lastMouseMove > 1400;
@@ -85,7 +87,7 @@ export class CameraRig {
       this.cam.position.set(px, py, pz);
       this.cam.lookAt(this.target.x, this.target.y + 0.2, this.target.z);
     }
-    const wantFov = 62 + clamp((f.speed - 6) * 1.1, 0, 16) + (f.boost ? 8 : 0);
+    const wantFov = this.baseFov + clamp((f.speed - 6) * 1.1, 0, 16) + (f.boost ? 8 : 0);
     this.fov = damp(this.fov, wantFov, 3, dt);
     if (Math.abs(this.cam.fov - this.fov) > 0.05) {
       this.cam.fov = this.fov;

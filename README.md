@@ -24,7 +24,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 | B | Drink a beer | P (hold) | Pee. Anywhere. |
 | H | Horn | R | Cart radio |
 | Tab | Phone: stats, bag, romance, empire | M | Map |
-| Esc | Pause / settings | | |
+| Esc | Pause / settings | V | Photo mode (free camera, no HUD) |
 
 **Gamepad:** left stick move/steer • right stick look • RT/LT gas & brake • A interact • X swing • Y drink • B hop/drift • LB switch club • RB pocket sand • L3 sprint/nitrous • R3 horn • D-pad: radio / pee / map • Start pause • Back phone. Menus: D-pad or arrow keys + A/Enter.
 

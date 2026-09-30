@@ -4,6 +4,7 @@ import { seatCharacter } from '../entities/cart.js';
 import { heightAt, waterLevel } from '../world/terrain.js';
 import { clamp, damp, dampAngle, rand, pick, chance, wrapAngle } from '../core/utils.js';
 import { audio } from '../core/audio.js';
+import { routineZone, ROUTINE_ZONES } from './life.js';
 
 let NEXT_ID = 1;
 
@@ -353,6 +354,9 @@ export class NPC {
     } else if (st === 'lounge' || st === 'fish') {
       // sunbathing / fishing: stay put
       if (this.data.face !== undefined) this.heading = dampAngle(this.heading, this.data.face, 3, dt);
+    } else if (st === 'chat') {
+      const o = this.data.chatWith;
+      if (o) this.faceTo(o.x, o.z, dt, 5);
     } else if (st === 'party') {
       // just vibing; dancing is triggered by the party
       if (this.distTo(p.x, p.z) < 6) this.faceTo(p.x, p.z, dt, 2);
@@ -442,6 +446,22 @@ export class NPC {
 
   pickTarget() {
     const w = this.game.world;
+    // daily routines: evenings at the pool/tiki bar, late nights at home
+    if (this.role === 'resident') {
+      const rz = routineZone(this.game, this);
+      if (rz === 'home') {
+        this.target = { x: this.homePt.x + rand(-3, 3), z: this.homePt.z + rand(-3, 3) };
+        this.stuckT = 0;
+        this.lastPos = { x: this.x, z: this.z };
+        return;
+      }
+      if (rz && Math.hypot(this.x - 40, this.z) < 180) {
+        this.target = w.randomZonePoint(ROUTINE_ZONES[rz]);
+        this.stuckT = 0;
+        this.lastPos = { x: this.x, z: this.z };
+        return;
+      }
+    }
     if (this.homePt && chance(0.5)) {
       this.target = { x: this.homePt.x + rand(-6, 6), z: this.homePt.z + rand(-6, 6) };
     } else if (this.zone) {

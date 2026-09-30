@@ -251,3 +251,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; fon
 .gz-cols h2 { font-size: 15px; margin: 0 0 4px; text-transform: uppercase; line-height: 1.15; }
 .gz-cols p { font-size: 13px; margin: 0; }
 .gz-foot { text-align: center; font-size: 11px; opacity: .55; margin-top: 12px; font-family: var(--body); }
+
+#photo-hint { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 9; background: rgba(0,0,0,.55); color: #fff; font-weight: 900; padding: 6px 14px; border-radius: 10px; font-size: 13px; pointer-events: none; }
+body.photo #hud > *:not(#photo-hint), body.photo #world-ui, body.photo #click-to-play { display: none !important; }

@@ -6,15 +6,15 @@ import { clamp, lerp, smooth } from '../core/utils.js';
 
 // hour -> palette keyframes
 const KEYS = [
-  { h: 0, top: '#070b1f', hor: '#16203d', fog: '#101830', sun: '#000000', sunI: 0, amb: 0.22, hemiSky: '#3b4a80', hemiGnd: '#1a1f2a', stars: 1 },
-  { h: 5.2, top: '#0d1433', hor: '#2a2d55', fog: '#1d2244', sun: '#000000', sunI: 0, amb: 0.25, hemiSky: '#3b4a80', hemiGnd: '#1a1f2a', stars: 0.9 },
+  { h: 0, top: '#070b1f', hor: '#16203d', fog: '#101830', sun: '#000000', sunI: 0, amb: 0.32, hemiSky: '#4b5a98', hemiGnd: '#222838', stars: 1 },
+  { h: 5.2, top: '#0d1433', hor: '#2a2d55', fog: '#1d2244', sun: '#000000', sunI: 0, amb: 0.34, hemiSky: '#4b5a98', hemiGnd: '#222838', stars: 0.9 },
   { h: 6.3, top: '#35508e', hor: '#f7a072', fog: '#d49a86', sun: '#ffb070', sunI: 0.9, amb: 0.45, hemiSky: '#9fb6e0', hemiGnd: '#5a4a3a', stars: 0.1 },
   { h: 8, top: '#3a84d6', hor: '#b9e2ff', fog: '#bfe0f5', sun: '#fff1d6', sunI: 2.4, amb: 0.7, hemiSky: '#bfe3ff', hemiGnd: '#6a7a4a', stars: 0 },
   { h: 16.5, top: '#3a84d6', hor: '#c4e6ff', fog: '#c8e4f5', sun: '#fff1d6', sunI: 2.5, amb: 0.7, hemiSky: '#bfe3ff', hemiGnd: '#6a7a4a', stars: 0 },
-  { h: 18.4, top: '#4a4f9a', hor: '#ff8a5c', fog: '#e89a80', sun: '#ff9a5a', sunI: 1.5, amb: 0.5, hemiSky: '#c49ad0', hemiGnd: '#6a4a3a', stars: 0 },
-  { h: 19.6, top: '#241f55', hor: '#c24f7e', fog: '#6a3f6a', sun: '#ff5a6a', sunI: 0.3, amb: 0.33, hemiSky: '#7a5aa0', hemiGnd: '#2a1f2a', stars: 0.35 },
-  { h: 20.8, top: '#0a0f28', hor: '#1f2248', fog: '#141a36', sun: '#000000', sunI: 0, amb: 0.24, hemiSky: '#3b4a80', hemiGnd: '#1a1f2a', stars: 1 },
-  { h: 24, top: '#070b1f', hor: '#16203d', fog: '#101830', sun: '#000000', sunI: 0, amb: 0.22, hemiSky: '#3b4a80', hemiGnd: '#1a1f2a', stars: 1 },
+  { h: 18.4, top: '#4a4f9a', hor: '#ff8a5c', fog: '#e89a80', sun: '#ff9a5a', sunI: 1.5, amb: 0.66, hemiSky: '#d6a8d8', hemiGnd: '#7a5a48', stars: 0 },
+  { h: 19.6, top: '#241f55', hor: '#c24f7e', fog: '#6a3f6a', sun: '#ff5a6a', sunI: 0.3, amb: 0.5, hemiSky: '#9a78c0', hemiGnd: '#3a2f3a', stars: 0.35 },
+  { h: 20.8, top: '#0a0f28', hor: '#1f2248', fog: '#141a36', sun: '#000000', sunI: 0, amb: 0.34, hemiSky: '#4b5a98', hemiGnd: '#222838', stars: 1 },
+  { h: 24, top: '#070b1f', hor: '#16203d', fog: '#101830', sun: '#000000', sunI: 0, amb: 0.32, hemiSky: '#4b5a98', hemiGnd: '#222838', stars: 1 },
 ];
 const cA = new THREE.Color(), cB = new THREE.Color();
 function mixHex(a, b, t, out) {

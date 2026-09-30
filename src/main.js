@@ -29,7 +29,7 @@ const CONTROLS = [
   ['B', 'Drink a beer'], ['P (hold)', 'Pee. Anywhere.'],
   ['H', 'Horn'], ['R', 'Cart radio'],
   ['Tab', 'Phone: stats, bag, romance'], ['M', 'Map'],
-  ['Esc', 'Pause / settings'], ['` [ ]', 'Demo: +3h / +stats / +$1k'],
+  ['Esc', 'Pause / settings'], ['V', 'Photo mode (free camera)'], ['` [ ]', 'Demo: +3h / +stats / +$1k'],
 ];
 for (const id of ['controls-grid', 'controls-grid2']) {
   $(id).innerHTML = CONTROLS.map(([k, d]) => `<span class="kbd">${k}</span><span>${d}</span>`).join('');
@@ -88,12 +88,14 @@ async function boot() {
   resize();
 
   // ---------------- settings ----------------
-  const settings = Object.assign({ master: 0.8, music: 0.55, sens: 1, speech: true, bloom: true, shadows: true, quality: 'high' }, JSON.parse(localStorage.getItem('sunset-palms-settings') || '{}'));
+  const settings = Object.assign({ master: 0.8, music: 0.55, sens: 1, speech: true, bloom: true, shadows: true, quality: 'high', fov: 62, invertY: false }, JSON.parse(localStorage.getItem('sunset-palms-settings') || '{}'));
   const applySettings = () => {
     audio.setVolume('master', settings.master);
     audio.setMusicVolume(settings.music);
     audio.speechEnabled = settings.speech;
     camRig.sensitivity = settings.sens;
+    camRig.baseFov = settings.fov;
+    camRig.invertY = settings.invertY;
     post.bloom.enabled = settings.bloom;
     sky.shadowsEnabled = settings.shadows;
     const presets = { low: { pr: 0.85, shadow: 1024, draw: 110 }, medium: { pr: 1.15, shadow: 1536, draw: 140 }, high: { pr: 1.6, shadow: 2048, draw: 170 } };
@@ -113,6 +115,10 @@ async function boot() {
   $('set-speech').checked = settings.speech;
   $('set-bloom').checked = settings.bloom;
   $('set-quality').value = settings.quality;
+  $('set-fov').value = settings.fov;
+  $('set-invert').checked = settings.invertY;
+  $('set-fov').oninput = (e) => { settings.fov = +e.target.value; applySettings(); };
+  $('set-invert').onchange = (e) => { settings.invertY = e.target.checked; applySettings(); };
   $('set-quality').onchange = (e) => { settings.quality = e.target.value; applySettings(); };
   $('set-shadows').checked = settings.shadows;
   $('set-master').oninput = (e) => { settings.master = +e.target.value; applySettings(); };
@@ -202,6 +208,7 @@ async function boot() {
   document.addEventListener('pointerlockchange', () => {
     const locked = document.pointerLockElement === canvas;
     // losing lock with no modal open = player pressed Esc -> pause
+    if (!locked && photo.on) { togglePhoto(); return; }
     if (!locked && game.running && !ui.modal && !paused) pause();
   });
 
@@ -214,8 +221,44 @@ async function boot() {
     requestAnimationFrame(frame);
     tick(Math.min(0.05, clock.getDelta()));
   }
+  // ---------------- photo mode ----------------
+  const photo = { on: false, yaw: 0, pitch: 0 };
+  const togglePhoto = () => {
+    photo.on = !photo.on;
+    document.body.classList.toggle('photo', photo.on);
+    $('photo-hint').classList.toggle('hidden', !photo.on);
+    if (photo.on) {
+      const d = new THREE.Vector3();
+      camera.getWorldDirection(d);
+      photo.yaw = Math.atan2(d.x, d.z);
+      photo.pitch = Math.asin(Math.max(-1, Math.min(1, d.y)));
+      audio.setEngine(false, 0, 0);
+    }
+  };
+  const updatePhoto = (dt) => {
+    photo.yaw -= input.dx * 0.0022;
+    photo.pitch = Math.max(-1.4, Math.min(1.4, photo.pitch - input.dy * 0.0022));
+    const k = (input.down.has('ShiftLeft') ? 30 : 9) * dt;
+    const f = new THREE.Vector3(Math.sin(photo.yaw) * Math.cos(photo.pitch), Math.sin(photo.pitch), Math.cos(photo.yaw) * Math.cos(photo.pitch));
+    const r = new THREE.Vector3(-Math.cos(photo.yaw), 0, Math.sin(photo.yaw));
+    const mv = (code, v, s) => { if (input.down.has(code)) camera.position.addScaledVector(v, s * k); };
+    mv('KeyW', f, 1); mv('KeyS', f, -1); mv('KeyD', r, 1); mv('KeyA', r, -1);
+    if (input.down.has('KeyE')) camera.position.y += k;
+    if (input.down.has('KeyQ')) camera.position.y -= k;
+    camera.lookAt(camera.position.clone().add(f));
+  };
+
   function tick(dt) {
     input.pollGamepad();
+    if (game.running && !ui.modal && (input.rawHit('KeyV') || (photo.on && input.rawHit('Escape')))) togglePhoto();
+    if (photo.on) {
+      updatePhoto(dt);
+      const pn = sky.update(game.state.minutes / 60, 0, game.player);
+      updateNightMaterials(pn);
+      post.render(dt, { drunk: 0, damage: 0, blind: 0, rhino: 0, fade: 0, night: pn });
+      input.endFrame();
+      return;
+    }
     // hit-stop / slow-mo for big impacts
     if (game.slowmo > 0) {
       game.slowmo -= dt;
