@@ -101,6 +101,7 @@ const ACH = {
   safecracker: ['Cracked It', "Opened the Captain's safe with nothing but a hearing aid and patience."],
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
+  scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
   aquaking: ['Aqua King', 'Scored 90%+ in Aqua Jazz. Chad has never been so threatened.'],
 };
 
@@ -336,6 +337,15 @@ export class Game {
       const c = this.addCart({ x: nd.x + 2, z: nd.z + 2, ry: rand(0, 6), kind: 'resident' });
       const d = this.spawnNPC({ role: 'driver', female: chance(0.4), x: nd.x, z: nd.z });
       d.seatIn(c, new Driver(c, 'cruise', { speed: rand(5, 7) }));
+      d.data.wants = null;
+    }
+    // mobility scooters: nine miles an hour of pure menace, and everyone gets stuck behind them
+    for (const id of ['C1', 'C5', 'S2', 'P4', 'P6']) {
+      const nd = NODES[id];
+      if (!nd) continue;
+      const c = this.addCart({ x: nd.x + 1.5, z: nd.z - 1.5, ry: rand(0, 6), kind: 'scooter', color: pick(['#b8323a', '#b8323a', '#23408e', '#2f6b4a', '#e8e0d0']) });
+      const d = this.spawnNPC({ role: 'driver', female: chance(0.55), x: nd.x, z: nd.z, look: { glasses: 'big' } });
+      d.seatIn(c, new Driver(c, 'cruise', { speed: rand(3.3, 4) }));
       d.data.wants = null;
     }
     // security
@@ -1077,7 +1087,7 @@ export class Game {
       if (c.sirenOn) for (const n of this.npcs) if (!n.cart && n.state === 'wander' && Math.hypot(n.x - c.x, n.z - c.z) < 25) { n.state = 'flee'; n.fleeFrom = this.player; n.fleeT = 3; }
       return;
     }
-    audio.play(c.upgrades.horn ? 'cucaracha' : 'horn');
+    audio.play(c.kind === 'scooter' ? 'meep' : c.upgrades.horn ? 'cucaracha' : 'horn');
     for (const n of this.npcs) {
       if (n.cart || n.state !== 'wander') continue;
       if (Math.hypot(n.x - c.x, n.z - c.z) < 12) {
@@ -1140,10 +1150,10 @@ export class Game {
       if (drv && drv !== p) {
         if (drv.role === 'lady' || drv.role === 'operator') continue; // talk instead
         if (drv.role === 'security' || drv.role === 'racer') continue;
-        consider(d + 0.3, { label: `Yank ${drv.name.split(' ')[0]} out of the cart`, cls: 'bad', action: () => this.carjack(c) });
+        consider(d + 0.3, { label: `Yank ${drv.name.split(' ')[0]} ${c.kind === 'scooter' ? 'off the scooter' : 'out of the cart'}`, cls: 'bad', action: () => this.carjack(c) });
       } else {
         const own = c === this.playerCart;
-        consider(d + 0.2, { label: own ? 'Drive your cart' : `Borrow ${c.kind === 'club' ? 'a club' : "somebody's"} cart`, action: () => this.enterCart(c) });
+        consider(d + 0.2, { label: own ? 'Drive your cart' : c.kind === 'scooter' ? "Borrow somebody's mobility scooter" : `Borrow ${c.kind === 'club' ? 'a club' : "somebody's"} cart`, action: () => this.enterCart(c) });
       }
     }
     for (const n of this.npcs) {
@@ -1194,8 +1204,8 @@ export class Game {
     drv.say(pick(['HEY! I\'M DRIVING HERE!', 'HELP! CARJACKING!', 'That\'s MY CART, you hooligan!']), 2.5);
     this.player.enterCart(c);
     this.announceRadio();
-    this.achievement('carjack');
-    this.crime(c.x, c.z, 1.1, 'Grand Theft Golf Cart', 25);
+    this.achievement(c.kind === 'scooter' ? 'scooterjack' : 'carjack');
+    this.crime(c.x, c.z, 1.1, c.kind === 'scooter' ? 'Grand Theft Mobility Scooter' : 'Grand Theft Golf Cart', 25);
     audio.play('oof');
   }
 

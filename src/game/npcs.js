@@ -525,7 +525,7 @@ export class NPC {
     for (const n of g.npcs) if (!n.cart && n.state !== 'ko' && Math.abs(n.x - c.x) < 8 && Math.abs(n.z - c.z) < 8) obstacles.push(n);
     const inp = d.control(dt, obstacles, chase);
     if (d.honkNow && !chase) {
-      if (Math.hypot(g.player.x - c.x, g.player.z - c.z) < 40) audio.play('horn', { vol: 0.5 });
+      if (Math.hypot(g.player.x - c.x, g.player.z - c.z) < 40) audio.play(c.kind === 'scooter' ? 'meep' : 'horn', { vol: 0.5 });
       if (chance(0.5)) this.say(pick(['MOVE IT, GRANDPA!', 'Some of us have DIALYSIS at 3!', 'Get outta the road!']), 2);
     }
     c.update(dt, inp, g.world.col);

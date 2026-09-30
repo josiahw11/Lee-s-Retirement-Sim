@@ -205,6 +205,10 @@ export class AudioSys {
       case 'ball':
         this.tone({ freq: rand(1300, 1600), type: 'sine', dur: 0.06, vol: 0.12 * v });
         break;
+      case 'meep': // mobility scooter horn
+        this.tone({ freq: 1320, type: 'square', dur: 0.09, vol: 0.07 * v });
+        this.tone({ freq: 1320, type: 'square', dur: 0.09, vol: 0.07 * v, at: 0.14 });
+        break;
       case 'horn':
         this.tone({ freq: 392, type: 'square', dur: 0.35, vol: 0.12 * v });
         this.tone({ freq: 494, type: 'square', dur: 0.35, vol: 0.1 * v });

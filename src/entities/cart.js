@@ -67,7 +67,7 @@ export class Cart {
     this.suspY = 0; this.suspV = 0;
     this.airT = 0;
     this.wheelRot = 0;
-    this.radius = 1.25;
+    this.radius = this.kind === 'scooter' ? 0.65 : 1.25;
     this.driver = null;
     this.passenger = null;
     this.sunk = false;
@@ -88,6 +88,7 @@ export class Cart {
 
   stats() {
     const u = this.upgrades;
+    if (this.kind === 'scooter') return { max: 4.2, turbo: 4.2, accel: 3, offroad: 0.95 }; // 9 mph of pure menace
     let max = 11;
     if (this.kind === 'security') max = 12.5;
     if (this.kind === 'rival') max = 12.5;
@@ -111,6 +112,7 @@ export class Cart {
   }
 
   build() {
+    if (this.kind === 'scooter') return this.buildScooter();
     const u = this.upgrades;
     const lift = u.lift ? 0.22 : 0;
     this.lift = lift;
@@ -465,16 +467,78 @@ export class Cart {
     return { x: this.x + lx * c + lz * s, z: this.z - lx * s + lz * c, y: this.y + this.lift + 0.02 };
   }
 
+  // Mobility scooter: red plastic shroud, tiller with a wire basket, padded captain's seat,
+  // four little wheels, and a tall orange safety flag.
+  buildScooter() {
+    this.lift = 0;
+    this.wheelR = 0.13;
+    const b = this.body;
+    const chassis = new THREE.Group();
+    b.add(chassis);
+    this.chassis = chassis;
+    const paint = new THREE.Mesh(shared('scooter:paint', () => mergeParts([
+      [rbox(0.62, 0.12, 1.3, 0.05), '#fff', mat4(0, 0.2, 0)], // deck
+      [rbox(0.58, 0.3, 0.42, 0.12), '#fff', mat4(0, 0.36, 0.5, 0, 1, 1, 1, 0.2)], // front shroud
+      [rbox(0.6, 0.22, 0.4, 0.1), '#fff', mat4(0, 0.32, -0.46)], // rear cover
+    ])), this.paintMat);
+    paint.castShadow = true;
+    chassis.add(paint);
+    const trim = new THREE.Mesh(shared('scooter:trim', () => mergeParts([
+      [rbox(0.64, 0.05, 1.34, 0.02), '#222', mat4(0, 0.14, 0)], // bumper skirt
+      [rbox(0.46, 0.012, 0.6, 0.005), '#333', mat4(0, 0.265, 0.12)], // rubber floor
+      [GEO.cyl, '#555', mat4(0, 0.5, -0.28, 0, 0.04, 0.3, 0.04)], // seat post
+      [rbox(0.48, 0.1, 0.44, 0.05), '#1c1c1c', mat4(0, 0.68, -0.28)], // seat
+      [rbox(0.46, 0.4, 0.09, 0.045), '#1c1c1c', mat4(0, 0.92, -0.49, 0, 1, 1, 1, -0.15)], // backrest
+      [SPOKE, '#1c1c1c', mat4(0.26, 0.8, -0.26, 0, 0.05, 0.04, 0.34)], // armrests
+      [SPOKE, '#1c1c1c', mat4(-0.26, 0.8, -0.26, 0, 0.05, 0.04, 0.34)],
+      [GEO.cyl, '#666', mat4(0, 0.72, 0.62, 0, 0.035, 0.75, 0.035, -0.35)], // tiller
+      [SPOKE, '#222', mat4(0, 1.05, 0.5, 0, 0.5, 0.035, 0.035)], // handlebar
+      // wire basket: open top, thin walls with a darker rim
+      [SPOKE, '#8a8f94', mat4(0, 0.93, 0.72, 0, 0.36, 0.015, 0.24)],
+      [SPOKE, '#9aa0a6', mat4(0.18, 1.02, 0.72, 0, 0.012, 0.18, 0.24)],
+      [SPOKE, '#9aa0a6', mat4(-0.18, 1.02, 0.72, 0, 0.012, 0.18, 0.24)],
+      [SPOKE, '#9aa0a6', mat4(0, 1.02, 0.84, 0, 0.36, 0.18, 0.012)],
+      [SPOKE, '#9aa0a6', mat4(0, 1.02, 0.6, 0, 0.36, 0.18, 0.012)],
+      [SPOKE, '#5f6468', mat4(0, 1.11, 0.84, 0, 0.37, 0.02, 0.02)],
+      [SPOKE, '#5f6468', mat4(0, 1.11, 0.6, 0, 0.37, 0.02, 0.02)],
+      [SPOKE, '#e8c07a', mat4(0.05, 1.0, 0.72, 0.4, 0.14, 0.12, 0.1)], // a loaf of bread, obviously
+      [GEO.cyl, '#d8d8d8', mat4(0.22, 1.35, -0.55, 0, 0.008, 1.9, 0.008)], // safety flag whip
+      [GEO.box, '#ff6b1a', mat4(0.22, 2.2, -0.62, 0, 0.01, 0.2, 0.26)], // flag
+      [GEO.cyl, '#d8dde0', mat4(0, 0.45, 0.73, 0, 0.06, 0.04, 0.06, Math.PI / 2 - 0.2)], // headlight bezel
+    ])), M.vc);
+    trim.castShadow = true;
+    chassis.add(trim);
+    this.headMat = new THREE.MeshStandardMaterial({ color: 0xbfc8cf, roughness: 0.2, metalness: 0.3, emissive: 0xfff2c0, emissiveIntensity: 0 });
+    const h = new THREE.Mesh(shared('scooter:head', () => new THREE.CircleGeometry(0.045, 10)), this.headMat);
+    h.position.set(0, 0.46, 0.755);
+    h.rotation.x = -0.2;
+    chassis.add(h);
+    const r = this.wheelR;
+    for (const [x, z] of [[0.22, 0.48], [-0.22, 0.48], [0.25, -0.48], [-0.25, -0.48]]) {
+      const w = new THREE.Group();
+      w.position.set(x, r, z);
+      const spin = new THREE.Group();
+      w.add(spin);
+      const tire = new THREE.Mesh(tireGeo(r, 0.08), TIRE_MAT);
+      spin.add(tire);
+      const hub = new THREE.Mesh(shared(`hub:${r}:false`, () => new THREE.CylinderGeometry(r * 0.52, r * 0.52, 0.09, 14).rotateZ(Math.PI / 2)), HUB_MAT);
+      spin.add(hub);
+      b.add(w);
+      this.wheels.push({ g: w, spin, front: z > 0 });
+    }
+  }
+
   exitPoint(side = 1) {
     const s = Math.sin(this.heading), c = Math.cos(this.heading);
-    const lx = 1.5 * side;
+    const lx = (this.kind === 'scooter' ? 0.9 : 1.5) * side;
     return { x: this.x + lx * c, z: this.z - lx * s };
   }
 }
 
 export function seatCharacter(ch, cart, side = 1) {
   cart.chassis.add(ch.root);
-  ch.root.position.set(0.28 * side, 0.9 - 0.85 + 0.0, -0.3);
+  if (cart.kind === 'scooter') ch.root.position.set(0, -0.2, -0.24); // one seat, dead center
+  else ch.root.position.set(0.28 * side, 0.9 - 0.85 + 0.0, -0.3);
   ch.root.rotation.set(0, 0, 0);
   ch.mode = 'sit';
 }
