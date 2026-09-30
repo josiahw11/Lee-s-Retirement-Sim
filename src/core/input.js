@@ -66,7 +66,48 @@ export class Input {
     let v = 0;
     for (const k of neg) if (this.key(k)) v -= 1;
     for (const k of pos) if (this.key(k)) v += 1;
+    // analog gamepad overrides when the stick is in use
+    if (this.enabled && this.pad) {
+      const a = this.pad.axes;
+      let s = 0;
+      if (pos.includes('KeyW')) s = Math.abs(this.pad.trig) > Math.abs(-a[1]) ? this.pad.trig : -a[1];
+      else if (pos.includes('KeyD')) s = a[0];
+      else if (pos.includes('KeyA')) s = -a[0];
+      if (Math.abs(s) > Math.abs(v)) v = s;
+    }
     return Math.max(-1, Math.min(1, v));
+  }
+
+  // Poll the first connected gamepad; buttons become virtual key codes.
+  pollGamepad() {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = pads && [...pads].find((p) => p && p.connected);
+    if (!gp) { this.pad = null; return; }
+    const dz = (v) => (Math.abs(v) < 0.18 ? 0 : (v - Math.sign(v) * 0.18) / 0.82);
+    const axes = [dz(gp.axes[0] || 0), dz(gp.axes[1] || 0), dz(gp.axes[2] || 0), dz(gp.axes[3] || 0)];
+    const b = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
+    const val = (i) => (gp.buttons[i] ? gp.buttons[i].value : 0);
+    const map = {
+      0: ['KeyE', 'PadA'], 1: ['Space', 'PadB'], 2: ['KeyF'], 3: ['KeyB'], 4: ['KeyQ'], 5: ['KeyG'],
+      8: ['Tab'], 9: ['Escape'], 10: ['ShiftLeft'], 11: ['KeyH'], 12: ['KeyR', 'PadUp'], 13: ['KeyP', 'PadDown'], 14: ['KeyM', 'PadLeft'], 15: ['PadRight'],
+    };
+    const prev = this.pad ? this.pad.held : new Set();
+    const held = new Set();
+    for (const [i, codes] of Object.entries(map)) {
+      if (!b(+i)) continue;
+      for (const c of codes) {
+        held.add(c);
+        if (!prev.has(c)) this.pressed.add(c);
+      }
+    }
+    for (const c of prev) if (!held.has(c)) this.down.delete(c);
+    for (const c of held) this.down.add(c);
+    this.pad = { axes, held, trig: val(7) - val(6) };
+    if (Math.abs(axes[2]) + Math.abs(axes[3]) > 0) {
+      this.dx += axes[2] * 14;
+      this.dy += axes[3] * 10;
+      this.lastMouseMove = performance.now();
+    }
   }
 
   endFrame() {

@@ -232,3 +232,5 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; fon
 .brew-pot { font-size: 84px; transition: transform .05s; }
 .brew-prog { height: 16px; border-radius: 8px; border: 2px solid var(--navy); background: #fff; overflow: hidden; margin-top: 8px; }
 .brew-prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3ccf6e, #7CFC9A); }
+
+.item.sel { background: #fff1c2; outline: 3px solid var(--coral); }

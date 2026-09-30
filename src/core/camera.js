@@ -21,7 +21,7 @@ export class CameraRig {
   }
 
   update(dt, input, f) {
-    if (input.locked) {
+    if (input.locked || input.pad) {
       this.yaw -= input.dx * 0.0024 * this.sensitivity;
       this.pitch = clamp(this.pitch + input.dy * 0.0019 * this.sensitivity, -0.15, 1.25);
     }

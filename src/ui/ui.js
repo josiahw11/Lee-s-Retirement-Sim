@@ -286,9 +286,48 @@ export class UI {
       b.innerHTML = `<span><span class="num">${i + 1}.</span>${c.text}</span>${chk}`;
       b.disabled = !!c.disabled;
       b.onclick = () => this.choose(i);
+      b.onmouseenter = () => this.setSel(i);
       box.appendChild(b);
     });
     this._choices = choices;
+    this.setSel(Math.max(0, choices.findIndex((c) => !c.disabled)));
+  }
+
+  // keyboard / gamepad highlight for dialogue choices
+  setSel(i) {
+    const els = this.el['dlg-choices'].children;
+    const n = els.length;
+    if (!n) return;
+    this.sel = ((i % n) + n) % n;
+    for (let k = 0; k < n; k++) els[k].classList.toggle('sel', k === this.sel);
+  }
+
+  moveSel(d) {
+    if (!this._choices) return;
+    let i = this.sel ?? 0;
+    for (let k = 0; k < this._choices.length; k++) {
+      i = (i + d + this._choices.length) % this._choices.length;
+      if (!this._choices[i].disabled) break;
+    }
+    this.setSel(i);
+  }
+
+  // shop highlight
+  moveShopSel(d) {
+    const items = [...this.el['shop-items'].children];
+    if (!items.length) return;
+    this.shopSel = (((this.shopSel ?? -1) + d) % items.length + items.length) % items.length;
+    items.forEach((el, k) => el.classList.toggle('sel', k === this.shopSel));
+    items[this.shopSel].scrollIntoView({ block: 'nearest' });
+  }
+
+  buyShopSel() {
+    const items = [...this.el['shop-items'].children];
+    if (this.shopSel == null || !items[this.shopSel]) return;
+    const keep = this.shopSel;
+    items[this.shopSel].click();
+    this.shopSel = keep - 1;
+    this.moveShopSel(1);
   }
 
   choose(i) {

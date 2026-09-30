@@ -213,6 +213,7 @@ async function boot() {
     tick(Math.min(0.05, clock.getDelta()));
   }
   function tick(dt) {
+    input.pollGamepad();
     // hit-stop / slow-mo for big impacts
     if (game.slowmo > 0) {
       game.slowmo -= dt;
@@ -242,12 +243,22 @@ async function boot() {
         else if (!ui.modal) openMap();
       }
       if (ui.modal === 'dialogue') {
+        if (input.rawHit('ArrowUp') || input.rawHit('PadUp') || input.rawHit('KeyW')) ui.moveSel(-1);
+        if (input.rawHit('ArrowDown') || input.rawHit('PadDown') || input.rawHit('KeyS')) ui.moveSel(1);
+        if (input.rawHit('PadA') || input.rawHit('Enter')) ui.choose(ui.sel ?? 0);
         for (let i = 1; i <= 9; i++) if (input.rawHit(`Digit${i}`) || input.rawHit(`Numpad${i}`)) ui.choose(i - 1);
         if (input.rawHit('Space') || input.rawHit('Enter')) {
           if (ui.typeI < ui.typeFull.length) ui.choose(0);
         }
       }
-      if (ui.modal === 'shop' && input.rawHit('KeyE')) ui.closeShop();
+      if (ui.modal === 'shop') {
+        if (input.rawHit('PadB')) ui.closeShop();
+        else if (input.rawHit('ArrowUp') || input.rawHit('PadUp') || input.rawHit('ArrowLeft') || input.rawHit('PadLeft')) ui.moveShopSel(-1);
+        else if (input.rawHit('ArrowDown') || input.rawHit('PadDown') || input.rawHit('ArrowRight') || input.rawHit('PadRight')) ui.moveShopSel(1);
+        else if (input.rawHit('Enter') || input.rawHit('PadA')) ui.buyShopSel();
+      }
+      if ((ui.modal === 'menu' || ui.modal === 'map') && input.rawHit('PadB')) { if (ui.modal === 'menu') closeMenu(); else closeMap(); }
+      if (ui.modal === 'pause' && input.rawHit('PadA')) resume();
     }
 
     if (!paused) {

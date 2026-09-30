@@ -26,6 +26,8 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 | Tab | Phone: stats, bag, romance, empire | M | Map |
 | Esc | Pause / settings | | |
 
+**Gamepad:** left stick move/steer • right stick look • RT/LT gas & brake • A interact • X swing • Y drink • B hop/drift • LB switch club • RB pocket sand • L3 sprint/nitrous • R3 horn • D-pad: radio / pee / map • Start pause • Back phone. Menus: D-pad or arrow keys + A/Enter.
+
 **Reviewer shortcuts:** `]` = +$1,000 • `[` = +1 to all stats • `` ` `` (backtick) = skip 3 hours
 
 ## What's in the demo
@@ -50,8 +52,14 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 - **Gang.** Recruit 4 geezer enforcers: an ex-boxer, a man with two titanium hips, a Korean War vet, and a guy whose walker is a weapon. They follow you, fight for you, or guard turf.
 - **Rival sabotage.** After you humble Chip, his goons raid your carts and drones on a timer.
 - **HOA takeover.** Win Sunday's election (campaign door to door, buy votes), or blackmail Karen with dirt from Linda or a late-night dumpster dive. Then issue decrees like the Bingo Levy, the Rival Colors Ban and the Security Budget Cut.
-- **Chapter 1 story** runs through 12 quest steps, followed by free-roam goals.
-- 16 achievements, auto-save when you sleep, and three procedural radio stations plus a text-to-speech talk-radio station.
+- **Golf cart races.** "Rocket" Ron runs the Back Nine Grand Prix out of the clubhouse lot: a 17-checkpoint lap with AI rivals and three bet tiers ($50 is winnable stock; $500 needs nitrous).
+- **Mini-games.** Chug-Off at the Tiki Hut (or vs. Millie), interactive Bingo at the clubhouse (Karen calls it, it's rigged, and a false bingo is an HOA violation), and a Rhino Tea brewing thermostat.
+- **Lawn parties.** Throw one from your front door: neighbors dance under string lights, you earn Status and votes, and Karen shows up with a noise complaint.
+- **Wardrobe.** The clubhouse boutique sells 7 Hawaiian shirts, hats, shades and white tube socks. Change outfits at home; style adds Status.
+- **Weather.** Florida afternoon thunderstorms bring rain, lightning, thunder, slick roads and residents panicking about their perms.
+- **Voices.** Every resident mumbles in Animal Crossing-style old-folks gibberish.
+- **Chapter 1 story** runs through 12 quest steps, then **Chapter 2: Rhino Rising** (7 steps): a tea shortage, a night-time antler heist, stealing a tooth from Mr. Chompers the gator, home brewing, and a boss fight with Chip's father "The Deuce". Free-roam goals follow.
+- 22 achievements, graphics quality presets (Low/Medium/High), auto-save when you sleep, and three procedural radio stations plus a text-to-speech talk-radio station.
 
 Everything is procedural: all models, textures, music and sound effects are generated in code, with no asset files.
 
