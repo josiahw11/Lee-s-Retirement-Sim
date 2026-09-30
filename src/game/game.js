@@ -12,6 +12,7 @@ import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
 import { Life } from './life.js';
+import { Litter } from './litter.js';
 import { BEACH, OCEAN, onSand } from '../world/beach.js';
 import { updateTooth, deuceConfront, spawnTooth, spawnDeuce } from './chapter2.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
@@ -87,6 +88,7 @@ const ACH = {
   party: ['Animal House', 'Threw a lawn party at your place.'],
   bingo: ['Beat the System', "Won Karen's rigged bingo."],
   raceLegend: ['Senior Speed Demon', 'Won a $500 race against The Widow Maker.'],
+  litterbug: ['Keep Florida Beautiful', 'Flung 24 empty beer cans onto the grounds.'],
 };
 
 export class Game {
@@ -408,6 +410,8 @@ export class Game {
     this.quests.begin();
     this.worldEvents = new Events(this);
     this.life = new Life(this);
+    if (this.litter) this.litter.clear();
+    this.litter = new Litter(this);
     this.yesterday = { ...state.counters };
     if (isNew) {
       this.ui.toast(`Welcome to Sunset Palms, ${state.name}.`, 'quest', 6);
@@ -951,11 +955,12 @@ export class Game {
     this.achievement('firstBeer');
     if (s.counters.beersToday >= 6) this.achievement('sixpack');
     p.char.setHeld(s.weapon === 'fists' ? null : s.weapon);
+    this.litter.toss();
     if (chance(0.5)) {
-      setTimeout(() => {
+      this.after(0.35, () => {
         audio.play('burp');
         this.ui.bubble(p, pick(['*BRAAAAP*', '*buuuurp*', '*URRRP* ...pardon me.', '*BELCH* That\'s the stuff.']), 1.8);
-      }, 350);
+      });
     }
     if (p.cart) this.ui.hint(pick(['Drinking and driving? In THIS economy?', 'Keep it under 12 MPH near Security...']), 2.5);
   }
@@ -1961,6 +1966,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       this.updateDetector(dt);
       if (this.worldEvents) this.worldEvents.update(dt);
       if (this.life) this.life.update(dt);
+      if (this.litter) this.litter.update(dt);
       if (this.timers && this.timers.length) {
         for (const tm of this.timers) tm.t -= dt;
         const due = this.timers.filter((tm) => tm.t <= 0);

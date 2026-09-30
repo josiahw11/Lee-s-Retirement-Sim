@@ -299,6 +299,17 @@ export class AudioSys {
         this.play('canOpen', opt);
         this.play('glug', opt);
         break;
+      case 'crush': // aluminum crumpling in a fist
+        for (let i = 0; i < 6; i++) this.noiseBurst({ dur: 0.03 + rand(0, 0.03), vol: (0.35 + rand(0, 0.2)) * v, type: 'bandpass', freq: 2200 + rand(0, 2500), q: 3, at: i * rand(0.018, 0.04) });
+        this.noiseBurst({ dur: 0.12, vol: 0.18 * v, type: 'lowpass', freq: 900, at: 0.02 });
+        break;
+      case 'clink': { // empty can bouncing on pavement
+        const f = rand(1900, 2600);
+        this.tone({ freq: f, type: 'triangle', dur: 0.09, vol: 0.14 * v });
+        this.tone({ freq: f * 2.76, type: 'sine', dur: 0.06, vol: 0.07 * v });
+        this.noiseBurst({ dur: 0.025, vol: 0.2 * v, type: 'highpass', freq: 3500 });
+        break;
+      }
     }
   }
 

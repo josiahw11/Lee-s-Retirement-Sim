@@ -528,9 +528,9 @@ export class World {
       // parked cart in driveway (every house has a chance; player's always)
       const cp = f.toWorld(gx, D / 2 + 4.5);
       if (h.owner === 'player') {
-        this.playerCartSpawn = { x: cp.x, z: cp.z, ry: h.facing + Math.PI };
+        this.playerCartSpawn = { x: cp.x, z: cp.z, ry: h.facing }; // backed in: W drives you to the street
       } else if (rnd() < 0.3) {
-        this.cartSpawns.push({ x: cp.x, z: cp.z, ry: h.facing + Math.PI, owner: 'resident', house: h.id });
+        this.cartSpawns.push({ x: cp.x, z: cp.z, ry: h.facing + (Math.round(cp.x * 0.37 + cp.z * 0.73) & 1 ? Math.PI : 0), owner: 'resident', house: h.id });
       }
       h.doorPos = f.toWorld(dx, D / 2 + 1.6);
       h.frontPos = f.toWorld(dx, D / 2 + 4);
