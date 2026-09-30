@@ -14,7 +14,7 @@ if [ ! -d node_modules ]; then
   npm install || { read -r -p "Install failed. Press Enter to close."; exit 1; }
 fi
 echo ""
-echo "  Starting Sunset Palms... your browser will open at http://localhost:5173"
+echo "  Starting Sunset Palms... your browser will open by itself (usually http://localhost:5173)"
 echo "  Leave this window open while you play. Close it to stop the game."
 echo ""
 npm run play

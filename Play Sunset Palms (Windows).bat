@@ -21,7 +21,7 @@ if not exist node_modules (
   )
 )
 echo.
-echo  Starting Sunset Palms... your browser will open at http://localhost:5173
+echo  Starting Sunset Palms... your browser will open by itself (usually http://localhost:5173)
 echo  Leave this window open while you play. Close it to stop the game.
 echo.
 call npm run play
