@@ -19,6 +19,7 @@ import { Karaoke } from './karaoke.js';
 import { GarageSales, sellerNode } from './garagesale.js';
 import { SeniorGames, commishNode } from './seniorgames.js';
 import { activitiesTab, bindActivities } from './activities.js';
+import { Soundscape } from './soundscape.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
@@ -465,6 +466,7 @@ export class Game {
     this.garageSales = new GarageSales(this);
     if (this.seniorGames) this.seniorGames.clear();
     this.seniorGames = new SeniorGames(this);
+    this.soundscape = new Soundscape(this);
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -2448,6 +2450,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     audio.setRadio(((!!c && audio.station !== 0) || partyNear) && !this.ui.modal);
     if (c) c.bass = c.upgrades.speakers && audio.station !== 0;
     audio.ambientTick(dt, this.sky.night > 0.6);
+    if (this.soundscape) this.soundscape.update(dt);
   }
 
   // ================================================================ menu (TAB)
