@@ -288,7 +288,14 @@ export function jumpToChapter(g, n, STEPS) {
   const ids = { 2: 'c2_doc', 3: 'c3_board' };
   const idx = STEPS.findIndex((x) => x.id === ids[n]);
   if (idx < 0) return;
-  Object.assign(f, { metGus: true, metDoc: true, beatChip: true, boughtBeer: true, c2Doc: true });
+  Object.assign(f, { metGus: true, metDoc: true, beatChip: true, boughtBeer: true });
+  if (n >= 3) f.c2Doc = true;
+  else for (const k of ['c2Doc', 'teaShortage', 'homebrew', 'testBatch', 'beatDeuce']) delete f[k];
+  // replaying a chapter starts it clean
+  for (const k of ['c3Boarded', 'c3Fingers', 'fingersDeal', 'c3Jackpot', 'beatCaptain', 'vaultOpen', 'vaultChoice']) delete f[k];
+  s.counters.bjWon = 0;
+  delete s.flags.gazVault;
+  delete s.flags.gazJackpot;
   s.hoa.president = s.hoa.president || n >= 2;
   if (n >= 3) Object.assign(f, { teaShortage: true, homebrew: true, testBatch: true, beatDeuce: true });
   s.inv.tea = Math.max(s.inv.tea, 3);

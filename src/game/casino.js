@@ -64,7 +64,15 @@ export class Blackjack {
 
   deal() {
     if (this.phase !== 'bet' && this.phase !== 'result') return;
-    if (this.g.state.money < this.bet) { this.msg = this.duel ? '"You can\'t cover the stake. Pathetic."' : '"Honey, you\'re tapped out."'; this.render(); return; }
+    if (this.g.state.money < this.bet) {
+      if (this.duel) { // can't cover the stake: that's a loss, and the deckhands know what that means
+        this.losses = this.duel.need;
+        this.msg = '"You can\'t cover the stake? Pathetic." The deckhands crack their knuckles...';
+        this.doneT = 2.4;
+      } else this.msg = '"Honey, you\'re tapped out."';
+      this.render();
+      return;
+    }
     this.g.spend(this.bet);
     this.stake = this.bet;
     this.player = [this.draw(), this.draw()];
@@ -92,7 +100,7 @@ export class Blackjack {
 
   hit() {
     if (this.phase !== 'player') return;
-    if (this.drunkFumble('hit') === 'stand') return this.stand(true);
+    if (this.drunkFumble('hit') === 'stand') { this.fumble = this.msg; return this.stand(true); }
     this.player.push(this.draw());
     audio.play('click');
     const v = handValue(this.player).v;
@@ -103,7 +111,15 @@ export class Blackjack {
 
   stand(forced = false) {
     if (this.phase !== 'player') return;
-    if (!forced && this.drunkFumble('stand') === 'hit') { this.player.push(this.draw()); if (handValue(this.player).v > 21) return this.settle(); this.render(); return; }
+    if (!forced && this.drunkFumble('stand') === 'hit') {
+      this.fumble = this.msg;
+      this.player.push(this.draw());
+      const v = handValue(this.player).v;
+      if (v > 21) return this.settle();
+      if (v === 21) return this.stand(true);
+      this.render();
+      return;
+    }
     this.phase = 'dealer';
     while (handValue(this.dealerCards).v < 17) this.dealerCards.push(this.draw());
     this.settle();
@@ -141,6 +157,7 @@ export class Blackjack {
     else if (res === 'win') { audio.play('cash'); this.msg = d > 21 ? `${who} busts with ${d}! You win ${money(this.stake)}.` : `${p} beats ${d}. You win ${money(this.stake)}.`; this.wins++; }
     else if (res === 'push') { audio.play('click'); this.msg = `Push at ${p}. Your bet comes back.`; }
     else { audio.play('fail'); this.msg = res === 'bust' ? `Bust with ${p}. ${pick(['"Ouch, sugar."', '"Happens to the best of us."', '"The house thanks you."'])}` : `${who} has ${d}. You lose ${money(this.stake)}.`; this.losses++; }
+    if (this.fumble) { this.msg = this.fumble + ' ' + this.msg; this.fumble = null; }
     this.phase = 'result';
     this.render();
     if (this.duel && (this.wins >= this.duel.need || this.losses >= this.duel.need)) {
@@ -189,12 +206,21 @@ export class Blackjack {
       if (this.doneT <= 0) this.finish();
       return;
     }
-    if (input.rawHit('KeyH')) this.hit();
-    if (input.rawHit('KeyS')) this.stand();
-    if (input.rawHit('KeyD')) this.double();
-    if (input.rawHit('Space') || input.rawHit('Enter') || input.rawHit('PadA')) this.deal();
+    // leaving first (gamepad B also sends Space): cash out, or fold the Captain's duel
+    if ((input.rawHit('Escape') || input.rawHit('PadB')) && this.phase !== 'player') {
+      if (!this.duel) return this.finish();
+      this.losses = this.duel.need;
+      this.msg = 'You fold. The Captain smiles. The deckhands do not.';
+      this.doneT = 2;
+      this.render();
+      return;
+    }
+    // gamepad: A = hit / deal, X (F) = stand, Y (B) = double
+    if (input.rawHit('KeyH') || (input.rawHit('PadA') && this.phase === 'player')) this.hit();
+    else if (input.rawHit('Space') || input.rawHit('Enter') || input.rawHit('PadA')) this.deal();
+    if (input.rawHit('KeyS') || input.rawHit('KeyF')) this.stand();
+    if (input.rawHit('KeyD') || input.rawHit('KeyB')) this.double();
     for (let i = 0; i < 4; i++) if (input.rawHit(`Digit${i + 1}`)) this.act(`bet${i}`);
-    if (!this.duel && (input.rawHit('Escape') || input.rawHit('PadB')) && this.phase !== 'player') this.finish();
   }
 
   finish() {
@@ -247,8 +273,8 @@ export class Slots {
       <div class="mg-msg" id="sl-msg"></div>
       <div class="bj-btns"><button class="btn" id="sl-b5">$5</button><button class="btn" id="sl-b25">$25</button><button class="btn big" id="sl-pull">PULL THE LEVER</button><button class="btn alt" id="sl-leave">CASH OUT</button></div>
       <div class="mg-hint">SPACE pull • 1/2 bet • ESC cash out</div>`;
-    $('sl-b5').onclick = () => { this.bet = 5; this.render(); };
-    $('sl-b25').onclick = () => { this.bet = 25; this.render(); };
+    $('sl-b5').onclick = () => { if (!this.spinning) { this.bet = 5; this.render(); } };
+    $('sl-b25').onclick = () => { if (!this.spinning) { this.bet = 25; this.render(); } };
     $('sl-pull').onclick = () => this.pull();
     $('sl-leave').onclick = () => this.finish();
     for (let i = 0; i < 3; i++) this.setReel(i, this.reels[i].sym);
@@ -267,6 +293,7 @@ export class Slots {
   pull() {
     if (this.spinning || this.done) return;
     if (this.g.state.money < this.bet) { this.msg = 'Out of quarters. And dignity.'; this.render(); return; }
+    this.spinBet = this.bet;
     this.g.spend(this.bet);
     this.net -= this.bet;
     this.g.state.casino.pot += Math.round(this.bet * 0.4);
@@ -289,8 +316,8 @@ export class Slots {
     const [a, b, c] = this.result;
     let win = 0, jackpot = false;
     if (a === b && b === c) {
-      if (a === '👵') { jackpot = true; win = this.g.state.casino.pot; } else win = this.bet * PAYS[a];
-    } else if ([a, b, c].filter((s) => s === '🍒').length === 2) win = this.bet * 2;
+      if (a === '👵') { jackpot = true; win = this.g.state.casino.pot; } else win = this.spinBet * PAYS[a];
+    } else if ([a, b, c].filter((s) => s === '🍒').length === 2) win = this.spinBet * 2;
     if (win) {
       this.g.addMoney(win, jackpot ? 'GAM-GAM JACKPOT' : 'slots');
       this.net += win;
@@ -339,10 +366,10 @@ export class Slots {
       });
       return;
     }
+    if (input.rawHit('Escape') || input.rawHit('PadB')) return this.finish();
     if (input.rawHit('Space') || input.rawHit('Enter') || input.rawHit('PadA')) this.pull();
     if (input.rawHit('Digit1')) { this.bet = 5; this.render(); }
     if (input.rawHit('Digit2')) { this.bet = 25; this.render(); }
-    if (input.rawHit('Escape') || input.rawHit('PadB')) this.finish();
   }
 
   finish() {
@@ -428,12 +455,18 @@ export class SafeCrack {
   update(dt, input) {
     if (this.done) {
       this.endT -= dt;
-      if (this.endT <= 0 && !this.closed) { this.closed = true; this.g.endMinigame(); if (this.onDone) this.onDone(this.ok); }
+      if (this.endT <= 0 && !this.closed) {
+        this.closed = true;
+        if (this.onDone) this.onDone(this.ok); // open the vault dialogue first so the mouse isn't re-locked under it
+        this.g.endMinigame();
+      }
       return;
     }
     this.time -= dt;
     if (this.time <= 0) return this.finish(false);
-    const dir = (input.down.has('KeyD') || input.down.has('ArrowRight') ? 1 : 0) - (input.down.has('KeyA') || input.down.has('ArrowLeft') ? 1 : 0) + this.btn;
+    if (input.rawHit('Escape') || input.rawHit('PadB')) return this.finish(false);
+    const pad = input.pad ? input.pad.axes[0] : 0;
+    const dir = clamp((input.down.has('KeyD') || input.down.has('ArrowRight') || input.down.has('PadRight') ? 1 : 0) - (input.down.has('KeyA') || input.down.has('ArrowLeft') || input.down.has('PadLeft') ? 1 : 0) + this.btn + pad, -1, 1);
     const fine = input.down.has('ShiftLeft') || input.down.has('ShiftRight');
     const want = dir * (fine ? 6 : 26);
     this.vel += (want - this.vel) * Math.min(1, dt * 10);
@@ -446,7 +479,6 @@ export class SafeCrack {
       audio.tone({ freq: near ? 1900 : 900, type: 'square', dur: 0.015, vol: near ? 0.2 : 0.04 });
     }
     if (input.rawHit('Space') || input.rawHit('Enter') || input.rawHit('PadA')) this.set();
-    if (input.rawHit('Escape') || input.rawHit('PadB')) return this.finish(false);
     this.render();
   }
 

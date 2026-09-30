@@ -435,11 +435,12 @@ export class NPC {
       const wl = waterLevel(this.x, this.z);
       this.y = wl !== null ? Math.max(ground, wl - 1.25) : ground;
       this.char.mode = this.state === 'ko' ? 'ko' : this.state === 'lounge' ? 'lounge' : wl !== null && wl - ground > 0.9 ? 'swim' : spd > 0.1 ? 'walk' : 'idle';
-      if (wl !== null && this.state === 'ko' && !this.data.splashed) {
+      const wet = wl !== null && wl - ground > 0.3; // the pier and the Lucky Lady's deck sit above the sea
+      if (wet && this.state === 'ko' && !this.data.splashed) {
         this.data.splashed = true;
         g.onSplashdown(this);
       }
-      if (wl === null) this.data.splashed = false;
+      if (!wet) this.data.splashed = false;
     }
     this.char.speed = spd;
 

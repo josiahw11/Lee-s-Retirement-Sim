@@ -274,7 +274,7 @@ export class ClosestToPin {
       this.waitT -= dt;
       if (this.waitT <= 0) this.oppShoot();
     } else if (this.phase === 'address' || this.phase === 'power' || this.phase === 'accuracy') {
-      const dir = (input.down.has('KeyA') || input.down.has('ArrowLeft') ? 1 : 0) - (input.down.has('KeyD') || input.down.has('ArrowRight') ? 1 : 0) + this.btnAim;
+      const dir = (input.down.has('KeyA') || input.down.has('ArrowLeft') ? 1 : 0) - (input.down.has('KeyD') || input.down.has('ArrowRight') ? 1 : 0) + this.btnAim - (input.pad ? input.pad.axes[0] : 0);
       if (this.phase === 'address') this.aim = clamp(this.aim + dir * dt * 0.12, -0.25, 0.25);
       this.aimDots.visible = true;
       this.aimDots.rotation.y = this.yaw0 + this.aim + Math.sin(this.g.camRig.t || performance.now() / 700) * 0.01 * drunk;

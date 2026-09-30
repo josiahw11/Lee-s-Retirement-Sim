@@ -9,7 +9,7 @@ export const BOAT = {
   x0: 474, x1: 520, z0: 25, z1: 37, h: 2.7, // main deck rectangle + height (same as the pier deck)
   bow: 3.3, // rounded bow beyond x1
   plank: { x0: 495.6, x1: 500.4, z0: 22.9 }, // gangplank from the pier's north edge
-  saloon: { x0: 480, x1: 512, z0: 27.5, z1: 34.5 },
+  saloon: { x0: 480, x1: 512, z0: 28.1, z1: 33.9 }, // leaves 2.8 m walkways so a golf cart fits
   door: { x: 496, z: 26.3 },
   captain: { x: 517, z: 31 },
   stern: { x: 476.5, z: 35.3 },
@@ -62,7 +62,7 @@ export function buildBoat(world, GEO) {
 
   // ---- deck railing (visual) + colliders; a gap on the pier side for the gangplank
   const railH = H + 1.2;
-  const rail = (x0, z0, x1, z1) => {
+  const rail = (x0, z0, x1, z1, curve = false) => {
     const len = Math.hypot(x1 - x0, z1 - z0), ry = Math.atan2(x1 - x0, z1 - z0);
     b.add(M.vc, GEO.box, '#ffffff', mat4((x0 + x1) / 2, H + 1.0, (z0 + z1) / 2, ry, 0.08, 0.08, len));
     b.add(M.vc, GEO.box, '#ffffff', mat4((x0 + x1) / 2, H + 0.5, (z0 + z1) / 2, ry, 0.04, 0.04, len));
@@ -71,7 +71,8 @@ export function buildBoat(world, GEO) {
       const t = i / n;
       b.add(M.vc, GEO.cyl, '#ffffff', mat4(x0 + (x1 - x0) * t, H + 0.5, z0 + (z1 - z0) * t, 0, 0.04, 1.0, 0.04));
     }
-    col.addBox(Math.min(x0, x1) - 0.15, Math.min(z0, z1) - 0.15, Math.max(x0, x1) + 0.15, Math.max(z0, z1) + 0.15, railH, 'rail');
+    if (curve) for (let i = 0; i <= n; i++) { const t = i / n; col.addCircle(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, 0.3, railH, 'rail'); } // diagonal chords: no fat AABB walls
+    else col.addBox(Math.min(x0, x1) - 0.15, Math.min(z0, z1) - 0.15, Math.max(x0, x1) + 0.15, Math.max(z0, z1) + 0.15, railH, 'rail');
   };
   rail(B.x0 + 0.1, B.z0 + 0.1, B.plank.x0, B.z0 + 0.1);
   rail(B.plank.x1, B.z0 + 0.1, B.x1, B.z0 + 0.1);
@@ -83,7 +84,7 @@ export function buildBoat(world, GEO) {
     const a = -Math.PI / 2 + (i / 8) * Math.PI;
     arc.push([B.x1 + Math.cos(a) * (B.bow - 0.1), ZC + Math.sin(a) * (HW - 0.1)]);
   }
-  for (let i = 0; i < 8; i++) rail(arc[i][0], arc[i][1], arc[i + 1][0], arc[i + 1][1]);
+  for (let i = 0; i < 8; i++) rail(arc[i][0], arc[i][1], arc[i + 1][0], arc[i + 1][1], true);
 
   // ---- casino saloon
   const S = B.saloon, sy1 = H + 3.6;

@@ -43,7 +43,7 @@ export function gazette(g) {
   if (d('cartsTaken') >= 1) add(`BEVERAGE CART "HOSTILE TAKEOVER" ROCKS COUNTRY CLUB SET`, 'Chip Wainwright III: "This is a travesty. Father will hear about this."');
   // Chapter 3: the Lucky Lady
   const qf = g.state.quest.flags;
-  const once = (flag, h, sub) => { if (!g.state.flags[flag]) { g.state.flags[flag] = true; add(h, sub); } };
+  const once = (flag, h, sub) => { if (!g.state.flags[flag]) { g.state.flags[flag] = true; stories.unshift([h, sub]); } }; // never cut
   if (qf.vaultChoice === 'return') once('gazVault', `PENSIONS MYSTERIOUSLY RETURNED TO FLAMINGO DRIVE MAILBOXES`, `Earl Finkbeiner reunited with dentures. "Whoever you are, I owe you a Werther's." Casino captain "unavailable for comment, crying."`);
   else if (qf.vaultChoice === 'keep') once('gazVault', `$48,211 PENSION HEIST ROCKS BOCA WATERFRONT`, `Police baffled. Residents furious. A local man was seen buying a gold-plated recliner "in cash, from a duffel bag."`);
   else if (qf.vaultChoice === 'split') once('gazVault', `HALF OF STOLEN PENSIONS "JUST SHOW UP" IN MAILBOXES`, `Residents grateful, confused, and doing math. "Where's the other half?" asks everyone.`);

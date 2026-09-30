@@ -9,7 +9,7 @@ const BPM = 112;
 const BEAT = 60 / BPM;
 const MOVES = ['up', 'left', 'right', 'down'];
 const ARROW = { up: '↑', left: '←', right: '→', down: '↓' };
-const KEYS = { up: ['ArrowUp', 'KeyW'], left: ['ArrowLeft', 'KeyA'], right: ['ArrowRight', 'KeyD'], down: ['ArrowDown', 'KeyS'] };
+const KEYS = { up: ['ArrowUp', 'KeyW', 'PadUp'], left: ['ArrowLeft', 'KeyA', 'PadLeft'], right: ['ArrowRight', 'KeyD', 'PadRight'], down: ['ArrowDown', 'KeyS', 'PadDown'] };
 const CALLS = {
   up: ['AND REACH FOR THE SKY!', 'ARMS UP, LADIES!', 'REACH! REACH! REACH!'],
   left: ['LEAN LEFT! LIKE YOUR POLITICS!', 'LEFT SIDE! FEEL IT!'],
