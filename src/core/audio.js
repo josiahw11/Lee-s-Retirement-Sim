@@ -525,6 +525,67 @@ export class AudioSys {
     }
   }
 
+  // ---------- weather ----------
+  setRain(level) {
+    if (!this.ready) return;
+    if (!this.rainGain) {
+      const s = this.ctx.createBufferSource();
+      s.buffer = this.noise;
+      s.loop = true;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 2600;
+      const f2 = this.ctx.createBiquadFilter();
+      f2.type = 'highpass';
+      f2.frequency.value = 400;
+      this.rainGain = this.ctx.createGain();
+      this.rainGain.gain.value = 0;
+      s.connect(f).connect(f2).connect(this.rainGain).connect(this.master);
+      s.start();
+    }
+    this.rainGain.gain.setTargetAtTime(level * 0.16, this.ctx.currentTime, 0.4);
+  }
+
+  thunder(delay = 0.6) {
+    if (!this.ready) return;
+    this.noiseBurst({ dur: 2.6, vol: 0.7, type: 'lowpass', freq: 300, to: 60, at: delay, attack: 0.05 });
+    this.noiseBurst({ dur: 0.5, vol: 0.4, type: 'lowpass', freq: 1200, to: 200, at: delay });
+    this.tone({ freq: 55, to: 30, type: 'sine', dur: 2, vol: 0.4, at: delay });
+  }
+
+  // ---------- gibberish voices (one blip per syllable, Animal Crossing style) ----------
+  mumble(text, { female = false, pitch = 1, vol = 1 } = {}) {
+    if (!this.ready) return;
+    const syl = Math.min(11, Math.max(2, Math.round(text.replace(/[^a-z]/gi, '').length / 3.2)));
+    const base = (female ? 250 : 130) * pitch;
+    const loud = /!|[A-Z]{3,}/.test(text);
+    let t = this.ctx.currentTime + 0.02;
+    for (let i = 0; i < syl; i++) {
+      const d = 0.07 + Math.random() * 0.05;
+      const o = this.ctx.createOscillator();
+      o.type = 'sawtooth';
+      const f0 = base * (0.85 + Math.random() * 0.4) * (loud ? 1.25 : 1);
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.linearRampToValueAtTime(f0 * (0.9 + Math.random() * 0.2), t + d);
+      // old-person warble
+      const l = this.ctx.createOscillator();
+      l.frequency.value = 7 + Math.random() * 3;
+      const lg = this.ctx.createGain();
+      lg.gain.value = f0 * 0.04;
+      l.connect(lg).connect(o.frequency);
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = [500, 800, 1100, 700, 1500][Math.floor(Math.random() * 5)] * (female ? 1.3 : 1);
+      f.Q.value = 3;
+      const g = this.ctx.createGain();
+      this._env(g, t, 0.01, (loud ? 0.5 : 0.32) * vol, d);
+      o.connect(f).connect(g).connect(this.sfx);
+      o.start(t); l.start(t);
+      o.stop(t + d + 0.05); l.stop(t + d + 0.05);
+      t += d + 0.02 + Math.random() * 0.03;
+    }
+  }
+
   setAmbientLevel(v) {
     if (this.ready) this.ambient.gain.setTargetAtTime(clamp(v, 0, 1) * 0.3, this.ctx.currentTime, 0.5);
   }

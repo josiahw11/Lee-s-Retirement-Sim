@@ -8,6 +8,7 @@ import { Driver, COURSE_LOOPS, PATROL_LOOP, nearestNode } from './traffic.js';
 import { Quests } from './quests.js';
 import { Race, RACE_TIERS, TRACK } from './race.js';
 import { ChugOff, Bingo } from './minigames.js';
+import { Weather } from '../gfx/weather.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
 import * as D from './dialogue.js';
 import { NODES, EDGES, HOLES, PONDS, ZONES, STREETS, HOUSES, PLAYER_HOUSE, BUILDINGS } from '../world/layout.js';
@@ -111,6 +112,15 @@ export class Game {
     this.scene.add(this.headlight, this.headlight.target);
     this.neonLight = new THREE.PointLight(0xff2bd6, 0, 7, 1.5);
     this.scene.add(this.neonLight);
+    this.weather = new Weather(this.scene);
+    this.storm = null;
+    this.ui.onBubble = (ent, text) => {
+      if (!this.running || text.startsWith('*') || ent === this.player) return;
+      const d = Math.hypot(ent.x - this.player.x, ent.z - this.player.z);
+      if (d > 30) return;
+      ent.voice ??= rand(0.8, 1.2);
+      audio.mumble(text, { female: ent.female, pitch: ent.voice, vol: clamp(1.2 - d / 30, 0.2, 1) });
+    };
     this.populate();
     const ph = PLAYER_HOUSE;
     const cs = this.world.playerCartSpawn;
@@ -351,6 +361,8 @@ export class Game {
     this.running = true;
     this.camRig.yaw = this.player.heading + Math.PI;
     this.camRig.target.set(this.player.x, this.player.y + 1.5, this.player.z);
+    if (isNew) this.storm = { start: 14, dur: 1.3, warned: false };
+    else this.rollWeather();
     if (isNew) {
       this.camRig.introDur = this.camRig.introT = 4.5;
       this.ui.splash('SUNSET PALMS', 'Day 1. Try to behave. (You won\'t.)', 3.5);
@@ -668,7 +680,33 @@ export class Game {
     }
   }
 
+  rollWeather() {
+    this.storm = chance(0.4) ? { start: rand(13.5, 16.5), dur: rand(0.8, 1.8), warned: false } : null;
+  }
+
+  // returns lightning flash (0..1)
+  updateWeather(dt) {
+    const h = this.state.minutes / 60;
+    const s = this.storm;
+    const on = !!s && h >= s.start && h < s.start + s.dur;
+    this.weather.target = on ? 1 : 0;
+    if (on && !s.warned && this.running) {
+      s.warned = true;
+      this.ui.toast('⛈️ Afternoon thunderstorm! Roads are slick and the ladies are worried about their perms.', 'quest', 5);
+    }
+    const flash = this.weather.update(dt, this.camera, () => audio.thunder(rand(0.3, 1.6)));
+    audio.setRain(this.weather.intensity);
+    // wet, shiny roads
+    const k = this.weather.intensity;
+    this.world.roadMat.roughness = 0.92 - k * 0.6;
+    this.world.roadMat.metalness = k * 0.25;
+    this.world.roadMat.color.setScalar(1 - k * 0.35);
+    this.world.pathMat.roughness = 0.9 - k * 0.55;
+    return flash;
+  }
+
   newDay() {
+    this.rollWeather();
     const s = this.state;
     s.day++;
     s.dow = (s.dow + 1) % 7;

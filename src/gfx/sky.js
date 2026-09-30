@@ -103,6 +103,33 @@ export class SkySystem {
     this.fogColor = new THREE.Color();
   }
 
+  // Storm overlay applied after update(): k = storm intensity 0..1, flash = lightning 0..1.
+  applyStorm(k, flash) {
+    const fog = this.scene.fog;
+    fog.near = 120 - 85 * k;
+    fog.far = 620 - 400 * k;
+    if (k < 0.001 && flash <= 0) return;
+    const gray = new THREE.Color(0x56606c);
+    const u = this.uniforms;
+    u.top.value.lerp(gray, k * 0.8);
+    u.hor.value.lerp(new THREE.Color(0x7a838e), k * 0.75);
+    u.sunCol.value.multiplyScalar(Math.max(0, 1 - k * 1.05));
+    this.sun.intensity *= 1 - 0.85 * k;
+    this.hemi.intensity *= 1 - 0.3 * k;
+    fog.color.lerp(new THREE.Color(0x6d7682), k * 0.8);
+    this.fogColor.copy(fog.color);
+    for (const c of this.clouds) {
+      c.material.color.lerp(gray, k);
+      c.material.opacity = Math.min(1, c.material.opacity + k * 0.5);
+    }
+    if (flash > 0) {
+      this.hemi.intensity += flash * 2.5;
+      u.top.value.lerp(new THREE.Color(0xe8eeff), flash * 0.7);
+      u.hor.value.lerp(new THREE.Color(0xe8eeff), flash * 0.5);
+    }
+    this.night = Math.max(this.night, k * 0.55);
+  }
+
   // hour: 0..24 float. focus: point the shadow camera follows.
   update(hour, dt, focus) {
     let i = 0;

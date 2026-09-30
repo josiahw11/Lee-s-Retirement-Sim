@@ -243,7 +243,9 @@ export class NPC {
           if (chance(0.25) && this.distTo(p.x, p.z) < 25) this.say(pick(this.female ? IDLE_BARKS_F : IDLE_BARKS_M), 3.5);
         } else {
           moveX = dx / d; moveZ = dz / d;
-          spd = this.walkSpeed;
+          const raining = g.weather.intensity > 0.5;
+          spd = this.walkSpeed * (raining ? 1.6 : 1);
+          if (raining && chance(dt * 0.05) && this.distTo(p.x, p.z) < 20) this.say(pick(this.female ? ['My PERM!', 'I just had my hair SET!', 'Somebody get me a rain bonnet!'] : ['My hip can feel this rain.', 'Florida. Every. Damn. Day.', 'Where did I park?!']), 2.5);
         }
       }
       // react to the player driving like a maniac close by

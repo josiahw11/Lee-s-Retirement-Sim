@@ -264,7 +264,7 @@ export class Cart {
       let yaw = (vf * Math.tan(this.steerAng)) / wheelbase;
       if (hb) yaw *= 1.5;
       this.heading = wrapAngle(this.heading + yaw * dt);
-      const grip = hb ? 1.6 : 9;
+      const grip = (hb ? 1.6 : 9) * (input.wet ? 0.6 : 1);
       vl *= Math.exp(-grip * dt);
     } else if (!this.sunk) {
       this.heading = wrapAngle(this.heading + steerIn * 0.9 * dt);

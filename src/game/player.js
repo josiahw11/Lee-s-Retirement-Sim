@@ -79,6 +79,7 @@ export class Player {
         boost: boost && !!c.upgrades.turbo,
         drunk,
         onRoad,
+        wet: g.weather.intensity > 0.3,
       }, g.world.col);
       this.x = c.x;
       this.z = c.z;

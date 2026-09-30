@@ -252,7 +252,10 @@ async function boot() {
 
     const focus = game.running ? game.player : { x: 30, z: 5 };
     const hour = game.state.minutes / 60;
-    const night = sky.update(hour, paused ? 0 : dt, focus);
+    let night = sky.update(hour, paused ? 0 : dt, focus);
+    const flash = game.updateWeather(paused ? 0 : dt);
+    sky.applyStorm(game.weather.intensity, flash);
+    night = sky.night;
     updateNightMaterials(night);
     for (const m of world.waterMats) {
       m.uniforms.uSky.value.copy(sky.fogColor);

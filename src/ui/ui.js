@@ -151,6 +151,7 @@ export class UI {
     el.textContent = text;
     this.el['world-ui'].appendChild(el);
     this.bubbles.push({ ent, el, t: dur });
+    if (this.onBubble) this.onBubble(ent, text);
   }
 
   float(x, y, z, text, color = '#fff', dur = 1.4) {
