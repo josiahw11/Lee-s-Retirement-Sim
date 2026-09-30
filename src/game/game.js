@@ -24,6 +24,7 @@ import { BeerPong, buildPongTable } from './beerpong.js';
 import { Shuttle, dorisNode } from './shuttle.js';
 import { Derby, buildArena, danNode, ARENA } from './derby.js';
 import { Fishing } from './fishing.js';
+import { BluePill } from './bluepill.js';
 import { activitiesTab, bindActivities } from './activities.js';
 import { Soundscape } from './soundscape.js';
 import { Weather } from '../gfx/weather.js';
@@ -495,6 +496,8 @@ export class Game {
     this.world.poi('derby', ARENA.x, ARENA.z - ARENA.d / 2 - 3, 'Bumper Brawl', 0); // map icon only
     if (this.derby) this.derby.clear();
     this.derby = new Derby(this);
+    if (this.bluePill) this.bluePill.clear();
+    this.bluePill = new BluePill(this);
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -2056,6 +2059,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (this.stunts) this.stunts.update(dt);
       if (this.shuttle) this.shuttle.update(dt);
       if (this.derby) this.derby.update(dt);
+      if (this.bluePill) this.bluePill.update(dt);
       this.updateHeat(dt);
       this.updateEvents(dt);
       this.updateDrones(dt);

@@ -126,6 +126,7 @@ function dealNode(g, npc, kind) {
     g.state.counters[isTea ? 'teaSold' : 'pillsSold'] += qty;
     npc.data.wants = null;
     npc.data.bought = true;
+    if (!isTea) npc.data.blueT = 90; // side effects kick in right away
     g.crime(npc.x, npc.z, 1.0, 'Distributing "vitamins"', 18, true);
     g.xp('cha', 1);
     g.particles.burst('cash', npc.x, 1.6, npc.z, 5, { speed: 1.5, up: 3, life: 1.2, size: 0.45 });

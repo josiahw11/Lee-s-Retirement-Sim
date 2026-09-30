@@ -613,6 +613,15 @@ export class Character {
         P.neck = 0.3;
       }
     } else this.koT = 0;
+    // Blue Boy side effects: a bow-legged waddle, both hands clamped over a strategically held newspaper
+    if (this.poseBlue && (this.mode === 'walk' || this.mode === 'idle')) {
+      P.hipLz = 0.17; P.hipRz = -0.17;
+      P.knL += 0.12; P.knR += 0.12;
+      P.spine = Math.max(P.spine, 0.28);
+      P.shL = P.shR = -0.42; P.elL = P.elR = -1.0;
+      P.shLz = -0.18; P.shRz = 0.18;
+      P.hipsYaw *= 0.3;
+    }
     // holding a fishing rod out over the water
     if (this.poseRod && this.mode !== 'ko' && this.mode !== 'sit') {
       P.shR = -0.95; P.elR = -0.95; P.shRz = -0.1;
