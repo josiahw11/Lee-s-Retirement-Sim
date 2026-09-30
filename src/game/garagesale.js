@@ -7,7 +7,7 @@ import { GEO } from '../world/world.js';
 import { HOUSES } from '../world/layout.js';
 import { heightAt } from '../world/terrain.js';
 import { audio } from '../core/audio.js';
-import { pick, rand, chance, money, mulberry32 } from '../core/utils.js';
+import { pick, rand, money, mulberry32 } from '../core/utils.js';
 import { makeSignTexture } from '../gfx/textures.js';
 
 let SIGN_MAT = null;
@@ -67,10 +67,12 @@ export class GarageSales {
     this.close();
     this.day = g.state.day;
     const rnd = mulberry32(777 + g.state.day);
+    if (!g.state.garage || g.state.garage.day !== g.state.day) g.state.garage = { day: g.state.day, sold: [] };
+    const soldKeys = g.state.garage.sold;
     const houses = HOUSES.filter((h) => h.owner !== 'player' && h.lawn);
     const picks = [];
     while (picks.length < 4) { const h = houses[Math.floor(rnd() * houses.length)]; if (!picks.includes(h)) picks.push(h); }
-    for (const h of picks) {
+    for (const [si, h] of picks.entries()) {
       // table on the lawn between the walk and the street, facing the road
       const f = h.facing;
       const fx = Math.sin(f), fz = Math.cos(f);
@@ -91,7 +93,9 @@ export class GarageSales {
         m.rotation.y = rnd() * 0.8 - 0.4;
         m.castShadow = true;
         group.add(m);
-        stock.push({ ...it, mesh: m, price: Math.max(1, Math.round(it.price * (0.8 + rnd() * 0.5))), sold: false });
+        const key = `${si}:${i}`, sold = soldKeys.includes(key);
+        m.visible = !sold;
+        stock.push({ ...it, mesh: m, key, price: Math.max(1, Math.round(it.price * (0.8 + rnd() * 0.5))), sold });
       }
       const sign = new THREE.Mesh(itemGeo('sign'), M.vc);
       sign.position.set(2.2, 0, 2.6);
@@ -105,7 +109,7 @@ export class GarageSales {
       const seller = g.spawnNPC({ female: rnd() < 0.6, role: 'seller', x: sx, z: sz, state: 'static', look: { hat: rnd() < 0.5 ? 'visor' : 'sunhat' }, homePt: { x: sx, z: sz } });
       seller.data.face = f;
       seller.data.quiet = true;
-      const sale = { house: h, group, stock, seller, x: cx, z: cz };
+      const sale = { house: h, group, stock, seller, face, x: cx, z: cz };
       seller.data.sale = sale;
       this.sales.push(sale);
     }
@@ -116,6 +120,7 @@ export class GarageSales {
     const g = this.g;
     for (const s of this.sales) {
       g.scene.remove(s.group);
+      s.face.geometry.dispose();
       if (g.npcs.includes(s.seller)) g.removeNPC(s.seller);
     }
     this.sales = [];
@@ -132,6 +137,7 @@ export function sellerNode(g, n) {
   const take = (it, paid, how) => {
     it.sold = true;
     it.mesh.visible = false;
+    if (g.state.garage) g.state.garage.sold.push(it.key);
     const got = it.give(g);
     g.state.counters.garageBuys = (g.state.counters.garageBuys || 0) + 1;
     if (g.state.counters.garageBuys >= 6) g.achievement('picker');
@@ -153,9 +159,12 @@ export function sellerNode(g, n) {
               if (g.roll('cha', 3)) { const p = Math.ceil(it.price * 0.6); g.spend(p); return take(it, p, 'Haggled!'); }
               return { name: n.name, title: 'Nope', text: '"Absolutely not. Do I look like I was born yesterday? I was born in 1944."', choices: [{ text: 'Back', action: () => sellerNode(g, n) }] };
             } },
-            { text: '*Pocket it while they look away*', tag: 'crime', action: () => {
-              const seen = g.crime(n.x, n.z, 0.6, 'Garage sale shoplifting', 14);
-              if (!seen && chance(0.35)) { n.say('THIEF! I SAW THAT!', 2); g.addHeat(0.3, 'Garage sale shoplifting'); }
+            { text: '*Pocket it while they look away*', tag: 'crime', check: { label: 'CHA', chance: g.chance('cha', 4) }, action: () => {
+              if (!g.roll('cha', 4)) { // she turned around at exactly the wrong moment
+                n.say('THIEF! I SAW THAT!', 2);
+                g.addHeat(0.6, 'Garage sale shoplifting');
+                g.crime(g.player.x, g.player.z, 0.2, 'Garage sale shoplifting', 14);
+              }
               return take(it, 0, 'Five-finger discount');
             } },
             { text: 'Back', action: () => sellerNode(g, n) },

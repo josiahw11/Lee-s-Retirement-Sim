@@ -184,7 +184,7 @@ export function buildBeach(world, GEO, heightAt) {
     const len = Math.hypot(x1 - x0, z1 - z0), n = Math.round(len / 0.22);
     for (let i = 0; i <= n; i++) {
       const t = i / n, l = 0.45 + ((i * 7) % 5) * 0.06;
-      b.add(M.vc, GEO.cone, i % 3 ? '#b8923f' : '#d9b56a', mat4(x0 + (x1 - x0) * t, 3.3 - l / 2, z0 + (z1 - z0) * t, 0, 0.13, l, 0.13, Math.PI), 0.2);
+      b.add(M.vc, GEO.cone, i % 3 ? '#b8923f' : '#d9b56a', mat4(x0 + (x1 - x0) * t, 3.3 - l / 2, z0 + (z1 - z0) * t, 0, 0.13, l, 0.13, Math.PI), 0.04);
     }
   };
   const ex0 = bx0 - 0.8, ex1 = bx1 + 0.8, ez0 = bz0 - 0.8, ez1 = bz1 + 0.8;

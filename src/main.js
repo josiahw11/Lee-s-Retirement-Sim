@@ -361,7 +361,7 @@ async function boot() {
       m.uniforms.uSunDir.value.copy(sky.uniforms.sunDir.value);
       m.uniforms.uNight.value = night;
     }
-    if (!paused) shared.time.value += dt;
+    if (!paused) { shared.time.value += dt; shared.windPhase.value += dt * shared.gust.value; }
     world.updateDucks(shared.time.value);
     updateBeach(world, shared.time.value);
     updateBoat(world, dt);

@@ -53,6 +53,7 @@ export class Player {
 
   enterCart(cart) {
     this.cart = cart;
+    this.stand = null;
     cart.driver = this;
     seatCharacter(this.char, cart, 1);
   }

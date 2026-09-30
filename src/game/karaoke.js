@@ -88,7 +88,7 @@ export class Karaoke {
     p.char.root.rotation.y = 0;
     p.char.setHeld('mic');
     // gather a crowd
-    const pool = g.npcs.filter((n) => (n.role === 'resident' || n.role === 'lady') && !n.cart && n.state !== 'ko' && !n.hostile && !n.data.aqua);
+    const pool = g.npcs.filter((n) => (n.role === 'resident' || n.role === 'lady') && !n.cart && n.state !== 'ko' && !n.hostile && !n.data.aqua && !n.data.hasDog);
     pool.sort((a, b) => Math.hypot(a.x - STAGE.x, a.z - STAGE.z) - Math.hypot(b.x - STAGE.x, b.z - STAGE.z));
     this.crowdNPCs = pool.slice(0, 9);
     this.crowdNPCs.forEach((n, i) => {

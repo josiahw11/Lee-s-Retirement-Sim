@@ -85,7 +85,8 @@ export class SeniorGames {
     this.podium.castShadow = true;
     g.scene.add(this.podium);
     const spots = { 1: [0, 1.2], 2: [-1.45, 0.8], 3: [1.45, 0.5] };
-    const rivals = g.npcs.filter((n) => n.role === 'resident' && !n.cart && n.state !== 'ko').slice(0, 2);
+    const rivals = g.npcs.filter((n) => n.role === 'resident' && !n.cart && n.state !== 'ko' && !n.hostile && !n.data.hasDog && !n.data.aqua && !n.talking)
+      .sort((a, b) => Math.hypot(a.x - PODIUM.x, a.z - PODIUM.z) - Math.hypot(b.x - PODIUM.x, b.z - PODIUM.z)).slice(0, 2);
     const standOn = (char, p, medal, who) => {
       const [dx, h] = spots[p];
       char.root.position.set(PODIUM.x + dx, y + h, PODIUM.z);
@@ -118,8 +119,8 @@ export class SeniorGames {
   }
 
   clearCeremony() {
-    if (this.podium) { this.g.scene.remove(this.podium); this.podium = null; }
-    for (const { char, m } of this.medals) char.root.remove(m);
+    if (this.podium) { this.g.scene.remove(this.podium); this.podium.geometry.dispose(); this.podium = null; }
+    for (const { char, m } of this.medals) { char.root.remove(m); m.geometry.dispose(); }
     this.medals = [];
   }
 

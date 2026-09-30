@@ -201,6 +201,7 @@ class Dog {
   constructor(g, owner, kind) {
     this.g = g;
     this.owner = owner;
+    owner.data.hasDog = true; // so nobody teleports a dog walker away from the dog
     this.kind = kind;
     const geo = dogGeo(kind);
     this.root = new THREE.Group();
@@ -264,6 +265,7 @@ class Dog {
       tx = o.x - ohx * 0.9 + ohz * 0.6;
       tz = o.z - ohz * 0.9 - ohx * 0.6;
       speed = Math.max(1.2, (o.char.speed || 1) * 1.3);
+      if (Math.hypot(tx - this.x, tz - this.z) > 12) { this.x = tx; this.z = tz; } // owner got whisked off: catch up
       // yap at the player
       this.barkT -= dt;
       if (this.barkT <= 0 && Math.hypot(p.x - this.x, p.z - this.z) < 5 && this.kind !== 'poodle' && vis) {
@@ -308,5 +310,7 @@ class Dog {
     this.g.scene.remove(this.root);
     this.g.scene.remove(this.leash);
     this.leash.geometry.dispose();
+    this.leash.material.dispose();
+    delete this.owner.data.hasDog;
   }
 }

@@ -92,8 +92,10 @@ export class Hurricane {
     const s = this.g.state;
     this.st.day = s.day;
     this.st.warned = false;
-    s.minutes = Math.max(s.minutes, START * 60 + 50);
-    if (s.minutes >= END * 60) s.minutes = START * 60 + 50;
+    const want = START * 60 + 50;
+    if (s.minutes < want) this.g.advanceTime(want - s.minutes);
+    else if (s.minutes >= END * 60) this.g.advanceTime(1440 - s.minutes + want); // too late today: tomorrow afternoon
+    this.st.day = s.day;
     this.g.ui.toast('🌀 Hurricane Mildred has arrived. Early. Like everyone around here.', 'heat', 6);
   }
 
@@ -120,13 +122,13 @@ export class Hurricane {
     if (!this.wasOn) this.start();
     // shove carts and the player
     for (const c of g.carts) {
-      if (c.sunk) continue;
+      if (c.sunk || (!c.driver && c.grounded)) continue; // parked carts stay parked
       const push = c.grounded ? 0.06 : 0.35; // airborne carts sail
       c.vx += this.wind.x * push * dt;
       c.vz += this.wind.z * push * dt;
       if (!c.grounded) c.vy += 1.4 * k * dt; // updraft: storm chasers get extra hang time
     }
-    if (!p.cart && !p.ko) {
+    if (!p.cart && !p.ko && !p.stand) {
       p.x += this.wind.x * 0.035 * dt;
       p.z += this.wind.z * 0.035 * dt;
     }
@@ -186,7 +188,11 @@ export class Hurricane {
     shared.gust.value = 1;
     shared.lean.value.set(0, 0);
     g.weather.windX = 5;
-    for (const n of this.party) if ((n.state === 'party' || n.state === 'walkTo') && !n.hostile) n.resumeBase();
+    for (const n of this.party) {
+      n.data.after = undefined;
+      n.data.walkSpeed = undefined;
+      if ((n.state === 'party' || n.state === 'walkTo') && !n.hostile) n.resumeBase();
+    }
     this.party = [];
     delete g.world.pois.hurricaneParty;
     // debris that was still flying comes down as strays
@@ -247,6 +253,10 @@ export class Hurricane {
       g.scene.remove(d.mesh);
       return;
     }
+    const q = { x: d.x, z: d.z };
+    g.world.col.resolve(q, 0.6); // blown onto a roof? it slides off onto the lawn
+    d.x = q.x; d.z = q.z;
+    if (waterAt(d.x, d.z)) { g.scene.remove(d.mesh); return; }
     d.mesh.position.set(d.x, heightAt(d.x, d.z) + 0.05, d.z);
     d.mesh.rotation.set(chance(0.5) ? Math.PI / 2 : 0, rand(0, 6.28), 0); // some land on their side
     this.strays.push(d);
