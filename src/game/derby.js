@@ -170,6 +170,7 @@ export class Derby {
       p.enterCart(this.mine);
       g.announceRadio();
       this.drivers = this.carts.slice(1).map((c, i) => {
+        if (i === 4 && g.quests.current()?.id === 'c4_derby') { RIVALS[4][0] = 'Buck Thunderhill'; c.derby.name = 'Buck Thunderhill'; } else if (i === 4) { RIVALS[4][0] = 'Big Hank'; c.derby.name = 'Big Hank'; }
         const n = g.spawnNPC({ name: RIVALS[i][0], female: RIVALS[i][0].includes('Wanda') || RIVALS[i][0].includes('Dolores'), role: 'derby', x: c.x, z: c.z, look: { hat: pick(['cap', 'bucket', 'visor']), glasses: pick(['aviator', 'big']) } });
         n.data.quiet = true;
         n.seatIn(c, new DerbyDriver(this, c));

@@ -205,6 +205,7 @@ async function boot() {
   $('btn-save').onclick = () => { game.save(); };
   $('btn-ch2').onclick = () => { game.jumpToChapter(2); resume(); };
   $('btn-ch3').onclick = () => { game.jumpToChapter(3); resume(); };
+  $('btn-ch4').onclick = () => { game.jumpToChapter(4); resume(); };
   $('btn-hurricane').onclick = () => { game.hurricane.summon(); resume(); };
   $('btn-quit').onclick = () => { if (confirm('Quit to title? Unsaved progress will be lost.')) location.reload(); };
   $('bigmap').onclick = closeMap;

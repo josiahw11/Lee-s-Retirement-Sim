@@ -97,6 +97,7 @@ export class Shuttle {
     const c = g.state.counters;
     c.fares = (c.fares || 0) + s.fares;
     c.bestShift = Math.max(c.bestShift || 0, s.cash);
+    if (s.fares >= 4) c.bigShifts = (c.bigShifts || 0) + 1;
     if (s.fares >= 5) g.achievement('daisy');
     if (s.cash >= 400) g.achievement('crazyshuttle');
     const grade = s.cash >= 500 ? 'S' : s.cash >= 300 ? 'A' : s.cash >= 150 ? 'B' : s.cash >= 50 ? 'C' : 'D';

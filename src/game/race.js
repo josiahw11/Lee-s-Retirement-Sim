@@ -50,7 +50,9 @@ export class Race {
     p.x = cart.x; p.z = cart.z;
     game.camRig.yaw = START.heading + Math.PI;
     // rivals
-    tier.rivals.forEach((name, i) => {
+    // Chapter 4's grudge match: Buck takes The Widow Maker's seat
+    const buckRace = game.quests.current()?.id === 'c4_race';
+    tier.rivals.map((n) => (buckRace && n === 'The Widow Maker' ? 'Buck Thunderhill' : n)).forEach((name, i) => {
       const c = game.addCart({ x: START.x, z: START.z, kind: 'rival', color: ['#ff6b1a', '#7d3cff', '#111111'][i % 3], upgrades: { governor: true, turbo: true, rims: true, neon: i === 0 } });
       place(c, lanes[i === 0 ? 0 : 2]);
       const npc = game.spawnNPC({ name, female: name.includes('Mabel') || name.includes('Widow'), role: 'racer', x: c.x, z: c.z, look: { hat: 'cap', hatColor: i ? '#111' : '#ff6b1a', glasses: 'aviator' } });
@@ -186,7 +188,7 @@ export class Race {
       g.state.counters.racesWon = (g.state.counters.racesWon || 0) + 1;
       g.achievement('raceWin');
       g.celebrate(8);
-      if (bet >= 500) g.achievement('raceLegend');
+      if (bet >= 500) { g.achievement('raceLegend'); g.state.counters.bigRacesWon = (g.state.counters.bigRacesWon || 0) + 1; }
       g.ui.splash('YOU WIN!', `${time.toFixed(1)}s. The retirement community will speak of this for days (they'll forget by Thursday).`, 4, '#7CFC9A');
       audio.play('levelup');
     } else if (result === 'lose') {

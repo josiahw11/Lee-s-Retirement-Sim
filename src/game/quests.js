@@ -2,6 +2,7 @@
 import { money } from '../core/utils.js';
 import { CH2 } from './chapter2.js';
 import { CH3 } from './chapter3.js';
+import { CH4 } from './chapter4.js';
 
 const poi = (id) => (g) => g.world.pois[id];
 
@@ -83,7 +84,7 @@ export const STEPS = [
   },
 ];
 
-STEPS.push(...CH2, ...CH3);
+STEPS.push(...CH2, ...CH3, ...CH4);
 
 const FREE = [
   { id: 'tammy', title: 'LEGEND: Win over Tammy the Cart Girl', done: (g) => g.state.romance.tammy.conquest, target: (g) => g.named.tammy },

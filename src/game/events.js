@@ -52,6 +52,7 @@ export function gazette(g) {
   if (hur && hur.day === g.state.day) once(`gazHur${hur.day}`, 'HURRICANE MILDRED BEARS DOWN ON SUNSET PALMS', 'Residents urged to secure flamingos, boxed wine, and grandchildren, in that order. Clubhouse hurricane party "definitely happening."');
   else if (hur && hur.day === g.state.day - 1) once(`gazHurAfter${hur.day}`, 'MILDRED LEAVES HUNDREDS OF FLAMINGOS HOMELESS', 'HOA offers $25 bounty per bird. Karen: "Half of those were mine and I want them back BEFORE the Hendersons."');
   if (d('overboard') >= 1) add(`MAN THROWN OFF CASINO BOAT, WASHES UP ON BOCA BEACH`, `"The Captain cheats," the man told a seagull. The seagull took his shoe.`);
+  if ((g.state.achievements || []).includes('crashcourse')) once('gazBuck', 'BUCK THUNDERHILL RESIGNS AS "HEAD OF CART SAFETY"', 'Impound lot emptied. Earl reunited with scooter (was still on it). Karen "exploring legal options," "and a new jacket for Buck."');
   // the new sports pages
   if (d('derbyWins') >= 1) add(`${name} WINS BUMPER BRAWL, ${d('derbyKills') || 'SEVERAL'} CARTS "NO LONGER CARTS"`, `Derby Dan: "Never seen a man T-bone like that. And I was in Korea."`);
   else if (d('derbyKills') >= 2) add(`CART CARNAGE AT THE BUMPER BRAWL: ${d('derbyKills')} WRECKED`, 'Crowd describes the action as "better than cable." Hay bales "traumatized."');

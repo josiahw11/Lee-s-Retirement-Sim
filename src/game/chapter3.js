@@ -285,14 +285,14 @@ function vaultChoiceNode(g) {
 export function jumpToChapter(g, n, STEPS) {
   const s = g.state;
   const f = s.quest.flags;
-  const ids = { 2: 'c2_doc', 3: 'c3_board' };
+  const ids = { 2: 'c2_doc', 3: 'c3_board', 4: 'c4_buck' };
   const idx = STEPS.findIndex((x) => x.id === ids[n]);
   if (idx < 0) return;
   Object.assign(f, { metGus: true, metDoc: true, beatChip: true, boughtBeer: true });
   if (n >= 3) f.c2Doc = true;
   else for (const k of ['c2Doc', 'teaShortage', 'homebrew', 'testBatch', 'beatDeuce']) delete f[k];
   // replaying a chapter starts it clean
-  for (const k of ['c3Boarded', 'c3Fingers', 'fingersDeal', 'c3Jackpot', 'beatCaptain', 'vaultOpen', 'vaultChoice']) delete f[k];
+  for (const k of ['c3Boarded', 'c3Fingers', 'fingersDeal', 'c3Jackpot', 'beatCaptain', 'vaultOpen', 'vaultChoice', 'c4Met', 'c4base']) delete f[k];
   s.counters.bjWon = 0;
   delete s.flags.gazVault;
   delete s.flags.gazJackpot;
@@ -305,6 +305,16 @@ export function jumpToChapter(g, n, STEPS) {
   s.quest.step = idx;
   s.quest.started = {};
   if (n >= 3) s.minutes = 17 * 60 + 40; // just before the boat opens
+  if (n >= 4) {
+    Object.assign(f, { c3Boarded: true, fingersDeal: true, c3Jackpot: true, beatCaptain: true, vaultOpen: true, vaultChoice: 'return' });
+    s.flags.gazVault = true;
+    s.flags.gazJackpot = true;
+    // Chapter 4 is all driving: hand over Sal's governor removal and nitrous
+    Object.assign(s.cart.upgrades, { governor: true, turbo: true });
+    if (g.playerCart) { g.playerCart.upgrades = { ...s.cart.upgrades }; g.playerCart.rebuild?.(); }
+    s.money = Math.max(s.money, 2500);
+    s.minutes = 16 * 60 + 30; // the Bumper Brawl opens at 5
+  }
   g.quests.begin();
   g.ui.toast(`⏭️ Jumped to Chapter ${n}. Progress before it was filled in.`, 'quest', 5);
 }
