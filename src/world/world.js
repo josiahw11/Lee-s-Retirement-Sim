@@ -8,6 +8,7 @@ import { Colliders } from './collide.js';
 import {
   HALF, WALL, EDGES, NODES, HOLES, FAIRWAY_W, PONDS, RAMPS, BUILDINGS as B, HOUSES, PLAYER_HOUSE, ZONES, STREETS,
 } from './layout.js';
+import { buildBeach, BEACH } from './beach.js';
 import { baseHeight, heightAt, paintGround, SPEED_BUMPS, POOL, WATER_Y, onCourse, onFairway, waterAt } from './terrain.js';
 import { mulberry32, distToSegment } from '../core/utils.js';
 
@@ -188,6 +189,7 @@ export class World {
     this.buildCourse();
     this.buildPerimeter();
     this.buildStreetscape();
+    buildBeach(this, GEO, heightAt);
     this.meshes = this.batch.build(this.root);
   }
 
@@ -280,10 +282,10 @@ export class World {
     const outer = new THREE.MeshStandardMaterial({ color: 0x6f9a4a, roughness: 1 });
     const big = 2400;
     for (const [sx, sz, x, z] of [
-      [big, big / 2, 0, -HALF - big / 4],
-      [big, big / 2, 0, HALF + big / 4],
+      // north/south strips stop at the beach; the ocean + sand strip live in beach.js
+      [big / 2 + HALF, big / 2, -big / 4 + HALF / 2, -HALF - big / 4],
+      [big / 2 + HALF, big / 2, -big / 4 + HALF / 2, HALF + big / 4],
       [big / 2, HALF * 2, -HALF - big / 4, 0],
-      [big / 2, HALF * 2, HALF + big / 4, 0],
     ]) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(sx, sz).rotateX(-Math.PI / 2), outer);
       m.position.set(x, -0.02, z);
@@ -1113,6 +1115,12 @@ export class World {
   }
 
   locationName(x, z) {
+    if (x > 292) {
+      if (x > BEACH.shore + 2) return Math.abs(z - BEACH.pier.z) < 4 && x < BEACH.pier.x1 ? 'The Pier' : 'Atlantic Ocean';
+      if (Math.abs(z - BEACH.pier.z) < 4 && x > BEACH.pier.x0) return 'The Pier';
+      if (Math.hypot(x - BEACH.bar.x, z - BEACH.bar.z) < 16) return 'The Rusty Pelican';
+      return x < 318 ? 'Beach Rd' : 'Boca Beach Club';
+    }
     if (z < -52) {
       for (const p of PONDS) if (Math.hypot(x - p.x, z - p.z) < p.r * 1.4) return p.name;
       let best = null, bd = 1e9;

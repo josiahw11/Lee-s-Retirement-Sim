@@ -79,7 +79,10 @@ function headParts(o) {
 
 export function makeHeld(type) {
   const parts = [];
-  if (type === 'beer') {
+  if (type === 'rod') {
+    parts.push([GEO.cyl, '#3a2a1a', mat4(0, -0.9, 0.35, 0, 0.018, 2.0, 0.018, 0.35)]);
+    parts.push([GEO.cyl, '#999', mat4(0, -0.1, 0.08, 0, 0.05, 0.12, 0.05, Math.PI / 2)]);
+  } else if (type === 'beer') {
     parts.push([GEO.cyl, '#c9d3db', mat4(0, 0, 0, 0, 0.035, 0.12, 0.035)]);
     parts.push([GEO.cyl, '#1f5fb0', mat4(0, 0, 0, 0, 0.036, 0.06, 0.036)]);
   } else if (type === 'fists' || !type) {
@@ -286,7 +289,7 @@ export class Character {
       armR = -1.8 - Math.sin(this.phase) * 1.2;
       lean = 0.9;
     }
-    if (this.mode === 'ko') {
+    if (this.mode === 'ko' || this.mode === 'lounge') {
       this.koT += dt;
       rigRotX = -Math.PI / 2;
       rigY = 0.28;

@@ -88,6 +88,21 @@ export const SHOPS = {
       { id: 'socks_white', name: 'Crisp White Tube Socks', price: 8, icon: '🧦', desc: 'Pulled up to the knee. Bold.' },
     ],
   },
+  pelican: {
+    title: 'THE RUSTY PELICAN', keeper: 'Skip', greet: ['"Welcome to the Pelican! Shoes optional, dentures recommended."', '"Two-for-one Bushwackers till the sun goes down. Or till you do."'],
+    items: [
+      { id: 'beer2', name: 'Beach Beer (2)', price: 8, icon: '🍺', desc: 'Two cold ones in a koozie.' },
+      { id: 'bushwacker', name: 'Bushwacker', price: 10, icon: '🥤', desc: 'Rum milkshake. Huge buzz, +CHA for a while.' },
+      { id: 'towel', name: 'Beach Towel (gift)', price: 15, icon: '🏖️', desc: 'Rhonda would like this.' },
+    ],
+  },
+  bait: {
+    title: 'BAIT • TACKLE • DETECTORS', keeper: 'Captain Roy', greet: [`"Metal detector? Found my third wife's ring with one of these. Then I lost her too."`],
+    items: [
+      { id: 'detector', name: 'Metal Detector', price: 150, icon: '🔍', desc: 'Legal hustle: beeps near buried loot on the sand. Press E to dig.' },
+      { id: 'sunscreen', name: 'SPF 100 Sunscreen', price: 8, icon: '🧴', desc: 'Heals a bit. Smells like coconut and regret.' },
+    ],
+  },
   buffet: {
     title: 'GOLDEN CORAL', keeper: 'Flo', greet: ['"Table for one? The prime rib is \'prime\' in the legal sense only."'],
     items: [
@@ -132,6 +147,13 @@ export const LADIES = [
     spot: 'clubhouse', likes: ['wine'], dislikes: ['beer'],
     perk: "Rival intel + DIRT ON KAREN (unlocks the blackmail route to HOA control).", perkId: 'dirt',
     bio: "Chip's wife. Bored out of her skull. Knows where every body in this HOA is buried.",
+  },
+  {
+    id: 'rhonda', name: 'Rhonda Castellano', tier: 1, title: 'Divorcée from Jersey', reqCha: 3, reqStat: 2,
+    look: { female: true, skin: '#c68863', hair: '#1c1c1c', shirt: 3, hat: 'none', hatColor: '#000', glasses: 'big', belly: 0.95, height: 0.98, sock: '#fff', shoe: '#d9c7b0' },
+    spot: 'beach', likes: ['beer', 'towel'], dislikes: ['flowers'],
+    perk: 'She runs a tab at the Rusty Pelican in your name. Beach drinks are free.', perkId: 'freebar',
+    bio: `Moved down from Paramus with three ex-husbands' alimony and a tan you can see from space. Says "whaddaya" as a complete sentence.`,
   },
   {
     id: 'tammy', name: 'Tammy', tier: 3, title: 'The Fairway Cart Girl', reqCha: 8, reqStat: 8, needsPimpedCart: 3,

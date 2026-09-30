@@ -1,7 +1,7 @@
 // Third-person chase camera with mouse orbit, auto-follow behind the cart, and screen shake.
 import * as THREE from 'three';
 import { clamp, damp, dampAngle, rand } from './utils.js';
-import { heightAt } from '../world/terrain.js';
+import { heightAt, waterLevel } from '../world/terrain.js';
 
 export class CameraRig {
   constructor(camera) {
@@ -69,7 +69,8 @@ export class CameraRig {
       pz += Math.cos(hy) * hd;
       py += 70 * e;
     }
-    const gy = heightAt(px, pz) + 0.6;
+    const wl = waterLevel(px, pz);
+    const gy = Math.max(heightAt(px, pz), wl === null ? -Infinity : wl) + 0.6;
     if (py < gy) py = gy;
     if (this.shake > 0) {
       const s = this.shake * this.shake * 0.35;

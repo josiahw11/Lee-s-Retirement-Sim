@@ -234,3 +234,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; fon
 .brew-prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3ccf6e, #7CFC9A); }
 
 .item.sel { background: #fff1c2; outline: 3px solid var(--coral); }
+
+#detector { position: absolute; left: 50%; bottom: 170px; transform: translateX(-50%); background: var(--panel); border: 2px solid #f2c94c; color: #f2c94c; padding: 6px 14px; border-radius: 10px; font-family: 'Courier New', monospace; font-size: 18px; font-weight: 900; }
+#detector span { opacity: .3; }
+#detector em { font-style: normal; color: #7CFC9A; animation: pulse .5s infinite; display: inline-block; }

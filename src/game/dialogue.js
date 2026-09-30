@@ -225,7 +225,7 @@ export function talkLady(g, npc) {
     audio.play('fail');
     return end(name, `${pick(LADY_REACTIONS.fail)}\n\n(-5 ❤)`, title);
   } });
-  for (const [item, icon, label] of [['flowers', '💐', 'Gas station flowers'], ['wine', '🍷', 'Box wine'], ['beer', '🍺', 'A warm Geezer Light']]) {
+  for (const [item, icon, label] of [['flowers', '💐', 'Gas station flowers'], ['wine', '🍷', 'Box wine'], ['beer', '🍺', 'A warm Geezer Light'], ['towel', '🏖️', 'A fluffy beach towel']]) {
     if (g.state.inv[item] > 0) {
       node.choices.push({ text: `Give her ${label} ${icon}`, action: () => {
         g.state.inv[item]--;
@@ -518,7 +518,7 @@ export function visit(g, poi) {
   if (id === 'hoa') return hoaNode(g);
   if (id === 'clubhouse') return clubhouseNode(g);
   if (id === 'dumpster') return dumpsterNode(g);
-  if (id === 'gate') return end('Front Gate', '"Sorry, sir. Your kids signed the paperwork. You can leave when you\'re dead, or when you\'re 90 and they need the house." — Gate Guard Hector');
+  if (id === 'gate') return end('Front Gate', `"Beach is straight ahead, Mr. ${g.state.name}. Boca Beach Club. Rusty Pelican's got two-for-one Bushwackers. Don't drive on the pier. Everybody drives on the pier." — Gate Guard Hector`);
   if (id === 'pickleball') return betNode(g, 'Pickleball Hustle', '"Twenty bucks says you can\'t return my dink shot, old man." — a 70-year-old in compression sleeves.', 'str', 4, 40);
   if (id === 'shuffle') return betNode(g, 'Shuffleboard Hustle', 'The shuffleboard sharks of Sunset Palms play for blood. And cash.', 'cha', 3, 30);
   if (id === 'pool') return end('The Pool', `The clubhouse pool. 82 degrees and approximately 30% water, 70% sunscreen. ${g.state.bladder > 20 ? '\n\n(Tip: press P while standing in the water. You know you want to.)' : ''}`);
@@ -760,6 +760,8 @@ Brew it at your place. Low heat. Patience. Then we never pay retail again."`,
     greet,
     info: (it) => {
       if (it.id === 'sellballs') return { label: `+${money(st.inv.balls * 2)}`, disabled: st.inv.balls <= 0, desc: `You have ${st.inv.balls} ball${st.inv.balls === 1 ? '' : 's'}. $2 each.` };
+      if (it.id === 'detector') return { owned: st.owned.detector, label: st.owned.detector ? 'OWNED' : null, disabled: st.owned.detector };
+      if (id === 'pelican' && st.perks.freebar && it.id !== 'towel') return { price: 0, label: "FREE (Rhonda's tab)" };
       if (it.id === 'bucket') return { owned: st.ballCap >= 20, label: st.ballCap >= 20 ? 'OWNED' : null, disabled: st.ballCap >= 20 };
       if (it.id === 'hopper') return { owned: st.hopper, label: st.hopper ? 'OWNED' : null, disabled: st.hopper };
       if (it.id === 'drone') return { desc: `${it.desc} Own: ${st.drones}/5`, disabled: st.drones >= 5 };
@@ -783,6 +785,7 @@ Brew it at your place. Low heat. Patience. Then we never pay retail again."`,
       let price = it.price;
       if (id === 'buffet') price = st.minutes >= 15 * 60 && st.minutes < 17 * 60 ? 9 : 18;
       if (id === 'tiki' && st.minutes >= 16 * 60 && st.minutes < 18 * 60) price = Math.ceil(price / 2);
+      if (id === 'pelican' && st.perks.freebar && it.id !== 'towel') price = 0;
       if (id === 'doc') price = Math.round(price * wholesale * (it.id.startsWith('tea') && st.quest.flags.teaShortage && !st.quest.flags.homebrew ? 2 : 1));
       if (it.id === 'sellballs') {
         const n = st.inv.balls;
@@ -818,6 +821,11 @@ Brew it at your place. Low heat. Patience. Then we never pay retail again."`,
         case 'wine': add('wine', 1); break;
         case 'flowers': add('flowers', 1); break;
         case 'teabags': add('teabags', 1); break;
+        case 'beer2': add('beer', 2); st.quest.flags.boughtBeer = true; break;
+        case 'bushwacker': st.buffs.colada = 240; st.buzz = Math.min(100, st.buzz + 32); g.ui.hint('🥤 Brain freeze AND a buzz. Efficient.', 2.5); break;
+        case 'towel': add('towel', 1); break;
+        case 'detector': st.owned.detector = true; g.toast('🔍 Metal detector acquired! Walk the sand and listen for the beeps.', 'quest', 6); break;
+        case 'sunscreen': g.player.hp = Math.min(g.maxHp(), g.player.hp + 20); break;
         case 'lotto': {
           const r = Math.random();
           const win = r < 0.004 ? 1000 : r < 0.05 ? 50 : r < 0.2 ? 10 : 0;

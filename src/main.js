@@ -8,6 +8,7 @@ import { Particles } from './gfx/particles.js';
 import { PostFX } from './gfx/postfx.js';
 import { shared, updateNightMaterials } from './gfx/materials.js';
 import { World } from './world/world.js';
+import { updateBeach } from './world/beach.js';
 import { UI } from './ui/ui.js';
 import { Minimap } from './ui/minimap.js';
 import { Game, defaultState } from './game/game.js';
@@ -285,6 +286,7 @@ async function boot() {
     }
     if (!paused) shared.time.value += dt;
     world.updateDucks(shared.time.value);
+    updateBeach(world, shared.time.value);
     particles.update(paused ? 0 : dt);
 
     if (game.running) {

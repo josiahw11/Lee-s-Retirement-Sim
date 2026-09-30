@@ -10,6 +10,7 @@ import { Race, RACE_TIERS, TRACK } from './race.js';
 import { ChugOff, Bingo, Brew } from './minigames.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
+import { BEACH, OCEAN, onSand } from '../world/beach.js';
 import { updateTooth, deuceConfront, spawnTooth, spawnDeuce } from './chapter2.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
 import * as D from './dialogue.js';
@@ -35,11 +36,11 @@ export function defaultState(name = 'Lee') {
     money: 180,
     day: 0, dow: 4, minutes: 8 * 60 + 30,
     stats: { str: { lvl: 2, xp: 0 }, cha: { lvl: 2, xp: 0 }, intim: { lvl: 1, xp: 0 }, stat: { lvl: 1, xp: 0 } },
-    inv: { beer: 0, wine: 0, flowers: 0, pills: 0, tea: 0, balls: 0, teabags: 0, antler: 0, tooth: 0 },
+    inv: { beer: 0, wine: 0, flowers: 0, pills: 0, tea: 0, balls: 0, teabags: 0, antler: 0, tooth: 0, towel: 0 },
     ballCap: 1, hopper: false, drones: 0, droneBank: 0,
     weapons: ['fists'], weapon: 'fists',
     cart: { color: '#ffffff', upgrades: {} },
-    owned: { polo: false, chain: false, rolex: false },
+    owned: { polo: false, chain: false, rolex: false, detector: false },
     look: { shirt: 0, hat: 'visor', glasses: 'aviator', sock: '#141414' },
     wardrobe: { shirt: [0], hat: ['visor'], glasses: ['aviator', 'none'], sock: ['#141414'] },
     romance,
@@ -74,6 +75,8 @@ const ACH = {
   blackout: ['Where Am I?', 'Drank until you blacked out.'],
   drunkDrive: ['Designated Driver? Never Heard Of Her', 'Drove hammered for 30 seconds straight.'],
   carjack: ['Grand Theft Golf Cart', 'Yanked a senior out of their own cart.'],
+  pierJump: ["Ocean's Eleven Feet Deep", 'Drove a golf cart off the end of the pier.'],
+  treasure: ['X Marks The Spot', 'Dug up buried treasure with a metal detector.'],
   gator: ['Gator Bait', 'Got bitten by Mr. Chompers. The sign warned you.'],
   raceWin: ['Geriatric Grand Prix', 'Won a golf cart race.'],
   chug: ['Bottoms Up', 'Won a chug-off.'],
@@ -228,6 +231,25 @@ export class Game {
     keeper('Flo', true, 193, 47.5, 0, 'buffet', { hair: '#f0d7a1', shirt: 3, glasses: 'readers' });
     keeper('Deb', true, 232, 46.5, 0, 'hoa', { hair: '#bdbdbd', shirt: 2, glasses: 'readers', hat: 'none' });
     keeper('Manny', false, 98, -2, 0, 'tiki', { hat: 'bucket', hatColor: '#f2c94c', shirt: 0, glasses: 'aviator', skin: '#c68863' });
+    keeper('Skip', false, BEACH.bar.x + 7.6, BEACH.bar.z + 2.6, Math.PI / 2, 'pelican', { hat: 'bucket', hatColor: '#ff6b1a', shirt: 7, glasses: 'aviator', skin: '#c68863', hair: '#f0d7a1' });
+    keeper('Captain Roy', false, BEACH.bait.x + 5, BEACH.bait.z + 2.5, Math.PI / 2, 'bait', { hat: 'fedora', hatColor: '#23408e', shirt: 2, mustache: true, belly: 1.4 });
+    // beach life
+    const vic = this.spawnNPC({ name: 'Vic, Retired Lifeguard', female: false, role: 'lifeguard', x: BEACH.tower.x + 2.6, z: BEACH.tower.z, state: 'static', look: { hat: 'visor', hatColor: '#e84a5f', shirt: 1, shorts: '#e84a5f', glasses: 'aviator', mustache: true, skin: '#9a6545' }, homePt: { x: BEACH.tower.x + 2.6, z: BEACH.tower.z } });
+    vic.data.face = Math.PI / 2;
+    vic.data.quiet = true;
+    [[452, -1], [481, 1], [508, -1]].forEach(([x, side], i) => {
+      const n = this.spawnNPC({ name: [`Fishin' Phil`, 'Old Man Moe', 'Sully'][i], female: false, role: 'fisher', x, z: BEACH.pier.z + side * 2.2, state: 'fish', look: { hat: 'bucket', hatColor: '#8a9a6a', shirt: 6 } });
+      n.data.face = side > 0 ? 0 : Math.PI;
+      n.char.setHeld('rod');
+      n.data.quiet = true;
+    });
+    (this.world.beachSpots || []).slice(0, 6).forEach((sp) => {
+      const n = this.spawnNPC({ female: chance(0.65), role: 'resident', x: sp.x, z: sp.z, state: 'lounge', look: { hat: 'none', glasses: 'big' } });
+      n.baseState = 'lounge';
+      n.data.face = rand(0, 6.28);
+      n.heading = n.data.face;
+      this.assignWants(n);
+    });
 
     // Karen
     this.named.karen = this.spawnNPC({ name: 'Karen Whitmore', female: true, role: 'karen', x: 230, z: 50, zone: { x0: -10, x1: 250, z0: 44, z1: 52 }, look: { female: true, hair: '#f0d7a1', shirt: 6, hat: 'none', glasses: 'readers', skin: '#f5d3b8' }, walkSpeed: 1.5 });
@@ -235,6 +257,7 @@ export class Game {
 
     // ladies (Tammy is spawned as a beverage cart operator)
     const spots = {
+      beach: { x0: 368, x1: 416, z0: 30, z1: 140 },
       pool: ZONES[1], shuffle: ZONES[2], tiki: { x0: 88, x1: 108, z0: 5, z1: 12 }, pickleball: ZONES[4], clubhouse: ZONES[0],
     };
     for (const def of LADIES) {
@@ -358,6 +381,7 @@ export class Game {
       if (n) this.recruit(n, true);
     }
     this.spawnDrones();
+    this.seedTreasure();
     const qid = this.quests.current()?.id;
     if (qid === 'c2_tooth') spawnTooth(this);
     if (qid === 'c2_deuce') spawnDeuce(this);
@@ -716,6 +740,7 @@ export class Game {
 
   newDay() {
     this.rollWeather();
+    this.seedTreasure();
     const s = this.state;
     s.day++;
     s.dow = (s.dow + 1) % 7;
@@ -1098,6 +1123,7 @@ export class Game {
       if (n.cart && n.role !== 'lady' && n.role !== 'operator') continue;
       consider(d - 0.4, { label: `Talk to ${n.name}`, action: () => this.talk(n) });
     }
+    if (this.detector && this.detector.strength > 0.9) consider(0.5, { label: '🔍 Dig here!', action: () => this.dig() });
     for (const poi of Object.values(this.world.pois)) {
       const d = Math.hypot(poi.x - p.x, poi.z - p.z);
       if (d < poi.r) consider(d + 0.1, { label: poi.label, action: () => this.visitPOI(poi) });
@@ -1166,6 +1192,8 @@ export class Game {
     else if (n.role === 'raceboss') node = this.talkRon(n);
     else if (n.role === 'racer') node = { name: n.name, title: 'Racer', text: `"Not now, I'm in the zone."`, choices: [] };
     else if (n.role === 'goon') node = { name: n.name, title: "Chip's Crew", text: pick(['"Chip says you\'re \'nouveau riche.\' I don\'t know what that means but I\'m offended."', '"Do you have a tee time? No? Then beat it."']), choices: [] };
+    else if (n.role === 'fisher') node = { name: n.name, title: 'Pier Fisherman', text: pick([`"Caught a grouper this big once. Wife left me the same day. Worth it."`, `"Shh. You'll scare the fish. And the fish are all I have left."`, `"Some maniac drove a golf cart off this pier last week. Beautiful arc, though."`]), choices: [] };
+    else if (n.role === 'lifeguard') node = { name: n.name, title: 'Retired Lifeguard (1971-2004)', text: pick([`"Rip currents, jellyfish, and Rhonda. The three dangers of this beach."`, `"If you go past the buoys, I'm not coming in after you. My knees are shot."`, `"Treasure hunters dig all over this sand. Found a Rolex last Tuesday. Real one."`]), choices: [] };
     else if (n.role === 'husband') node = { name: n.name, title: 'Resident', text: '"You lookin\' at my wife? Everybody looks at my wife. Don\'t look at my wife."', choices: [] };
     else node = D.talkResident(this, n);
     if (node) {
@@ -1579,6 +1607,67 @@ export class Game {
     if (this.ui.onModalClose) this.ui.onModalClose();
   }
 
+  // ---------------- metal detecting on the beach ----------------
+  seedTreasure() {
+    this.treasures = [];
+    for (let i = 0; i < 400 && this.treasures.length < 14; i++) {
+      const x = 330 + Math.random() * (BEACH.shore - 334), z = BEACH.z0 + 10 + Math.random() * (BEACH.z1 - BEACH.z0 - 20);
+      if (!onSand(x, z) || this.world.col.query(x, z, 2).some((o) => o.t === 'b' && x > o.x0 - 2 && x < o.x1 + 2 && z > o.z0 - 2 && z < o.z1 + 2)) continue;
+      if (Math.abs(z - BEACH.pier.z) < 5 && x > BEACH.pier.x0) continue;
+      this.treasures.push({ x, z });
+    }
+  }
+
+  updateDetector(dt) {
+    const p = this.player;
+    const on = this.state.owned.detector && !p.cart && onSand(p.x, p.z);
+    const el = document.getElementById('detector');
+    if (!on || !this.treasures) {
+      this.detector = null;
+      if (el) el.classList.add('hidden');
+      return;
+    }
+    let best = Infinity;
+    for (const t of this.treasures) best = Math.min(best, Math.hypot(t.x - p.x, t.z - p.z));
+    const strength = clamp(1 - best / 20, 0, 1);
+    this.detector = { strength };
+    if (el) {
+      el.classList.remove('hidden');
+      const bars = Math.round(strength * 8);
+      el.innerHTML = `🔍 <b>${'▮'.repeat(bars)}<span>${'▯'.repeat(8 - bars)}</span></b>${strength > 0.9 ? ' <em>DIG! [E]</em>' : ''}`;
+    }
+    this.beepT = (this.beepT || 0) - dt;
+    if (strength > 0.05 && this.beepT <= 0) {
+      this.beepT = lerp(1.3, 0.09, strength);
+      audio.tone({ freq: 700 + strength * 1100, type: 'square', dur: 0.05, vol: 0.05 + strength * 0.05 });
+    }
+  }
+
+  dig() {
+    const p = this.player;
+    let bi = -1, bd = Infinity;
+    this.treasures.forEach((t, i) => { const d = Math.hypot(t.x - p.x, t.z - p.z); if (d < bd) { bd = d; bi = i; } });
+    if (bi < 0) return;
+    this.treasures.splice(bi, 1);
+    p.char.play('sand', 0.6);
+    audio.play('pocketSand');
+    this.particles.burst('sand', p.x, p.y + 0.3, p.z, 20, { speed: 2, up: 3, life: 0.8, size: 0.2, gravity: 8 });
+    const loot = pick([
+      ['a handful of quarters', 12], ['a handful of quarters', 18], ['a crusty $20 bill', 20], ['loose change and a Life Saver', 7],
+      [`a lost wedding ring. Somebody's in trouble`, 120], ['a gold Rolex. A REAL one this time', 250],
+      [`somebody's dentures. You pawn them anyway`, 3], ['a Spanish doubloon from 1715!', 400],
+      ['a flip phone with 40 missed calls from "Mom"', 0], ['a vintage can of Schlitz (still sealed)', 0],
+    ]);
+    const [what, cash] = loot;
+    if (cash) this.addMoney(cash, 'metal detecting');
+    if (what.includes('Schlitz')) this.state.inv.beer++;
+    if (what.includes('doubloon')) this.xp('stat', 2);
+    this.state.counters.treasures = (this.state.counters.treasures || 0) + 1;
+    this.achievement('treasure');
+    this.ui.splash('🔍 FOUND IT', `You dug up ${what}.`, 2.4, '#f2c94c');
+    this.detector = null;
+  }
+
   talkRon(n) {
     const inRace = this.race && this.race.running;
     const won = this.state.counters.racesWon || 0;
@@ -1620,6 +1709,16 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
         this.race = null;
       }
     }
+  }
+
+  coastGuard() {
+    this.fadeOut(() => {
+      if (this.player.cart) this.player.exitCart();
+      this.teleport(BEACH.pier.x0 - 4, BEACH.pier.z + 6, -Math.PI / 2);
+      this.recoverCart();
+      this.spend(75);
+      this.advanceTime(45);
+    }, 2.6, 'RESCUED', 'The Coast Guard fished you out of the Atlantic. Sal has your cart. That will be $75, and a lecture.', '#4cc9f0');
   }
 
   recoverCart() {
@@ -1682,7 +1781,9 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (distToSegment(x, z, e.a.x, e.a.z, e.b.x, e.b.z) < e.width / 2 + 0.5) return true;
     }
     const B = BUILDINGS;
-    for (const lot of [B.parking, B.strip]) if (Math.abs(x - lot.x) < lot.sx / 2 && Math.abs(z - lot.z) < lot.sz / 2) return true;
+    const pr = BEACH.pier;
+    if (x > pr.x0 && x < pr.x1 && Math.abs(z - pr.z) < pr.w / 2) return true;
+    for (const lot of [B.parking, B.strip, BEACH.lot]) if (Math.abs(x - lot.x) < lot.sx / 2 && Math.abs(z - lot.z) < lot.sz / 2) return true;
     return false;
   }
 
@@ -1809,6 +1910,12 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
         this.election();
       }
       updateTooth(this, dt);
+      this.updateDetector(dt);
+      if (this.oceanRescueT > 0) {
+        this.oceanRescueT -= dt;
+        if (this.oceanRescueT <= 0) this.coastGuard();
+      }
+      audio.setSurf(p.x > 300 ? clamp(1 - (BEACH.shore - p.x) / 110, 0.25, 1) : clamp(1 - (300 - p.x) / 40, 0, 0.25));
       const walker = this.named.walker;
       if (walker && walker.data.zoomT > 0) {
         walker.data.zoomT -= dt;
@@ -1943,8 +2050,13 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
         audio.play('splash');
         this.particles.burst('drop', pc.x, pc.y + 0.5, pc.z, 40, { speed: 4, up: 7, life: 1.4, size: 0.3, gravity: 12 });
         this.achievement('sunk');
+        if (waterAt(pc.x, pc.z) === OCEAN) {
+          this.achievement('pierJump');
+          this.ui.float(pc.x, pc.y + 3, pc.z, 'PIER JUMP!', '#4cc9f0', 2);
+        }
         this.ui.splash('SPLASHDOWN', pc === this.playerCart ? "Your cart is sleeping with the fishes. Sal can fish it out." : 'Well, that one\'s gone.', 2.5, '#4cc9f0');
         this.sinkExitT = 0.9;
+        if (waterAt(pc.x, pc.z) === OCEAN && pc === this.playerCart) this.oceanRescueT = 2.8;
       }
       if (!pc.sunk) this._sinkHandled = false;
       if (this.sinkExitT > 0) {
@@ -2172,7 +2284,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       for (const l of LADIES) {
         const r = s.romance[l.id];
         const n = Math.round(r.aff / 20);
-        const where = { pool: 'Pool deck', shuffle: 'Shuffleboard courts', tiki: 'Tiki Hut bar', pickleball: 'Pickleball courts', clubhouse: 'Clubhouse', cart: 'Beverage cart on the course' }[l.spot];
+        const where = { beach: 'Boca Beach (through the front gate)', pool: 'Pool deck', shuffle: 'Shuffleboard courts', tiki: 'Tiki Hut bar', pickleball: 'Pickleball courts', clubhouse: 'Clubhouse', cart: 'Beverage cart on the course' }[l.spot];
         h += `<div class="card"><div class="t">${l.name} ${r.conquest ? '💞' : ''}</div><div class="sub">Tier ${l.tier} • ${l.title} • ${where}</div><div class="hearts">${'❤'.repeat(n)}${'♡'.repeat(5 - n)}</div><p>${l.bio}</p><p style="opacity:.75">Needs CHA ${l.reqCha} / STATUS ${l.reqStat}${l.needsPimpedCart ? ` / ${l.needsPimpedCart} cart mods` : ''} • Likes: ${l.likes.join(', ') || '—'}${l.dislikes.length ? ` • Hates: ${l.dislikes.join(', ')}` : ''}</p><p><b>Perk:</b> ${r.conquest ? l.perk : '???'}</p></div>`;
       }
       h += '</div>';

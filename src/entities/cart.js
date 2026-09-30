@@ -318,7 +318,9 @@ export class Cart {
     }
     this._onRamp = rampHeight(this.x, this.z) > 0.05;
     if (!this.grounded) {
-      this.vy -= G * dt;
+      // water drag once you've gone under
+      if (this.sunk) this.vy *= Math.exp(-5 * dt);
+      this.vy -= G * dt * (this.sunk ? 0.15 : 1);
       this.y += this.vy * dt;
       this.airT += dt;
       if (this.y <= ground) {
@@ -334,7 +336,7 @@ export class Cart {
     // water: splashdown
     const wl = waterLevel(this.x, this.z);
     this.inWater = wl !== null && this.y < wl - 0.1;
-    if (this.inWater && !this.sunk && this.grounded) this.sunk = true;
+    if (this.inWater && !this.sunk && (this.grounded || this.y < wl - 0.5)) this.sunk = true;
     if (this.sunk) this.y = Math.max(ground, this.y - dt * 0.6);
 
     this.syncMesh(dt, vf);

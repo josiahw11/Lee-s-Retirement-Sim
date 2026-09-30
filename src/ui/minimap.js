@@ -1,9 +1,10 @@
 // Rotating circular minimap + full-screen map.
 import { paintGround, toPx } from '../world/terrain.js';
 import { HALF } from '../world/layout.js';
+import { paintBeachMap } from '../world/beach.js';
 
 export const POI_ICONS = {
-  home: '🏠', liquor: '🍺', buffet: '🍗', hoa: '🏛️', proshop: '⛳', sal: '🔧', doc: '💊', tiki: '🍹', pool: '🏊', pickleball: '🎾', clubhouse: '🌴', gate: '🚧',
+  home: '🏠', pelican: '🍻', bait: '🎣', liquor: '🍺', buffet: '🍗', hoa: '🏛️', proshop: '⛳', sal: '🔧', doc: '💊', tiki: '🍹', pool: '🏊', pickleball: '🎾', clubhouse: '🌴', gate: '🚧',
 };
 
 export class Minimap {
@@ -14,6 +15,10 @@ export class Minimap {
     this.bg = bigCanvas.getContext('2d');
     this.map = paintGround(1024, 'map');
     this.size = 1024;
+    // the beach lives east of the community wall: x 292..552
+    this.ppm = this.size / (HALF * 2);
+    this.beach = paintBeachMap(this.ppm, 292, -HALF, 260, HALF * 2);
+    this.beachU = toPx(292, this.size);
     this.range = 110; // meters radius shown
   }
 
@@ -39,6 +44,7 @@ export class Minimap {
     g.translate(R, R);
     g.rotate(a);
     g.scale(scale, scale);
+    g.drawImage(this.beach, this.beachU - pc.u, -pc.v);
     g.drawImage(this.map, -pc.u, -pc.v);
     g.restore();
 
@@ -123,9 +129,14 @@ export class Minimap {
   drawBig(game) {
     const g = this.bg, W = this.big.width;
     g.clearRect(0, 0, W, W);
-    g.drawImage(this.map, 0, 0, W, W);
-    const s = W / this.size;
-    const P = (x, z) => ({ x: toPx(x, this.size) * s, y: toPx(z, this.size) * s });
+    // fit community + beach side by side, vertically centered
+    const s = W / (this.beachU + this.beach.width);
+    const oy = (W - this.size * s) / 2;
+    g.fillStyle = '#6f9a4a';
+    g.fillRect(0, 0, W, W);
+    g.drawImage(this.beach, this.beachU * s, oy, this.beach.width * s, this.beach.height * s);
+    g.drawImage(this.map, 0, oy, this.size * s, this.size * s);
+    const P = (x, z) => ({ x: toPx(x, this.size) * s, y: oy + toPx(z, this.size) * s });
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     g.font = '22px "Segoe UI Emoji", sans-serif';
@@ -173,12 +184,13 @@ export class Minimap {
     lbl('MAINTENANCE LOT', -238, 58 - 20);
     lbl('COMMERCIAL STRIP', 197, 16);
     lbl('RESIDENTIAL', 0, 285);
+    lbl('BOCA BEACH CLUB', 380, -150);
 
     const legend = document.getElementById('bigmap-legend');
     if (legend && !legend.dataset.done) {
       legend.dataset.done = '1';
       legend.innerHTML = `<div style="font-family:var(--display);color:var(--coral);font-size:18px;margin-bottom:6px">SUNSET PALMS</div>
-        🏠 Your house<br>🍺 Liquor Barrel<br>🍹 Tiki Hut bar<br>🍗 Golden Coral buffet<br>🏛️ HOA Office<br>⛳ Pro Shop (Gus)<br>🔧 Sal's Cart Customs<br>💊 Doc's van<br>🏊 Pool • 🎾 Pickleball<br>💗 Ladies<br>
+        🏠 Your house<br>🍻 Rusty Pelican • 🎣 Bait shack<br>🍺 Liquor Barrel<br>🍹 Tiki Hut bar<br>🍗 Golden Coral buffet<br>🏛️ HOA Office<br>⛳ Pro Shop (Gus)<br>🔧 Sal's Cart Customs<br>💊 Doc's van<br>🏊 Pool • 🎾 Pickleball<br>💗 Ladies<br>
         <span style="color:#b7791f">●</span> Beverage cart (Chip's)<br><span style="color:#2e7d4f">●</span> Beverage cart (yours)<br><span style="color:#d33">●</span> Trouble<br>🔻 Objective
         <div style="margin-top:10px;opacity:.6;font-size:12px">Click or press M to close</div>`;
     }

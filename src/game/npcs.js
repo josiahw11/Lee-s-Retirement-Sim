@@ -344,6 +344,9 @@ export class NPC {
         this.char.play('swing', 0.9);
         this.data.shotT = 0.45;
       }
+    } else if (st === 'lounge' || st === 'fish') {
+      // sunbathing / fishing: stay put
+      if (this.data.face !== undefined) this.heading = dampAngle(this.heading, this.data.face, 3, dt);
     } else if (st === 'party') {
       // just vibing; dancing is triggered by the party
       if (this.distTo(p.x, p.z) < 6) this.faceTo(p.x, p.z, dt, 2);
@@ -411,7 +414,7 @@ export class NPC {
     } else {
       const wl = waterLevel(this.x, this.z);
       this.y = wl !== null ? Math.max(ground, wl - 1.25) : ground;
-      this.char.mode = this.state === 'ko' ? 'ko' : wl !== null && wl - ground > 0.9 ? 'swim' : spd > 0.1 ? 'walk' : 'idle';
+      this.char.mode = this.state === 'ko' ? 'ko' : this.state === 'lounge' ? 'lounge' : wl !== null && wl - ground > 0.9 ? 'swim' : spd > 0.1 ? 'walk' : 'idle';
       if (wl !== null && this.state === 'ko' && !this.data.splashed) {
         this.data.splashed = true;
         g.onSplashdown(this);

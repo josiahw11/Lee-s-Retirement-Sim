@@ -546,6 +546,32 @@ export class AudioSys {
     this.rainGain.gain.setTargetAtTime(level * 0.16, this.ctx.currentTime, 0.4);
   }
 
+  setSurf(level) {
+    if (!this.ready) return;
+    if (!this.surfGain) {
+      const s = this.ctx.createBufferSource();
+      s.buffer = this.noise;
+      s.loop = true;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 700;
+      this.surfGain = this.ctx.createGain();
+      this.surfGain.gain.value = 0;
+      // slow swell so it sounds like waves rolling in
+      const lfo = this.ctx.createOscillator();
+      lfo.frequency.value = 0.12;
+      this.surfLfo = this.ctx.createGain();
+      this.surfLfo.gain.value = 0;
+      lfo.connect(this.surfLfo).connect(this.surfGain.gain);
+      lfo.start();
+      s.connect(f).connect(this.surfGain).connect(this.master);
+      s.start();
+    }
+    const t = this.ctx.currentTime;
+    this.surfGain.gain.setTargetAtTime(level * 0.12, t, 0.5);
+    this.surfLfo.gain.setTargetAtTime(level * 0.09, t, 0.5);
+  }
+
   thunder(delay = 0.6) {
     if (!this.ready) return;
     this.noiseBurst({ dur: 2.6, vol: 0.7, type: 'lowpass', freq: 300, to: 60, at: delay, attack: 0.05 });

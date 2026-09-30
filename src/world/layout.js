@@ -24,6 +24,7 @@ STREETS.forEach((s, i) => {
 });
 node('P7', 265, 60);
 node('GATE', 290, 60);
+node('BCH', 336, 60);
 node('F0', -265, -45);
 node('F1', -200, -45);
 node('F3', -40, -45);
@@ -59,6 +60,7 @@ edge('P3', 'F3', 'road', 'Clubhouse Rd');
 edge('P5', 'F5', 'road', 'Heron Ct');
 edge('P7', 'F7', 'road', 'Commerce St');
 edge('P0', 'F0', 'road', 'Service Rd');
+edge('GATE', 'BCH', 'blvd', 'Beach Rd');
 // Fairway Dr + cart paths
 ['F0', 'F1', 'F3', 'F5', 'F7'].reduce((a, b) => (edge(a, b, 'road', 'Fairway Dr'), b));
 edge('F0', 'M0', 'path', 'Cart Path');
