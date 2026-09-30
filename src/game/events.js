@@ -41,6 +41,14 @@ export function gazette(g) {
   if (d('beers') >= 8) add(`LIQUOR BARREL REPORTS "BEST TUESDAY EVER"`, `Barb credits "one very thirsty customer." ${d('beers')} beers and counting.`);
   if (d('treasures') >= 2) add(`BEACH "TREASURE HUNTER" STRIKES AGAIN`, 'Lifeguard Vic: "He dug up my car keys. I lost those in 1987."');
   if (d('cartsTaken') >= 1) add(`BEVERAGE CART "HOSTILE TAKEOVER" ROCKS COUNTRY CLUB SET`, 'Chip Wainwright III: "This is a travesty. Father will hear about this."');
+  // Chapter 3: the Lucky Lady
+  const qf = g.state.quest.flags;
+  const once = (flag, h, sub) => { if (!g.state.flags[flag]) { g.state.flags[flag] = true; add(h, sub); } };
+  if (qf.vaultChoice === 'return') once('gazVault', `PENSIONS MYSTERIOUSLY RETURNED TO FLAMINGO DRIVE MAILBOXES`, `Earl Finkbeiner reunited with dentures. "Whoever you are, I owe you a Werther's." Casino captain "unavailable for comment, crying."`);
+  else if (qf.vaultChoice === 'keep') once('gazVault', `$48,211 PENSION HEIST ROCKS BOCA WATERFRONT`, `Police baffled. Residents furious. A local man was seen buying a gold-plated recliner "in cash, from a duffel bag."`);
+  else if (qf.vaultChoice === 'split') once('gazVault', `HALF OF STOLEN PENSIONS "JUST SHOW UP" IN MAILBOXES`, `Residents grateful, confused, and doing math. "Where's the other half?" asks everyone.`);
+  if (qf.c3Jackpot) once('gazJackpot', `GOLDEN GAM-GAM PAYS OUT FOR FIRST TIME SINCE 1979`, `Machine #3 played "Wind Beneath My Wings." Three nearby grandmothers fainted. Mechanic "Fingers" Fanucci: "Beats me."`);
+  if (d('overboard') >= 1) add(`MAN THROWN OFF CASINO BOAT, WASHES UP ON BOCA BEACH`, `"The Captain cheats," the man told a seagull. The seagull took his shoe.`);
   if (g.state.hoa.president && !g.state.flags.gazPres) { g.state.flags.gazPres = true; add(`${name} ELECTED HOA PRESIDENT IN SHOCK UPSET`, 'Karen demands recount, is escorted from clubhouse clutching a clipboard.'); }
   while (stories.length < 3) {
     const f = pick(FILLER);

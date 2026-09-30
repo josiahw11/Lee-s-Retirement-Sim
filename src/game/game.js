@@ -5,10 +5,11 @@ import { Props, Balls, Pickups } from '../entities/props.js';
 import { NPC } from './npcs.js';
 import { Player } from './player.js';
 import { Driver, COURSE_LOOPS, PATROL_LOOP, nearestNode } from './traffic.js';
-import { Quests } from './quests.js';
+import { Quests, STEPS } from './quests.js';
 import { Race, RACE_TIERS, TRACK } from './race.js';
 import { ChugOff, Bingo, Brew } from './minigames.js';
 import { Shuffleboard } from './shuffleboard.js';
+import { Blackjack, Slots, SafeCrack } from './casino.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
@@ -17,6 +18,7 @@ import { Litter } from './litter.js';
 import { SkidMarks } from '../gfx/skids.js';
 import { BEACH, OCEAN, onSand } from '../world/beach.js';
 import { updateTooth, deuceConfront, spawnTooth, spawnDeuce } from './chapter2.js';
+import { spawnBoatCrew, talkCaptain, talkFingers, talkDeckhand, talkPatron, jumpToChapter } from './chapter3.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
 import * as D from './dialogue.js';
 import { NODES, EDGES, HOLES, PONDS, ZONES, STREETS, HOUSES, PLAYER_HOUSE, BUILDINGS } from '../world/layout.js';
@@ -92,6 +94,12 @@ const ACH = {
   raceLegend: ['Senior Speed Demon', 'Won a $500 race against The Widow Maker.'],
   litterbug: ['Keep Florida Beautiful', 'Flung 24 empty beer cans onto the grounds.'],
   shuffle: ['Shuffleboard Shark', 'Beat a shuffleboard hustler on his own court.'],
+  blackjack21: ['Twenty-One Gun Salute', 'Hit a natural blackjack on the Lucky Lady.'],
+  jackpot: ['Gam-Gam Jackpot', 'Hit the Golden Gam-Gam progressive jackpot.'],
+  overboard: ['Man Overboard', "Got thrown off a casino boat by a man in a captain's hat."],
+  safecracker: ['Cracked It', "Opened the Captain's safe with nothing but a hearing aid and patience."],
+  robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
+  kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
 };
 
 export class Game {
@@ -248,7 +256,8 @@ export class Game {
     const vic = this.spawnNPC({ name: 'Vic, Retired Lifeguard', female: false, role: 'lifeguard', x: BEACH.tower.x + 2.6, z: BEACH.tower.z, state: 'static', look: { hat: 'visor', hatColor: '#e84a5f', shirt: 1, shorts: '#e84a5f', glasses: 'aviator', mustache: true, skin: '#9a6545' }, homePt: { x: BEACH.tower.x + 2.6, z: BEACH.tower.z } });
     vic.data.face = Math.PI / 2;
     vic.data.quiet = true;
-    [[452, -1], [481, 1], [508, -1]].forEach(([x, side], i) => {
+    spawnBoatCrew(this);
+    [[452, -1], [458, 1], [508, -1]].forEach(([x, side], i) => {
       const n = this.spawnNPC({ name: [`Fishin' Phil`, 'Old Man Moe', 'Sully'][i], female: false, role: 'fisher', x, z: BEACH.pier.z + side * 2.2, state: 'fish', look: { hat: 'bucket', hatColor: '#8a9a6a', shirt: 6 } });
       n.data.face = side > 0 ? 0 : Math.PI;
       n.char.setHeld('rod');
@@ -1215,6 +1224,10 @@ export class Game {
     else if (n.role === 'raceboss') node = this.talkRon(n);
     else if (n.role === 'racer') node = { name: n.name, title: 'Racer', text: `"Not now, I'm in the zone."`, choices: [] };
     else if (n.role === 'goon') node = { name: n.name, title: "Chip's Crew", text: pick(['"Chip says you\'re \'nouveau riche.\' I don\'t know what that means but I\'m offended."', '"Do you have a tee time? No? Then beat it."']), choices: [] };
+    else if (n.role === 'captain') node = talkCaptain(this, n);
+    else if (n.role === 'mechanic') node = talkFingers(this, n);
+    else if (n.role === 'deckhand') node = talkDeckhand(this, n);
+    else if (n.role === 'patron') node = talkPatron(this, n);
     else if (n.role === 'fisher') node = { name: n.name, title: 'Pier Fisherman', text: pick([`"Caught a grouper this big once. Wife left me the same day. Worth it."`, `"Shh. You'll scare the fish. And the fish are all I have left."`, `"Some maniac drove a golf cart off this pier last week. Beautiful arc, though."`]), choices: [] };
     else if (n.role === 'lifeguard') node = { name: n.name, title: 'Retired Lifeguard (1971-2004)', text: pick([`"Rip currents, jellyfish, and Rhonda. The three dangers of this beach."`, `"If you go past the buoys, I'm not coming in after you. My knees are shot."`, `"Treasure hunters dig all over this sand. Found a Rolex last Tuesday. Real one."`]), choices: [] };
     else if (n.role === 'husband') node = { name: n.name, title: 'Resident', text: '"You lookin\' at my wife? Everybody looks at my wife. Don\'t look at my wife."', choices: [] };
@@ -1648,7 +1661,7 @@ export class Game {
   }
 
   startMinigame(kind, opts = {}) {
-    const Cls = kind === 'bingo' ? Bingo : kind === 'brew' ? Brew : kind === 'shuffle' ? Shuffleboard : ChugOff;
+    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack }[kind] || ChugOff;
     if (opts.bet) this.spend(opts.bet);
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();
@@ -1825,6 +1838,11 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
   onQuestComplete(s) {
     this.ui.toast(`✅ <b>${s.title}</b>`, 'quest', 4);
     audio.play('success');
+  }
+
+  // reviewer shortcut from the pause menu
+  jumpToChapter(n) {
+    jumpToChapter(this, n, STEPS);
   }
 
   chapterComplete() {

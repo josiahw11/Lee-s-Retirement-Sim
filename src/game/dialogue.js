@@ -3,6 +3,7 @@ import { SHOPS, LADIES, PICKUP_LINES, LADY_REACTIONS, RECRUITS, CART_MODS, PAINT
 import { pick, rand, randInt, chance, money, DAYS, fmtTime } from '../core/utils.js';
 import { audio } from '../core/audio.js';
 import { testBatchOn } from './chapter2.js';
+import { casinoNode, cabinNode } from './chapter3.js';
 
 // ---------------------------------------------------------------- helpers
 const C = (g, stat, diff, label) => ({ label: label || stat.toUpperCase().replace('INTIM', 'INT').replace('STAT', 'STA'), chance: g.chance(stat, diff) });
@@ -524,6 +525,8 @@ export function talkGolfer(g, npc) {
 export function visit(g, poi) {
   const id = poi.id;
   if (id === 'tiki') return tikiNode(g);
+  if (id === 'casino') return casinoNode(g);
+  if (id === 'cabin') return cabinNode(g);
   if (SHOPS[id]) return openShop(g, id);
   if (id === 'sal') return openSal(g);
   if (id === 'home') return homeNode(g);

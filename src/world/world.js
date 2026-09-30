@@ -10,6 +10,7 @@ import {
   HALF, WALL, EDGES, NODES, HOLES, FAIRWAY_W, PONDS, RAMPS, BUILDINGS as B, HOUSES, PLAYER_HOUSE, ZONES, STREETS, SHUFFLE_COURT,
 } from './layout.js';
 import { buildBeach, BEACH } from './beach.js';
+import { onBoat } from './casinoboat.js';
 import { baseHeight, heightAt, paintGround, SPEED_BUMPS, POOL, WATER_Y, onCourse, onFairway, waterAt } from './terrain.js';
 import { mulberry32, distToSegment } from '../core/utils.js';
 
@@ -1319,6 +1320,7 @@ export class World {
 
   locationName(x, z) {
     if (x > 292) {
+      if (onBoat(x, z)) return 'The Lucky Lady';
       if (x > BEACH.shore + 2) return Math.abs(z - BEACH.pier.z) < 4 && x < BEACH.pier.x1 ? 'The Pier' : 'Atlantic Ocean';
       if (Math.abs(z - BEACH.pier.z) < 4 && x > BEACH.pier.x0) return 'The Pier';
       if (Math.hypot(x - BEACH.bar.x, z - BEACH.bar.z) < 16) return 'The Rusty Pelican';

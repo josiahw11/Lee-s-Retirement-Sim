@@ -239,6 +239,12 @@ function bodyParts(o, lod = false) {
     sc(T.sph, hc, at(0, 0.15 + hy, 0), 0.165, 0.11, 0.165);
     sc(T.cyl, hc, at(0, 0.13 + hy, 0), 0.36, 0.012, 0.36, 'head', 0.06);
     sc(T.cyl, '#e84a5f', at(0, 0.16 + hy, 0), 0.168, 0.03, 0.168);
+  } else if (o.hat === 'captain') {
+    sc(T.cyl, '#ffffff', at(0, 0.15 + hy, 0.005), 0.19, 0.075, 0.195); // flat white crown
+    sc(T.cyl, '#1a1a1a', at(0, 0.1 + hy, 0), 0.163, 0.05, 0.17); // black band
+    sc(T.cyl, '#d4af37', at(0, 0.125 + hy, 0.0), 0.165, 0.008, 0.172); // gold braid
+    sc(T.cyl, '#111111', at(0, 0.085 + hy, 0.165), 0.13, 0.012, 0.1, 'head', -0.18); // patent visor
+    sc(T.box, '#d4af37', at(0, 0.125 + hy, 0.17), 0.05, 0.04, 0.012); // anchor badge
   } else if (o.hat === 'security') {
     sc(T.hi, '#1d2b53', at(0, 0.09, 0), 0.165, 0.125, 0.172);
     sc(T.cyl, '#1d2b53', at(0, 0.085, 0.17), 0.12, 0.012, 0.12, 'head', -0.12);

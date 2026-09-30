@@ -6,6 +6,7 @@ import { M } from '../gfx/materials.js';
 import { makeWaterMaterial } from '../gfx/water.js';
 import { makeSignTexture } from '../gfx/textures.js';
 import { mulberry32, clamp } from '../core/utils.js';
+import { buildBoat, paintBoat, BOAT } from './casinoboat.js';
 
 export const BEACH = {
   x0: 318, x1: 440, z0: -228, z1: 268,
@@ -145,12 +146,16 @@ export function buildBeach(world, GEO, heightAt) {
   for (let x = p.x0 + p.ramp; x <= p.x1; x += 6) {
     for (const s of [-1, 1]) {
       box(x, -4, p.z + s * (p.w / 2 - 0.2), 0.35, 4 + deckTop - 0.2, 0.35, '#6d5a48');
-      box(x, deckTop, p.z + s * (p.w / 2 - 0.1), 0.12, 1.1, 0.12, '#6d5a48');
+      if (!(s > 0 && x > BOAT.plank.x0 - 0.2 && x < BOAT.plank.x1 + 0.2)) box(x, deckTop, p.z + s * (p.w / 2 - 0.1), 0.12, 1.1, 0.12, '#6d5a48');
     }
   }
   for (const s of [-1, 1]) {
-    box((p.x0 + p.ramp + p.x1) / 2, deckTop + 1.0, p.z + s * (p.w / 2 - 0.1), p.x1 - p.x0 - p.ramp, 0.1, 0.1, '#7a6040');
-    col.addBox(p.x0 + p.ramp, p.z + s * (p.w / 2) - 0.2, p.x1, p.z + s * (p.w / 2) + 0.2, deckTop + 1.2, 'rail');
+    // the north rail opens where the Lucky Lady's gangplank meets the pier
+    const spans = s > 0 ? [[p.x0 + p.ramp, BOAT.plank.x0], [BOAT.plank.x1, p.x1]] : [[p.x0 + p.ramp, p.x1]];
+    for (const [a, c] of spans) {
+      box((a + c) / 2, deckTop + 1.0, p.z + s * (p.w / 2 - 0.1), c - a, 0.1, 0.1, '#7a6040');
+      col.addBox(a, p.z + s * (p.w / 2) - 0.2, c, p.z + s * (p.w / 2) + 0.2, deckTop + 1.2, 'rail');
+    }
   }
   world.addSign('PIER — NO DIVING, NO CARTS, NO FUN', { bg: '#fff', fg: '#b8323a', font: 'bold 44px sans-serif', border: '#b8323a', w: 1024, h: 128 }, p.x0 - 1, 2.2, p.z + p.w / 2 + 1, -Math.PI / 2, 4, 0.5);
   box(p.x0 - 1, 0, p.z + p.w / 2 + 1, 0.1, 2, 0.1, '#555');
@@ -255,6 +260,9 @@ export function buildBeach(world, GEO, heightAt) {
   b.add(M.vc, GEO.cone, '#9a9a9a', mat4(361.05, 2.42, 60, 0, 0.12, 0.12, 0.12, Math.PI));
   box(361.4, 0, 60, 1.4, 0.06, 1.4, '#c9c3b5');
 
+  // ---- the Lucky Lady casino boat, moored off the end of the pier
+  buildBoat(world, GEO);
+
   // ---- seagulls
   world.gulls = [];
   const gullGeo = mergeParts([
@@ -322,6 +330,7 @@ export function paintBeachMap(ppm, x0, z0, W, H) {
   const p = BEACH.pier;
   [ax, az] = P(p.x0, p.z - p.w / 2);
   g.fillRect(ax, az, (p.x1 - p.x0) * ppm, p.w * ppm);
+  paintBoat(g, P, ppm);
   g.fillStyle = '#c9955f';
   for (const bl of [BEACH.bar, BEACH.bait]) {
     [ax, az] = P(bl.x - 5, bl.z - 4);

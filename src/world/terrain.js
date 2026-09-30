@@ -2,6 +2,7 @@
 import { HALF, HOLES, FAIRWAY_W, PONDS, BUNKERS, MOUNDS, RAMPS, BUILDINGS, EDGES, HOUSES, STREETS } from './layout.js';
 import { clamp, smooth, mulberry32, distToSegment } from '../core/utils.js';
 import { beachSlope, pierHeight, inOcean, OCEAN } from './beach.js';
+import { boatHeight } from './casinoboat.js';
 
 export const WATER_Y = -0.45;
 export const POOL = { x0: 52, z0: -10, x1: 76, z1: 2, y: -0.15 };
@@ -55,7 +56,7 @@ export function baseHeight(x, z) {
 }
 
 export function heightAt(x, z) {
-  if (x > 300) return Math.max(beachSlope(x), pierHeight(x, z));
+  if (x > 300) return Math.max(beachSlope(x), pierHeight(x, z), boatHeight(x, z));
   return Math.max(baseHeight(x, z), rampHeight(x, z));
 }
 

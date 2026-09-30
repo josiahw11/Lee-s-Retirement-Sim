@@ -9,6 +9,7 @@ import { PostFX } from './gfx/postfx.js';
 import { shared, updateNightMaterials } from './gfx/materials.js';
 import { World } from './world/world.js';
 import { updateBeach } from './world/beach.js';
+import { updateBoat } from './world/casinoboat.js';
 import { UI } from './ui/ui.js';
 import { Minimap } from './ui/minimap.js';
 import { TouchControls } from './ui/touch.js';
@@ -202,6 +203,8 @@ async function boot() {
   const resume = () => { paused = false; $('pause').classList.add('hidden'); ui.modal = null; input.requestLock(); };
   $('btn-resume').onclick = resume;
   $('btn-save').onclick = () => { game.save(); };
+  $('btn-ch2').onclick = () => { game.jumpToChapter(2); resume(); };
+  $('btn-ch3').onclick = () => { game.jumpToChapter(3); resume(); };
   $('btn-quit').onclick = () => { if (confirm('Quit to title? Unsaved progress will be lost.')) location.reload(); };
   $('bigmap').onclick = closeMap;
   ui.onModalClose = () => { if (game.running && !ui.modal) input.requestLock(); };
@@ -346,6 +349,7 @@ async function boot() {
     if (!paused) shared.time.value += dt;
     world.updateDucks(shared.time.value);
     updateBeach(world, shared.time.value);
+    updateBoat(world, dt);
     particles.update(paused ? 0 : dt);
 
     if (game.running) {
