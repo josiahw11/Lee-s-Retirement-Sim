@@ -1,6 +1,32 @@
 // Golf carts: model + upgrades + arcade physics (drift, air, suspension, splashdown).
 import * as THREE from 'three';
 import { mergeParts, mat4 } from '../gfx/batch.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+// Shared cart primitives (rounded fiberglass panels, fender arcs, tires)
+const RB = new Map();
+function rbox(w, h, d, r) {
+  const k = `${w}:${h}:${d}:${r}`;
+  // more bevel segments only where the curve is big enough to see
+  if (!RB.has(k)) RB.set(k, new RoundedBoxGeometry(w, h, d, r >= 0.1 ? 3 : r >= 0.04 ? 2 : 1, r));
+  return RB.get(k);
+}
+const FENDER = new THREE.TorusGeometry(0.34, 0.055, 6, 14, Math.PI);
+const SPOKE = new THREE.BoxGeometry(1, 1, 1);
+const TIRE = new Map();
+function tireGeo(r, w) {
+  const k = `${r}:${w}`;
+  if (!TIRE.has(k)) {
+    // a torus reads as a real rounded tire; squash it to the tire width
+    const g = new THREE.TorusGeometry(r * 0.74, r * 0.27, 8, 18);
+    g.scale(1, 1, w / (r * 0.54));
+    g.rotateY(Math.PI / 2);
+    TIRE.set(k, g);
+  }
+  return TIRE.get(k);
+}
+const TIRE_MAT = new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.92 });
+const HUB_MAT = new THREE.MeshStandardMaterial({ color: 0xa8adb2, roughness: 0.35, metalness: 0.6 });
 import { M } from '../gfx/materials.js';
 import { GEO } from '../world/world.js';
 import { heightAt, waterLevel, rampHeight } from '../world/terrain.js';
@@ -84,41 +110,59 @@ export class Cart {
     this.chassis = chassis;
     // painted panels
     const paint = mergeParts([
-      [GEO.box, '#fff', mat4(0, 0.47, 0.05, 0, 1.18, 0.26, 2.3)],
-      [GEO.box, '#fff', mat4(0, 0.7, 0.98, 0, 1.12, 0.42, 0.42)],
-      [GEO.sph, '#fff', mat4(0, 0.78, 1.12, 0, 0.56, 0.26, 0.26)],
-      [GEO.box, '#fff', mat4(0, 0.72, -0.92, 0, 1.18, 0.34, 0.6)],
-      [GEO.box, '#fff', mat4(0, 2.02, -0.08, 0, 1.3, 0.07, 1.75)],
+      [rbox(1.18, 0.24, 2.3, 0.09), '#fff', mat4(0, 0.47, 0.03)], // tub
+      [rbox(1.12, 0.44, 0.56, 0.12), '#fff', mat4(0, 0.69, 1.0)], // nose cowl
+      [rbox(0.96, 0.08, 0.5, 0.035), '#fff', mat4(0, 0.9, 0.96, 0, 1, 1, 1, 0.1)], // sloped hood panel
+      [rbox(1.06, 0.3, 0.12, 0.05), '#fff', mat4(0, 1.0, 0.7, 0, 1, 1, 1, -0.25)], // dash
+      [rbox(1.18, 0.36, 0.64, 0.12), '#fff', mat4(0, 0.72, -0.92)], // rear body
+      [rbox(1.34, 0.07, 1.82, 0.035), '#fff', mat4(0, 2.02, -0.08)], // roof
+      [rbox(1.3, 0.05, 1.78, 0.02), '#fff', mat4(0, 1.97, -0.08)], // roof lip
+      [FENDER, '#fff', mat4(0.57, 0.3, 0.85, Math.PI / 2)],
+      [FENDER, '#fff', mat4(-0.57, 0.3, 0.85, Math.PI / 2)],
+      [FENDER, '#fff', mat4(0.57, 0.3, -0.85, Math.PI / 2)],
+      [FENDER, '#fff', mat4(-0.57, 0.3, -0.85, Math.PI / 2)],
     ]);
     const pm = new THREE.Mesh(paint, this.paintMat);
     pm.castShadow = true;
     chassis.add(pm);
     // trim + seats + posts
     const seat = this.kind === 'security' ? '#1d2b53' : u.leather ? '#6b3a1f' : '#e9dcc0';
+    const seatHi = new THREE.Color(seat).multiplyScalar(1.08).getStyle();
     const parts = [
-      [GEO.box, '#2a2a2a', mat4(0, 0.33, 0.05, 0, 1.2, 0.08, 2.34)],
-      [GEO.box, '#333', mat4(0, 0.61, 0.35, 0, 1.0, 0.03, 0.9)],
-      [GEO.box, seat, mat4(0, 0.82, -0.28, 0, 1.08, 0.16, 0.55)],
-      [GEO.box, seat, mat4(0, 1.12, -0.56, 0, 1.08, 0.46, 0.13, -0.15)],
-      [GEO.cyl, '#bbb', mat4(0.56, 1.35, 0.52, 0, 0.03, 1.3, 0.03)],
-      [GEO.cyl, '#bbb', mat4(-0.56, 1.35, 0.52, 0, 0.03, 1.3, 0.03)],
-      [GEO.cyl, '#bbb', mat4(0.56, 1.45, -0.72, 0, 0.03, 1.1, 0.03)],
-      [GEO.cyl, '#bbb', mat4(-0.56, 1.45, -0.72, 0, 0.03, 1.1, 0.03)],
-      [GEO.torus, '#222', mat4(0.28, 1.12, 0.38, 0, 0.17, 0.17, 1.4, -0.9)],
-      [GEO.cyl, '#222', mat4(0.28, 0.9, 0.5, 0, 0.025, 0.5, 0.025, -0.5)],
-      [GEO.sph, '#fffbe0', mat4(0.36, 0.78, 1.33, 0, 0.09, 0.07, 0.04)],
-      [GEO.sph, '#fffbe0', mat4(-0.36, 0.78, 1.33, 0, 0.09, 0.07, 0.04)],
-      [GEO.box, '#c01818', mat4(0.45, 0.72, -1.23, 0, 0.14, 0.08, 0.02)],
-      [GEO.box, '#c01818', mat4(-0.45, 0.72, -1.23, 0, 0.14, 0.08, 0.02)],
-      [GEO.box, '#2a2a2a', mat4(0, 0.4, 1.25, 0, 1.2, 0.14, 0.12)],
+      [rbox(1.22, 0.08, 2.36, 0.03), '#262626', mat4(0, 0.33, 0.03)], // rocker / frame
+      [rbox(1.0, 0.03, 0.9, 0.01), '#343434', mat4(0, 0.605, 0.33)], // floor mat
+      [rbox(1.08, 0.16, 0.56, 0.07), seat, mat4(0, 0.83, -0.28)], // seat cushion
+      [rbox(1.08, 0.46, 0.14, 0.07), seat, mat4(0, 1.13, -0.57, 0, 1, 1, 1, -0.15)], // backrest
+      [SPOKE, seatHi, mat4(0, 0.915, -0.28, 0, 0.01, 0.005, 0.5)], // seam between the two seats
+      [rbox(1.26, 0.13, 0.14, 0.06), '#222', mat4(0, 0.42, 1.28)], // front bumper
+      [rbox(1.26, 0.13, 0.12, 0.05), '#222', mat4(0, 0.44, -1.25)], // rear bumper
+      [GEO.cyl, '#c9ced1', mat4(0.57, 1.46, 0.5, 0, 0.028, 1.05, 0.028, -0.08)], // front posts (slight rake)
+      [GEO.cyl, '#c9ced1', mat4(-0.57, 1.46, 0.5, 0, 0.028, 1.05, 0.028, -0.08)],
+      [GEO.cyl, '#c9ced1', mat4(0.57, 1.45, -0.74, 0, 0.028, 1.1, 0.028)],
+      [GEO.cyl, '#c9ced1', mat4(-0.57, 1.45, -0.74, 0, 0.028, 1.1, 0.028)],
+      [SPOKE, '#c9ced1', mat4(0, 1.08, 0.56, 0, 1.12, 0.03, 0.03)], // windshield frame bottom
+      [SPOKE, '#c9ced1', mat4(0, 1.96, 0.47, 0, 1.12, 0.03, 0.03)], // windshield frame top
+      [GEO.torus, '#1c1c1c', mat4(0.28, 1.13, 0.38, 0, 0.16, 0.16, 1.3, -0.9)], // steering wheel
+      [SPOKE, '#1c1c1c', mat4(0.28, 1.13, 0.38, 0, 0.3, 0.02, 0.02, -0.9)],
+      [GEO.cyl, '#1c1c1c', mat4(0.28, 0.92, 0.5, 0, 0.022, 0.5, 0.022, -0.5)], // column
+      [GEO.cyl, '#d8dde0', mat4(0.36, 0.8, 1.29, 0, 0.085, 0.05, 0.085, Math.PI / 2)], // headlight bezels
+      [GEO.cyl, '#d8dde0', mat4(-0.36, 0.8, 1.29, 0, 0.085, 0.05, 0.085, Math.PI / 2)],
+      [rbox(0.16, 0.08, 0.03, 0.02), '#c01818', mat4(0.45, 0.74, -1.235)], // taillights
+      [rbox(0.16, 0.08, 0.03, 0.02), '#c01818', mat4(-0.45, 0.74, -1.235)],
+      [rbox(0.2, 0.06, 0.02, 0.02), '#c9a64a', mat4(0, 0.84, 1.285)], // badge
+      [SPOKE, '#3a3a3a', mat4(0.2, 0.62, 0.72, 0, 0.12, 0.03, 0.2)], // pedals
+      [SPOKE, '#3a3a3a', mat4(0.36, 0.62, 0.72, 0, 0.08, 0.03, 0.16)],
     ];
     // rear cargo
     if (this.kind === 'concession') {
-      parts.push([GEO.box, '#1f5fb0', mat4(0, 1.05, -1.25, 0, 1.1, 0.7, 0.8)]);
-      parts.push([GEO.box, '#ffffff', mat4(0, 1.42, -1.25, 0, 1.14, 0.06, 0.84)]);
+      parts.push([rbox(1.1, 0.7, 0.8, 0.06), '#1f5fb0', mat4(0, 1.05, -1.25)]);
+      parts.push([rbox(1.16, 0.06, 0.86, 0.025), '#ffffff', mat4(0, 1.42, -1.25)]);
+      parts.push([rbox(0.9, 0.34, 0.02, 0.01), '#f2c94c', mat4(0, 1.08, -1.66)]); // menu board
     } else if (this.kind === 'player' || u.cooler) {
-      parts.push([GEO.box, '#e84a5f', mat4(0, 1.02, -1.15, 0, 0.7, 0.45, 0.45)]);
-      parts.push([GEO.box, '#ffffff', mat4(0, 1.27, -1.15, 0, 0.72, 0.07, 0.47)]);
+      parts.push([rbox(0.7, 0.44, 0.45, 0.05), '#e84a5f', mat4(0, 1.02, -1.15)]); // cooler
+      parts.push([rbox(0.74, 0.08, 0.49, 0.035), '#ffffff', mat4(0, 1.27, -1.15)]); // lid
+      parts.push([SPOKE, '#ffffff', mat4(0.39, 1.1, -1.15, 0, 0.03, 0.05, 0.16)]); // handles
+      parts.push([SPOKE, '#ffffff', mat4(-0.39, 1.1, -1.15, 0, 0.03, 0.05, 0.16)]);
     } else {
       parts.push([GEO.cyl, '#2f2f2f', mat4(0, 1.2, -1.15, 0, 0.18, 0.9, 0.18, 0.25)]);
       for (let i = 0; i < 4; i++) parts.push([GEO.cyl, '#999', mat4(-0.08 + i * 0.05, 1.72, -1.05 + (i % 2) * 0.05, 0, 0.012, 0.35, 0.012, 0.25)]);
@@ -126,16 +170,16 @@ export class Cart {
     const trim = new THREE.Mesh(mergeParts(parts), M.vc);
     trim.castShadow = true;
     chassis.add(trim);
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.8), new THREE.MeshStandardMaterial({ color: 0xcfe8f5, transparent: true, opacity: 0.25, roughness: 0.05 }));
-    glass.position.set(0, 1.6, 0.53);
-    glass.rotation.x = -0.08;
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.86), new THREE.MeshStandardMaterial({ color: 0xcfe8f5, transparent: true, opacity: 0.25, roughness: 0.05 }));
+    glass.position.set(0, 1.52, 0.515);
+    glass.rotation.x = -0.1;
     chassis.add(glass);
 
     // lights (emissive meshes)
     this.headMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2c0, emissiveIntensity: 0 });
     for (const x of [0.36, -0.36]) {
       const h = new THREE.Mesh(new THREE.CircleGeometry(0.07, 10), this.headMat);
-      h.position.set(x, 0.78, 1.375);
+      h.position.set(x, 0.8, 1.318);
       chassis.add(h);
     }
 
@@ -160,8 +204,8 @@ export class Cart {
     }
     if (u.speakers) {
       const sp = mergeParts([
-        [GEO.box, '#111', mat4(0.4, 2.2, -0.75, 0, 0.3, 0.3, 0.25)],
-        [GEO.box, '#111', mat4(-0.4, 2.2, -0.75, 0, 0.3, 0.3, 0.25)],
+        [rbox(0.3, 0.3, 0.25, 0.04), '#111', mat4(0.4, 2.2, -0.75)],
+        [rbox(0.3, 0.3, 0.25, 0.04), '#111', mat4(-0.4, 2.2, -0.75)],
         [GEO.cyl, '#555', mat4(0.4, 2.2, -0.62, 0, 0.1, 0.02, 0.1, Math.PI / 2)],
         [GEO.cyl, '#555', mat4(-0.4, 2.2, -0.62, 0, 0.1, 0.02, 0.1, Math.PI / 2)],
       ]);
@@ -202,11 +246,15 @@ export class Cart {
       w.position.set(x * (u.lift ? 1.08 : 1), r, z);
       const spin = new THREE.Group();
       w.add(spin);
-      const tire = new THREE.Mesh(new THREE.CylinderGeometry(r, r, u.lift ? 0.3 : 0.2, 14).rotateZ(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.95 }));
+      const tire = new THREE.Mesh(tireGeo(r, u.lift ? 0.3 : 0.2), TIRE_MAT);
       tire.castShadow = true;
       spin.add(tire);
-      const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.6, r * 0.6, u.lift ? 0.32 : 0.22, 8).rotateZ(Math.PI / 2), u.rims ? M.chrome : new THREE.MeshStandardMaterial({ color: rimCol }));
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.52, r * 0.52, u.lift ? 0.24 : 0.16, 14).rotateZ(Math.PI / 2), u.rims ? M.chrome : HUB_MAT);
       spin.add(hub);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(r * 0.2, 10, 6).scale(0.5, 1, 1), u.rims ? M.chrome : HUB_MAT);
+      cap.position.x = (x > 0 ? 1 : -1) * (u.lift ? 0.12 : 0.085);
+      spin.add(cap);
+      void rimCol;
       if (u.rims) {
         // spinner blades that keep spinning even when stopped
         const sp = new THREE.Mesh(new THREE.BoxGeometry(0.02, r * 1.1, 0.08), M.chrome);
