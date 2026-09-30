@@ -57,7 +57,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 - **Rival sabotage.** After you humble Chip, his goons raid your carts and drones on a timer.
 - **HOA takeover.** Win Sunday's election (campaign door to door, buy votes), or blackmail Karen with dirt from Linda or a late-night dumpster dive. Then issue decrees like the Bingo Levy, the Rival Colors Ban and the Security Budget Cut.
 - **Golf cart races.** "Rocket" Ron runs the Back Nine Grand Prix out of the clubhouse lot: a 17-checkpoint lap with AI rivals and three bet tiers ($50 is winnable stock; $500 needs nitrous).
-- **Mini-games.** Chug-Off at the Tiki Hut (or vs. Millie), interactive Bingo at the clubhouse (Karen calls it, it's rigged, and a false bingo is an HOA violation), and a Rhino Tea brewing thermostat.
+- **Mini-games.** Chug-Off at the Tiki Hut (or vs. Millie), interactive Bingo at the clubhouse (Karen calls it, it's rigged, and a false bingo is an HOA violation), a Rhino Tea brewing thermostat, and **3D Shuffleboard Hustle**: a real frame on the courts against a shark who draws to open spots, guards his tens and blasts yours into the gutter.
 - **Lawn parties.** Throw one from your front door: neighbors dance under string lights, you earn Status and votes, and Karen shows up with a noise complaint.
 - **Wardrobe.** The clubhouse boutique sells 7 Hawaiian shirts, hats, shades and white tube socks. Change outfits at home; style adds Status.
 - **Metal detecting.** A second legal hustle on the beach: the signal meter and beeps speed up near buried loot (quarters, wedding rings, a real Rolex, dentures, a 1715 doubloon).

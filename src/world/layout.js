@@ -142,6 +142,10 @@ export const BUILDINGS = {
   strip: { x: 197, z: 50, sx: 118, sz: 10 },
 };
 
+// Shuffleboard court markings, in meters measured from a court's end (courts run along x).
+// Painted by world.js and scored by game/shuffleboard.js, so both always agree.
+export const SHUFFLE_COURT = { len: 26, w: 2.4, play: 0.9, base: 1.6, apex: 5.2, half: 0.86, off: 0.55, dead: 7.4 };
+
 // Houses: 6 per side of each residential street.
 export const HOUSE_Z = [88, 112, 136, 196, 220, 244];
 export const PASTELS = ['#f6c6a8', '#bfe3d0', '#f7cad0', '#fbe7a1', '#d7c4ec', '#bde0fe', '#fff1e0', '#ffd6a5', '#cde8e2', '#f9d5e5'];

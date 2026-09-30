@@ -532,7 +532,18 @@ export function visit(g, poi) {
   if (id === 'dumpster') return dumpsterNode(g);
   if (id === 'gate') return end('Front Gate', `"Beach is straight ahead, Mr. ${g.state.name}. Boca Beach Club. Rusty Pelican's got two-for-one Bushwackers. Don't drive on the pier. Everybody drives on the pier." — Gate Guard Hector`);
   if (id === 'pickleball') return betNode(g, 'Pickleball Hustle', '"Twenty bucks says you can\'t return my dink shot, old man." — a 70-year-old in compression sleeves.', 'str', 4, 40);
-  if (id === 'shuffle') return betNode(g, 'Shuffleboard Hustle', 'The shuffleboard sharks of Sunset Palms play for blood. And cash.', 'cha', 3, 30);
+  if (id === 'shuffle') {
+    const play = (bet, skill) => () => { g.startMinigame('shuffle', { bet, skill }); g.ui.closeDialogue(); return 'keep'; };
+    return {
+      name: 'Shuffleboard Hustle', title: 'The courts',
+      text: 'The shuffleboard sharks of Sunset Palms play for blood. And cash. One frame, four pucks each. Land in the triangle, knock their pucks into the gutter.',
+      choices: [
+        { text: 'Play a friendly frame', tag: `bet ${money(30)}`, disabled: g.state.money < 30, action: play(30, 0.55) },
+        { text: 'Play the house champion', tag: `bet ${money(150)}`, disabled: g.state.money < 150, action: play(150, 0.85) },
+        { text: 'Walk away', action: () => null },
+      ],
+    };
+  }
   if (id === 'pool') return end('The Pool', `The clubhouse pool. 82 degrees and approximately 30% water, 70% sunscreen. ${g.state.bladder > 20 ? '\n\n(Tip: press P while standing in the water. You know you want to.)' : ''}`);
   if (id === 'gazebo') return end('Gazebo', 'Someone carved "MILDRED + ???" into the railing. The ??? has been scratched out and re-carved nine times.');
   return null;

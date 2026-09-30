@@ -7,7 +7,7 @@ import { makeDetailTexture, makeAsphaltTexture, makeSignTexture } from '../gfx/t
 import { makeWaterMaterial } from '../gfx/water.js';
 import { Colliders } from './collide.js';
 import {
-  HALF, WALL, EDGES, NODES, HOLES, FAIRWAY_W, PONDS, RAMPS, BUILDINGS as B, HOUSES, PLAYER_HOUSE, ZONES, STREETS,
+  HALF, WALL, EDGES, NODES, HOLES, FAIRWAY_W, PONDS, RAMPS, BUILDINGS as B, HOUSES, PLAYER_HOUSE, ZONES, STREETS, SHUFFLE_COURT,
 } from './layout.js';
 import { buildBeach, BEACH } from './beach.js';
 import { baseHeight, heightAt, paintGround, SPEED_BUMPS, POOL, WATER_Y, onCourse, onFairway, waterAt } from './terrain.js';
@@ -1046,19 +1046,38 @@ export class World {
     // shuffleboard
     const sb = B.shuffle;
     const sbTex = (() => {
+      const SC = SHUFFLE_COURT;
       const c = document.createElement('canvas');
-      c.width = 1024; c.height = 128;
+      c.width = 2048; c.height = 192;
       const g = c.getContext('2d');
-      g.fillStyle = '#2e7d6b'; g.fillRect(0, 0, 1024, 128);
-      g.fillStyle = '#e8e2d0'; g.fillRect(8, 16, 1008, 96);
-      g.strokeStyle = '#1f3b8a'; g.lineWidth = 4;
-      for (const x0 of [60, 964]) {
-        const dir = x0 < 512 ? 1 : -1;
-        g.beginPath(); g.moveTo(x0, 20); g.lineTo(x0 + dir * 180, 64); g.lineTo(x0, 108); g.closePath(); g.stroke();
-        g.font = 'bold 20px sans-serif'; g.fillStyle = '#1f3b8a';
-        g.fillText('10', x0 + dir * 120, 70); g.fillText('8', x0 + dir * 70, 50); g.fillText('7', x0 + dir * 70, 95);
+      const PX = c.width / SC.len, PY = c.height / SC.w, cy = c.height / 2;
+      g.fillStyle = '#2e7d6b'; g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = '#ece5d1'; g.fillRect(6, cy - SC.play * PY, c.width - 12, SC.play * 2 * PY);
+      // waxed sheen streaks
+      for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(255,255,255,${0.04 + Math.random() * 0.05})`; g.fillRect(Math.random() * c.width, cy - SC.play * PY + Math.random() * SC.play * 2 * PY, 120 + Math.random() * 300, 2); }
+      g.strokeStyle = '#1f3b8a'; g.fillStyle = '#1f3b8a'; g.lineWidth = 4;
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      for (const [x0, dir] of [[0, 1], [c.width, -1]]) {
+        const bx = x0 + dir * SC.base * PX, ax = x0 + dir * SC.apex * PX, hw = SC.half * PY;
+        const ox = x0 + dir * (SC.base - SC.off) * PX;
+        g.strokeRect(Math.min(ox, bx), cy - hw, Math.abs(bx - ox), hw * 2);
+        g.beginPath(); g.moveTo(bx, cy - hw); g.lineTo(ax, cy); g.lineTo(bx, cy + hw); g.closePath(); g.stroke();
+        for (const t of [1 / 3, 2 / 3]) {
+          const lx = ax + (bx - ax) * t;
+          g.beginPath(); g.moveTo(lx, cy - hw * t); g.lineTo(lx, cy + hw * t); g.stroke();
+        }
+        g.beginPath(); g.moveTo(ax + (bx - ax) / 3, cy); g.lineTo(bx, cy); g.stroke();
+        const dl = x0 + dir * SC.dead * PX;
+        g.beginPath(); g.moveTo(dl, cy - SC.play * PY); g.lineTo(dl, cy + SC.play * PY); g.stroke();
+        g.font = 'bold 30px sans-serif';
+        const at = (t) => ax + (bx - ax) * t;
+        g.fillText('10', at(0.2), cy);
+        g.fillText('8', at(0.5), cy - hw * 0.25); g.fillText('8', at(0.5), cy + hw * 0.25);
+        g.fillText('7', at(0.83), cy - hw * 0.42); g.fillText('7', at(0.83), cy + hw * 0.42);
+        g.font = 'bold 18px sans-serif';
+        g.fillText('10', (ox + bx) / 2, cy - 12); g.fillText('OFF', (ox + bx) / 2, cy + 12);
       }
-      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
     })();
     const sbMat = new THREE.MeshStandardMaterial({ map: sbTex, roughness: 0.6 });
     for (let i = 0; i < 4; i++) {
@@ -1067,7 +1086,7 @@ export class World {
       m.receiveShadow = true;
       this.root.add(m);
     }
-    this.poi('shuffle', sb.x - 14, sb.z, 'Shuffleboard Courts', 3);
+    this.poi('shuffle', sb.x + 14.2, sb.z - 5, 'Shuffleboard Courts', 3); // at the shooting end of court 0
 
     // duck pond park trees
     for (let i = 0; i < 10; i++) {

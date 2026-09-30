@@ -8,6 +8,7 @@ import { Driver, COURSE_LOOPS, PATROL_LOOP, nearestNode } from './traffic.js';
 import { Quests } from './quests.js';
 import { Race, RACE_TIERS, TRACK } from './race.js';
 import { ChugOff, Bingo, Brew } from './minigames.js';
+import { Shuffleboard } from './shuffleboard.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
@@ -90,6 +91,7 @@ const ACH = {
   bingo: ['Beat the System', "Won Karen's rigged bingo."],
   raceLegend: ['Senior Speed Demon', 'Won a $500 race against The Widow Maker.'],
   litterbug: ['Keep Florida Beautiful', 'Flung 24 empty beer cans onto the grounds.'],
+  shuffle: ['Shuffleboard Shark', 'Beat a shuffleboard hustler on his own court.'],
 };
 
 export class Game {
@@ -1645,7 +1647,7 @@ export class Game {
   }
 
   startMinigame(kind, opts = {}) {
-    const Cls = kind === 'bingo' ? Bingo : kind === 'brew' ? Brew : ChugOff;
+    const Cls = kind === 'bingo' ? Bingo : kind === 'brew' ? Brew : kind === 'shuffle' ? Shuffleboard : ChugOff;
     if (opts.bet) this.spend(opts.bet);
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();
