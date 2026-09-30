@@ -46,6 +46,10 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 
 **Core loops**
 - **Golf carts.** Arcade handling with drift, suspension, speed-bump hops, jump ramps and pond splashdowns. Hop into any cart, or yank a senior out of theirs, GTA-style. 10 visual mods at Sal's: lift kit, chrome spinners, neon underglow, bass speakers, nitrous, La Cucaracha horn, and truck nuts with pendulum physics.
+- **Honest Abe's Pre-Owned Carts** (next to Sal's) sells three new models, and test drives are welcome. Sal's mods carry over to whichever cart you drive.
+  - **The Stretch** is a limo cart; Senior Shuttle passengers tip 50% more.
+  - **The Beach Buggy** has a roll cage and fat tires, and loves sand.
+  - **The Hearse** is the fastest thing on the lot ("previous owner no longer needs it").
 - **Unique Stunt Jumps.** Nine ramps around town, from the Grandkids Ramp to clearing the whole Duck Pond, a leap over Palm Blvd, porta-potties on the beach and a Pool Party Plunge (land it *in* the pool). Each has a slow-motion side camera, a verdict (short, clipped, in the drink, crooked) and a cash reward. They come in three tiers: stock cart, governor removed, governor plus nitrous. Hold Space and steer in the air to spin the cart, and land a clean 360 or 720 for a bonus.
 - **Beer.** Buzz raises CHA and STR as liquid courage, then you start to slur. The screen wobbles, doubles and tilts. At 100 you black out and wake up somewhere embarrassing. Your bladder fills; press P.
 - **Legal money.** Golf balls go from pockets (1 ball) to a bucket (20) to a cart vacuum hopper (200) to autonomous drones. Gus buys them at $2 each. Golfers keep slicing new ones into the ponds.
