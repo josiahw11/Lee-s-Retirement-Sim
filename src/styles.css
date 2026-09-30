@@ -439,6 +439,8 @@ body.touch #hint { bottom: 84px; }
 .fi-bar { position: relative; flex: 1; height: 14px; background: #1d1d1d; border: 2px solid #000; border-radius: 7px; overflow: hidden; }
 .fi-bar i { display: block; height: 100%; width: 0; transition: width 0.08s linear; }
 .fi-zone { position: absolute; top: 0; bottom: 0; left: 85%; right: 0; background: repeating-linear-gradient(45deg, rgba(255,77,77,0.35) 0 6px, transparent 6px 12px); }
+.ks-bal { position: relative; height: 18px; margin: 8px 4px 2px; border-radius: 9px; border: 2px solid #1d2b53; background: linear-gradient(90deg, #e84a5f 0 12%, #f2c94c 12% 30%, #7CFC9A 30% 70%, #f2c94c 70% 88%, #e84a5f 88% 100%); }
+.ks-bal b { position: absolute; top: -5px; width: 6px; height: 24px; margin-left: -3px; border-radius: 3px; background: #1d2b53; left: 50%; }
 .act-cats { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
 .act-cat { font: inherit; font-weight: 800; font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 2px solid #1d2b53; background: #fff; cursor: pointer; }
 .act-cat.on { background: #1d2b53; color: #ffd23f; }

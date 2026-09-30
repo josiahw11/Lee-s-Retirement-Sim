@@ -27,6 +27,7 @@ import { Fishing } from './fishing.js';
 import { BluePill } from './bluepill.js';
 import { spawnBuck, buckNode, chapter4Started } from './chapter4.js';
 import { Dealership, abeNode } from './dealer.js';
+import { KegStand } from './kegstand.js';
 import { activitiesTab, bindActivities } from './activities.js';
 import { Soundscape } from './soundscape.js';
 import { Weather } from '../gfx/weather.js';
@@ -123,6 +124,8 @@ const ACH = {
   angler: ['Old Man and the Sea', 'Landed a fish off Boca Pier.'],
   silverking: ['The Silver King', 'Landed a Tarpon off the pier. Phil still doesn\'t believe it.'],
   dentures: ['Finders Keepers', 'Fished somebody\'s dentures out of the Gulf.'],
+  kegstand: ['Upside-Down Legend', 'Set a new keg stand record at the Tiki Hut.'],
+  kegking: ['Keg King', 'Held a keg stand for 20+ seconds. Your liver has filed for divorce.'],
   dealer: ['Pre-Owned', 'Bought a cart from Honest Abe. No refunds. No questions.'],
   crashcourse: ['Crash Course', 'Beat Buck Thunderhill and finished Chapter 4.'],
   derby: ['Last Cart Standing', 'Won the Bumper Brawl demolition derby.'],
@@ -1759,7 +1762,7 @@ export class Game {
   }
 
   startMinigame(kind, opts = {}) {
-    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke, pickle: Pickleball, pong: BeerPong, fish: Fishing }[kind] || ChugOff;
+    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke, pickle: Pickleball, pong: BeerPong, fish: Fishing, keg: KegStand }[kind] || ChugOff;
     if (opts.bet) this.spend(opts.bet);
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();
