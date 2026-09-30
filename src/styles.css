@@ -391,3 +391,34 @@ body.touch #hint { bottom: 84px; }
 .aq-note.perfect, .aq-note.good { transform: scale(1.6); opacity: 0; transition: transform .2s, opacity .2s; }
 .aq-note.miss { opacity: .25; filter: grayscale(1); }
 .aq-btns .btn { min-width: 64px; font-size: 20px; }
+
+/* ---------- GRANDR dating app (phone tab) ---------- */
+.gr-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.gr-logo { font-family: var(--script, 'Pacifico', cursive); font-size: 30px; color: #ff4f8b; }
+.gr-rate { font-weight: 900; font-size: 13px; color: #c99a16; }
+.gr-card { display: flex; gap: 14px; background: #fff; border: 3px solid var(--navy); border-radius: 18px; padding: 12px; box-shadow: 6px 6px 0 #ff9ec7; }
+.gr-photo { flex: 0 0 150px; height: 180px; border-radius: 12px; overflow: hidden; background: #ffe0ec; display: flex; align-items: center; justify-content: center; font-size: 60px; }
+.gr-photo img { width: 100%; height: 100%; object-fit: cover; }
+.gr-info { flex: 1; min-width: 0; text-align: left; }
+.gr-name { font-family: var(--display); font-size: 22px; }
+.gr-name b { color: #ff4f8b; }
+.gr-dist { font-size: 12px; font-weight: 800; opacity: .7; }
+.gr-bio { font-style: italic; margin: 6px 0; }
+.gr-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.gr-tags span { background: #ffe0ec; border-radius: 10px; padding: 2px 8px; font-size: 12px; font-weight: 800; }
+.gr-wants { font-size: 12px; margin-top: 6px; }
+.gr-btns { display: flex; justify-content: center; gap: 40px; margin: 10px 0 2px; }
+.gr-btns button { width: 64px; height: 64px; border-radius: 50%; font-size: 28px; border: 3px solid var(--navy); cursor: pointer; box-shadow: 3px 3px 0 var(--navy); }
+.gr-no { background: #fff; color: #555; }
+.gr-yes { background: #ff4f8b; color: #fff; }
+.gr-btns button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--navy); }
+.gr-left, .gr-empty { text-align: center; font-size: 12px; font-weight: 800; opacity: .7; }
+.gr-empty { font-size: 15px; padding: 30px 10px; }
+.gr-date, .gr-review { background: #fff5f9; border-left: 4px solid #ff4f8b; padding: 5px 10px; border-radius: 6px; margin: 4px 0; font-size: 13px; }
+.gr-review span { color: #c99a16; }
+.gr-match { position: absolute; inset: 0; background: rgba(255,79,139,.94); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border-radius: 12px; z-index: 5; text-align: center; padding: 20px; animation: toastIn .3s ease-out; }
+.gr-match-t { font-family: var(--script, 'Pacifico', cursive); font-size: 44px; text-shadow: 3px 3px 0 #b8325f; }
+.gr-match-ph { display: flex; align-items: center; gap: 12px; font-size: 40px; }
+.gr-match-ph img { width: 120px; height: 144px; object-fit: cover; border-radius: 14px; border: 4px solid #fff; }
+.gr-small { font-size: 13px; opacity: .9; font-style: italic; }
+#menu-body { position: relative; }

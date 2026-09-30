@@ -88,7 +88,7 @@ export class Minimap {
       if (Math.abs(n.x - p.x) > this.range || Math.abs(n.z - p.z) > this.range) continue;
       if (n.role === 'security') dot(n.x, n.z, n.cart && n.cart.sirenOn ? (Math.floor(performance.now() / 250) % 2 ? '#ff3030' : '#3050ff') : '#5b7cff', 5);
       else if (n.hostile) dot(n.x, n.z, '#ff3b3b', 4);
-      else if (n.role === 'lady') dot(n.x, n.z, '#ff6fa8', 4);
+      else if (n.role === 'lady' || n.role === 'date') dot(n.x, n.z, '#ff6fa8', 4);
       else if (n.role === 'gang') dot(n.x, n.z, '#7CFC9A', 4);
       else if (n.data.wants) dot(n.x, n.z, '#4cc9f0', 3);
     }

@@ -11,6 +11,7 @@ import { ChugOff, Bingo, Brew } from './minigames.js';
 import { Shuffleboard } from './shuffleboard.js';
 import { Blackjack, Slots, SafeCrack } from './casino.js';
 import { AerobicsClass, AquaAerobics, talkChad } from './aerobics.js';
+import { Grandr, talkDate } from './grandr.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
@@ -102,6 +103,7 @@ const ACH = {
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
   scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
+  grandr: ['Swipe Right on Life', 'Had a five-star Grandr date.'],
   aquaking: ['Aqua King', 'Scored 90%+ in Aqua Jazz. Chad has never been so threatened.'],
 };
 
@@ -438,6 +440,8 @@ export class Game {
     this.litter = new Litter(this);
     if (this.aerobicsClass) this.aerobicsClass.stop();
     this.aerobicsClass = new AerobicsClass(this);
+    if (this.grandr) this.grandr.clear();
+    this.grandr = new Grandr(this);
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -1239,6 +1243,7 @@ export class Game {
     else if (n.role === 'racer') node = { name: n.name, title: 'Racer', text: `"Not now, I'm in the zone."`, choices: [] };
     else if (n.role === 'goon') node = { name: n.name, title: "Chip's Crew", text: pick(['"Chip says you\'re \'nouveau riche.\' I don\'t know what that means but I\'m offended."', '"Do you have a tee time? No? Then beat it."']), choices: [] };
     else if (n.role === 'instructor') node = talkChad(this, n);
+    else if (n.role === 'date') node = talkDate(this, n);
     else if (n.role === 'captain') node = talkCaptain(this, n);
     else if (n.role === 'mechanic') node = talkFingers(this, n);
     else if (n.role === 'deckhand') node = talkDeckhand(this, n);
@@ -2029,6 +2034,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (this.life) this.life.update(dt);
       if (this.litter) this.litter.update(dt);
       if (this.aerobicsClass) this.aerobicsClass.update(dt);
+      if (this.grandr) this.grandr.update();
       if (this.skids) {
         this.skids.update(dt);
         // AI carts leave rubber too (race rivals, fleeing drivers)
@@ -2353,6 +2359,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       else if (n.data.wants === 'pills' && this.state.quest.flags.metDoc) icon = '💊';
       else if (n.data.wants === 'tea' && this.state.quest.flags.metDoc) icon = '🍵';
       else if (n.role === 'lady') { icon = this.state.romance[n.data.lady.id].conquest ? '💞' : '💗'; cls = 'lady'; }
+      else if (n.role === 'date') { icon = '💘'; cls = 'lady'; }
       else if (n.role === 'recruit') icon = '⭐';
       else if (n.role === 'gang') icon = '🟢';
       else if (n.role === 'operator') icon = this.concession.find((c) => c.operator === n)?.state.owned ? '✅' : '🛺';
@@ -2409,7 +2416,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
   // ================================================================ menu (TAB)
   renderMenu(tab) {
     const s = this.state;
-    const tabs = [['status', 'STATUS'], ['bag', 'BAG'], ['romance', 'ROMANCE'], ['empire', 'EMPIRE'], ['hoa', 'HOA'], ['help', 'HELP']];
+    const tabs = [['status', 'STATUS'], ['bag', 'BAG'], ['romance', 'ROMANCE'], ['grandr', 'GRANDR 💘'], ['empire', 'EMPIRE'], ['hoa', 'HOA'], ['help', 'HELP']];
     const tabEl = document.getElementById('menu-tabs');
     tabEl.innerHTML = tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('');
     tabEl.querySelectorAll('button').forEach((b) => (b.onclick = () => this.renderMenu(b.dataset.tab)));
@@ -2483,7 +2490,9 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
         <div class="card"><div class="t">Reviewer shortcuts</div><p>] = +$1,000 • [ = +1 all stats • &#96; (backtick) = skip 3 hours</p></div>
       </div>`;
     }
+    if (tab === 'grandr') h = this.grandr.renderTab();
     body.innerHTML = h;
+    if (tab === 'grandr') this.grandr.bindTab(() => this.renderMenu('grandr'));
     const ub = document.getElementById('use-blue');
     if (ub) ub.onclick = () => { s.inv.pills--; s.buffs.blue = 150; this.ui.toast('💊 You took a Blue Boy. Flirting bonus active. Walking is... different.', 'love', 4); this.renderMenu('bag'); };
     const ur = document.getElementById('use-rhino');
