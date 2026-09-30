@@ -12,6 +12,7 @@ import { Shuffleboard } from './shuffleboard.js';
 import { Blackjack, Slots, SafeCrack } from './casino.js';
 import { AerobicsClass, AquaAerobics, talkChad } from './aerobics.js';
 import { Grandr, talkDate } from './grandr.js';
+import { ClosestToPin, golferChallenge } from './golf.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
@@ -103,6 +104,7 @@ const ACH = {
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
   scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
+  ace: ['Ace!', 'Made a hole in one in a closest-to-the-pin bet.'],
   grandr: ['Swipe Right on Life', 'Had a five-star Grandr date.'],
   aquaking: ['Aqua King', 'Scored 90%+ in Aqua Jazz. Chad has never been so threatened.'],
 };
@@ -1236,7 +1238,7 @@ export class Game {
     } else if (n.role === 'karen') node = D.talkKaren(this, n);
     else if (n === this.named.deuce) node = this.state.quest.flags.beatDeuce ? { name: n.name, title: 'Humbled Patriarch', text: `"Go away. I'm calling my lawyer. And my other lawyer."`, choices: [] } : deuceConfront(this);
     else if (n.role === 'rival') node = D.talkChip(this, n);
-    else if (n.role === 'golfer') node = D.talkGolfer(this, n);
+    else if (n.role === 'golfer') node = golferChallenge(this, n) || D.talkGolfer(this, n);
     else if (n.role === 'recruit' || n.role === 'gang') node = D.talkRecruit(this, n);
     else if (n.role === 'security') node = this.talkSecurity(n);
     else if (n.role === 'raceboss') node = this.talkRon(n);
@@ -1681,7 +1683,7 @@ export class Game {
   }
 
   startMinigame(kind, opts = {}) {
-    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics }[kind] || ChugOff;
+    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin }[kind] || ChugOff;
     if (opts.bet) this.spend(opts.bet);
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();
