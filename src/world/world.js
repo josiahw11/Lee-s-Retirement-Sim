@@ -1,13 +1,16 @@
 // Builds the whole Sunset Palms map: ground, roads, houses, course, landmarks, signage.
 import * as THREE from 'three';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Batcher, mat4, mergeParts } from '../gfx/batch.js';
 import { M } from '../gfx/materials.js';
 import { makeDetailTexture, makeAsphaltTexture, makeSignTexture } from '../gfx/textures.js';
 import { makeWaterMaterial } from '../gfx/water.js';
 import { Colliders } from './collide.js';
 import {
-  HALF, WALL, EDGES, NODES, HOLES, FAIRWAY_W, PONDS, RAMPS, BUILDINGS as B, HOUSES, PLAYER_HOUSE, ZONES, STREETS,
+  HALF, WALL, EDGES, NODES, HOLES, FAIRWAY_W, PONDS, RAMPS, BUILDINGS as B, HOUSES, PLAYER_HOUSE, ZONES, STREETS, SHUFFLE_COURT,
 } from './layout.js';
+import { buildBeach, BEACH } from './beach.js';
+import { onBoat } from './casinoboat.js';
 import { baseHeight, heightAt, paintGround, SPEED_BUMPS, POOL, WATER_Y, onCourse, onFairway, waterAt } from './terrain.js';
 import { mulberry32, distToSegment } from '../core/utils.js';
 
@@ -19,11 +22,37 @@ export const GEO = {
   sph: new THREE.SphereGeometry(1, 10, 8),
   ico: new THREE.IcosahedronGeometry(1, 0),
   ico1: new THREE.IcosahedronGeometry(1, 1),
+  ico2: new THREE.IcosahedronGeometry(1, 2),
   pyr: new THREE.ConeGeometry(Math.SQRT1_2, 1, 4).rotateY(Math.PI / 4),
   cone: new THREE.ConeGeometry(1, 1, 10),
   cone8: new THREE.ConeGeometry(1, 1, 8),
   torus: new THREE.TorusGeometry(1, 0.08, 6, 16),
 };
+
+// Hip roof with a short ridge. Base rectangle w x d at y=0, ridge at y=h. UVs run along the
+// eave (u) and up the slope (v) in 1.2 m tile-texture repeats.
+export function hipRoof(w, d, h) {
+  const r = Math.max(0, w - d) / 2, hw = w / 2, hd = d / 2;
+  const slope = Math.hypot(hd, h) / 1.2;
+  const pos = [], uv = [];
+  const tri = (a, b, c) => { for (const p of [a, b, c]) { pos.push(p[0], p[1], p[2]); uv.push(p[3], p[4]); } };
+  // front (+z) and back (-z) trapezoids
+  const F = [[-hw, 0, hd, 0, 0], [hw, 0, hd, w / 1.2, 0], [r, h, 0, (hw + r) / 1.2, slope], [-r, h, 0, (hw - r) / 1.2, slope]];
+  tri(F[0], F[1], F[2]); tri(F[0], F[2], F[3]);
+  const B = [[hw, 0, -hd, 0, 0], [-hw, 0, -hd, w / 1.2, 0], [-r, h, 0, (hw + r) / 1.2, slope], [r, h, 0, (hw - r) / 1.2, slope]];
+  tri(B[0], B[1], B[2]); tri(B[0], B[2], B[3]);
+  // hip triangles
+  tri([hw, 0, hd, 0, 0], [hw, 0, -hd, d / 1.2, 0], [r, h, 0, hd / 1.2, slope]);
+  tri([-hw, 0, -hd, 0, 0], [-hw, 0, hd, d / 1.2, 0], [-r, h, 0, hd / 1.2, slope]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.computeVertexNormals();
+  return g;
+}
+
+const HIP_ROOF = hipRoof(15.8, 13.8, 2.3);
+const darker = (hex, k) => '#' + new THREE.Color(hex).multiplyScalar(k).getHexString();
 
 const _q = new THREE.Quaternion();
 const _up = new THREE.Vector3(0, 1, 0);
@@ -37,7 +66,7 @@ export function segMatrix(ax, ay, az, bx, by, bz, r) {
 
 // ---------- reusable vegetation geometry ----------
 function frondGeometry(len, width, droop) {
-  const S = 7;
+  const S = 5;
   const rings = [];
   for (let i = 0; i <= S; i++) {
     const t = i / S;
@@ -68,7 +97,7 @@ function makePalm(rnd) {
     const t = i / S;
     const nx = lx * t * t, ny = H * t, nz = lz * t * t;
     const r = 0.34 - 0.13 * t;
-    parts.push([GEO.cyl, i % 2 ? '#8b6b4a' : '#7a5c3e', segMatrix(px, py - 0.05, pz, nx, ny + 0.05, nz, r)]);
+    parts.push([GEO.cyl6, i % 2 ? '#8b6b4a' : '#7a5c3e', segMatrix(px, py - 0.05, pz, nx, ny + 0.05, nz, r)]);
     px = nx; py = ny; pz = nz;
   }
   const n = 8 + Math.floor(rnd() * 3);
@@ -85,7 +114,46 @@ function makePalm(rnd) {
     const a = (i / 3) * Math.PI * 2;
     parts.push([GEO.sph, '#6b4a2a', mat4(px + Math.cos(a) * 0.25, py - 0.25, pz + Math.sin(a) * 0.25, 0, 0.2, 0.22, 0.2)]);
   }
-  return mergeParts(parts);
+  const g = mergeParts(parts);
+  g.userData.top = py;
+  return g;
+}
+
+// Leafy look for low-poly canopies: lumpy noise displacement (radial from the clump's center so
+// shared corners move together), recomputed flat normals, and a dark-underside / sunlit-top
+// vertex-color gradient with per-vertex jitter.
+const leafNoise = (x, y, z) => (Math.sin(x * 1.9 + Math.sin(z * 2.7)) + Math.sin(y * 2.3 + Math.sin(x * 1.6)) + Math.sin(z * 2.1 + Math.sin(y * 1.8))) / 3;
+const leafHash = (x, y, z) => { const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return h - Math.floor(h); };
+function foliage(g, { cy = 0, minY = -Infinity, amp = 0.1, freq = 3, dark = 0.55, light = 1.15, bloom = null } = {}) {
+  const p = g.attributes.position, c = g.attributes.color;
+  const bc = bloom && new THREE.Color(bloom);
+  g.computeBoundingBox();
+  const y0 = Math.max(g.boundingBox.min.y, minY), y1 = g.boundingBox.max.y;
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    if (y < minY) continue;
+    const dy = y - cy, len = Math.hypot(x, dy, z) || 1;
+    const n = leafNoise(x * freq, y * freq, z * freq) * amp;
+    x += (x / len) * n; y += (dy / len) * n; z += (z / len) * n;
+    p.setXYZ(i, x, y, z);
+    const t = Math.min(1, Math.max(0, (y - y0) / (y1 - y0 || 1)));
+    const k = (dark + (light - dark) * Math.pow(t, 0.8)) * (0.9 + 0.2 * leafHash(x, y, z));
+    // flowering shrubs: blossom clusters on the sunny upper half
+    if (bc && t > 0.25 && leafNoise(x * 9 + 3, y * 9, z * 9 - 2) > 0.2) {
+      const kb = 0.85 + 0.3 * t;
+      c.setXYZ(i, bc.r * kb, bc.g * kb, bc.b * kb);
+    } else c.setXYZ(i, c.getX(i) * k, c.getY(i) * k, c.getZ(i) * k);
+  }
+  // weld shared corners so the clumps shade soft and round instead of faceted
+  g.deleteAttribute('normal');
+  g.deleteAttribute('uv');
+  const welded = mergeVertices(g, 1e-4);
+  welded.computeVertexNormals();
+  const out = welded.toNonIndexed();
+  out.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(out.attributes.position.count * 2), 2));
+  out.computeBoundingSphere();
+  out.computeBoundingBox();
+  return out;
 }
 
 function makePine(rnd) {
@@ -93,34 +161,54 @@ function makePine(rnd) {
   const parts = [[GEO.cyl, '#6d5a48', mat4(0, H / 2, 0, 0, 0.28, H, 0.28)]];
   for (let i = 0; i < 4; i++) {
     const r = 1.8 + rnd() * 1.2;
-    parts.push([GEO.ico, i % 2 ? '#2f5d34' : '#3a6b3c', mat4((rnd() - 0.5) * 2, H - 1 + i * 0.9 + rnd() * 0.5, (rnd() - 0.5) * 2, rnd() * 3, r, r * 0.55, r), 0.12]);
+    parts.push([GEO.ico1, i % 2 ? '#2f5d34' : '#3a6b3c', mat4((rnd() - 0.5) * 2, H - 1 + i * 0.9 + rnd() * 0.5, (rnd() - 0.5) * 2, rnd() * 3, r, r * 0.55, r), 0.12]);
   }
-  return mergeParts(parts);
+  return foliage(mergeParts(parts), { cy: H + 0.4, minY: H - 2.2, amp: 0.35, freq: 1.4, dark: 0.62, light: 1.25 });
 }
 
 function makeOak(rnd) {
   const parts = [[GEO.cyl, '#5e4a3a', mat4(0, 1.6, 0, 0, 0.45, 3.2, 0.45)]];
+  // a big soft core plus a shell of smaller clumps gives a leafy, bumpy silhouette
+  parts.push([GEO.ico2, '#4d7c3c', mat4(0, 4.6, 0, 0, 2.6, 1.5, 2.6), 0.06]);
+  for (let i = 0; i < 14; i++) {
+    const a = i * 2.39996 + rnd() * 0.3; // golden-angle spread
+    const up = i / 13; // low ring first, then up over the crown
+    const d = 2.7 * Math.sqrt(1 - up * up * 0.8) + rnd() * 0.4;
+    const r = 0.95 + rnd() * 0.55;
+    parts.push([GEO.ico1, i % 3 ? '#4a7a3a' : '#5a8543', mat4(Math.cos(a) * d, 3.7 + up * 2.0 + rnd() * 0.3, Math.sin(a) * d, rnd() * 3, r, r * 0.8, r), 0.06]);
+  }
+  // the trunk splits into a couple of limbs under the canopy
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + rnd();
+    parts.push([GEO.cyl6, '#5e4a3a', segMatrix(0, 2.6, 0, Math.cos(a) * 1.5, 4.1, Math.sin(a) * 1.5, 0.16)]);
+  }
+  const canopy = foliage(mergeParts(parts), { cy: 4.7, minY: 3.3, amp: 0.18, freq: 2.2, dark: 0.45, light: 1.12 });
+  // spanish moss: thin drapes hanging in little bunches from the canopy's underside
+  const moss = [];
   for (let i = 0; i < 5; i++) {
-    const a = rnd() * Math.PI * 2, d = rnd() * 2.2;
-    const r = 2.2 + rnd() * 1.4;
-    parts.push([GEO.ico1, i % 2 ? '#4a7a3a' : '#557f3f', mat4(Math.cos(a) * d, 4 + rnd() * 1.5, Math.sin(a) * d, rnd() * 3, r, r * 0.75, r), 0.06]);
+    const a = rnd() * Math.PI * 2, d = 1.6 + rnd() * 1.6;
+    for (let j = 0; j < 3; j++) {
+      const len = 0.7 + rnd() * 0.8;
+      moss.push([GEO.cone, j % 2 ? '#7d876f' : '#8c957c', mat4(Math.cos(a) * d + (rnd() - 0.5) * 0.4, 3.35 - len / 2, Math.sin(a) * d + (rnd() - 0.5) * 0.4, 0, 0.06 + rnd() * 0.04, len, 0.06 + rnd() * 0.04, Math.PI), 0.3]);
+    }
   }
-  // spanish moss
-  for (let i = 0; i < 6; i++) {
-    const a = rnd() * Math.PI * 2, d = 1.5 + rnd() * 2;
-    parts.push([GEO.cone, '#9aa58c', mat4(Math.cos(a) * d, 2.9, Math.sin(a) * d, 0, 0.18, 1.3, 0.18, Math.PI), 0.25]);
-  }
-  return mergeParts(parts);
+  const g = mergeGeometries([canopy, mergeParts(moss)], false);
+  g.computeBoundingSphere();
+  g.computeBoundingBox();
+  return g;
 }
 
 function makeBush(rnd, color) {
   const parts = [];
-  const n = 2 + Math.floor(rnd() * 3);
+  const bloom = new THREE.Color(color).getHSL({}).s > 0.55 && new THREE.Color(color).r > 0.6 ? color : null;
+  if (bloom) color = '#3d7436'; // green shrub, pink blossoms
+  const n = 5 + Math.floor(rnd() * 3);
   for (let i = 0; i < n; i++) {
-    const r = 0.5 + rnd() * 0.4;
-    parts.push([GEO.ico1, color, mat4((rnd() - 0.5) * 0.9, r * 0.8, (rnd() - 0.5) * 0.9, rnd() * 3, r, r * 0.85, r), (x, y) => Math.max(0, y) * 0.08]);
+    const r = 0.34 + rnd() * 0.26;
+    const a = (i / n) * Math.PI * 2 + rnd(), d = i === 0 ? 0 : 0.25 + rnd() * 0.35;
+    parts.push([GEO.ico1, color, mat4(Math.cos(a) * d, r * 0.85 + (i === 0 ? 0.2 : rnd() * 0.15), Math.sin(a) * d, rnd() * 3, r, r * 0.85, r), (x, y) => Math.max(0, y) * 0.08]);
   }
-  return mergeParts(parts);
+  return foliage(mergeParts(parts), { cy: 0.45, amp: 0.07, freq: 4.5, dark: 0.5, light: 1.18, bloom });
 }
 
 // ---------- local building frame (rotations are multiples of 90deg) ----------
@@ -164,6 +252,7 @@ export class World {
     this.rnd = mulberry32(1987);
     this.propSpawns = [];
     this.cartSpawns = [];
+    this.pads = []; // raised paving (driveways, walks, porches): {x0, z0, x1, z1, top}
     this.lamps = [];
     this.fountains = [];
     this.waterMats = [];
@@ -188,6 +277,7 @@ export class World {
     this.buildCourse();
     this.buildPerimeter();
     this.buildStreetscape();
+    buildBeach(this, GEO, heightAt);
     this.meshes = this.batch.build(this.root);
   }
 
@@ -196,7 +286,32 @@ export class World {
     const g = this.palms[Math.floor(this.rnd() * this.palms.length)];
     this.batch.addPrepped(M.vc, g, mat4(x, heightAt(x, z) - 0.1, z, this.rnd() * 6.28, s, s, s));
     if (collide) this.col.addCircle(x, z, 0.45 * s, 12, 'tree');
+    if (collide) (this.palmSpots ||= []).push({ x, z, top: (g.userData.top || 9) * s });
   }
+  // Register a flat raised slab (Frame-local center + size) so things can rest on top of it.
+  pad(f, lx, lz, sx, sz, top) {
+    const a = f.toWorld(lx - sx / 2, lz - sz / 2), b = f.toWorld(lx + sx / 2, lz + sz / 2);
+    this.pads.push({ x0: Math.min(a.x, b.x), z0: Math.min(a.z, b.z), x1: Math.max(a.x, b.x), z1: Math.max(a.z, b.z), top });
+  }
+  padTop(x, z) {
+    for (const p of this.pads) if (x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1) return p.top;
+    return 0;
+  }
+
+  // Tiled hip roof geometry for a w x d footprint (ridge runs along the longer side).
+  roofGeo(w, d, h) {
+    const rot = d > w;
+    const key = `${(rot ? d : w).toFixed(2)}:${(rot ? w : d).toFixed(2)}:${h}`;
+    this._roofs ||= new Map();
+    if (!this._roofs.has(key)) this._roofs.set(key, hipRoof(rot ? d : w, rot ? w : d, h));
+    return { geo: this._roofs.get(key), ry: rot ? Math.PI / 2 : 0 };
+  }
+  // ...placed on a building Frame with its eaves at local height y
+  roof(f, lx, y, lz, w, d, h, color) {
+    const r = this.roofGeo(w, d, h);
+    f.add(r.geo, color, lx, y, lz, 1, 1, 1, r.ry, M.roof);
+  }
+
   tree(kind, x, z, s = 1) {
     const list = kind === 'pine' ? this.pines : this.oaks;
     const g = list[Math.floor(this.rnd() * list.length)];
@@ -280,10 +395,10 @@ export class World {
     const outer = new THREE.MeshStandardMaterial({ color: 0x6f9a4a, roughness: 1 });
     const big = 2400;
     for (const [sx, sz, x, z] of [
-      [big, big / 2, 0, -HALF - big / 4],
-      [big, big / 2, 0, HALF + big / 4],
+      // north/south strips stop at the beach; the ocean + sand strip live in beach.js
+      [big / 2 + HALF, big / 2, -big / 4 + HALF / 2, -HALF - big / 4],
+      [big / 2 + HALF, big / 2, -big / 4 + HALF / 2, HALF + big / 4],
       [big / 2, HALF * 2, -HALF - big / 4, 0],
-      [big / 2, HALF * 2, HALF + big / 4, 0],
     ]) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(sx, sz).rotateX(-Math.PI / 2), outer);
       m.position.set(x, -0.02, z);
@@ -455,35 +570,100 @@ export class World {
       f.box(0, 0, 0, W + 0.6, 0.3, D + 0.6, '#d9d2c5');
       f.box(0, 0.3, 0, W, WH, D, h.color);
       f.box(0, 0.3 + WH, 0, W + 0.3, 0.25, D + 0.3, trim);
-      f.add(GEO.pyr, roof, 0, 0.55 + WH + 1.15, 0, W + 1.8, 2.3, D + 1.8);
-      // garage door
-      f.box(gx, 0.3, D / 2 + 0.02, 5, 2.5, 0.12, '#f7f5ef');
-      for (let i = 1; i < 4; i++) f.box(gx, 0.3 + i * 0.62, D / 2 + 0.09, 4.9, 0.04, 0.04, '#d6d2c8');
-      // front door + little porch
+      // roof: tiled hip roof with a fascia board around the overhang
+      const RY = 0.55 + WH, RW = W + 1.8, RD = D + 1.8;
+      f.add(HIP_ROOF, roof, 0, RY, 0, 1, 1, 1, 0, M.roof);
+      f.box(0, RY - 0.22, RD / 2 - 0.04, RW + 0.08, 0.24, 0.08, trim);
+      f.box(0, RY - 0.22, -RD / 2 + 0.04, RW + 0.08, 0.24, 0.08, trim);
+      f.box(RW / 2 - 0.04, RY - 0.22, 0, 0.08, 0.24, RD, trim);
+      f.box(-RW / 2 + 0.04, RY - 0.22, 0, 0.08, 0.24, RD, trim);
+      f.box(0, RY - 0.08, 0, RW, 0.06, RD, darker(h.color, 0.8)); // soffit
+      // ridge + hip caps
+      const ridgeR = (RW - RD) / 2;
+      f.add(GEO.cyl6, roof, 0, RY + 2.3 + 0.03, 0, 0.1, ridgeR * 2 + 0.2, 0.1, 0, M.vc, 0, 0, Math.PI / 2);
+      for (const sx of [1, -1]) for (const sz of [1, -1]) {
+        const a = [sx * ridgeR, RY + 2.3, 0], b = [sx * RW / 2, RY, sz * RD / 2];
+        const m = segMatrix(a[0], a[1] + 0.03, a[2], b[0], b[1] + 0.05, b[2], 0.08);
+        this.batch.add(M.vc, GEO.cyl6, darker(roof, 0.9), f.m.clone().multiply(m));
+      }
+      // roof clutter: plumbing vent, maybe a dish or a solar water heater
+      f.add(GEO.cyl, '#9a9a9a', 2.2, RY + 1.2, -3.2, 0.06, 1.0, 0.06);
+      if (rnd() < 0.3) {
+        f.add(GEO.cyl, '#d8d8d8', -3, RY + 1.35, -3.6, 0.03, 0.6, 0.03);
+        f.add(GEO.sph, '#eeeeee', -3, RY + 1.7, -3.55, 0.32, 0.32, 0.1, 0.5, M.vc, 0, -0.5);
+      } else if (rnd() < 0.25) {
+        const tilt = Math.atan2(2.3, RD / 2);
+        f.add(GEO.box, '#1d2d4a', -1.5, RY + 1.3, -3.3, 2.6, 0.08, 1.6, 0, M.vcShiny, 0, -tilt);
+        f.add(GEO.box, '#c9ccd1', -1.5, RY + 1.26, -3.3, 2.7, 0.06, 1.7, 0, M.vc, 0, -tilt);
+      }
+      // trimmed windows: frame, sill and muntins (wall key: front/back/right/left)
+      const WALL = { front: [0, D / 2, 0], back: [0, -D / 2, Math.PI], right: [W / 2, 0, Math.PI / 2], left: [-W / 2, 0, -Math.PI / 2] };
+      const wpart = (key, a, y, out, sx, sy, sz, color, mat = M.vc) => {
+        const [cx, cz, ry] = WALL[key];
+        const c = Math.cos(ry), s = Math.sin(ry);
+        f.add(GEO.box, color, cx + a * c + out * s, y, cz - a * s + out * c, sx, sy, sz, ry, mat);
+      };
+      const win = (key, a, y, w, hh, shutters = null) => {
+        wpart(key, a, y, 0.03, w, hh, 0.1, '#fff', M.glass);
+        wpart(key, a, y + hh / 2 + 0.07, 0.07, w + 0.28, 0.14, 0.1, trim);
+        wpart(key, a, y - hh / 2 - 0.07, 0.07, w + 0.28, 0.14, 0.1, trim);
+        wpart(key, a - w / 2 - 0.07, y, 0.07, 0.14, hh, 0.1, trim);
+        wpart(key, a + w / 2 + 0.07, y, 0.07, 0.14, hh, 0.1, trim);
+        wpart(key, a, y - hh / 2 - 0.17, 0.12, w + 0.45, 0.08, 0.22, trim); // sill
+        wpart(key, a, y, 0.08, 0.05, hh, 0.04, trim); // muntins
+        wpart(key, a, y, 0.08, w, 0.05, 0.04, trim);
+        if (shutters) for (const sd of [-1, 1]) {
+          wpart(key, a + sd * (w / 2 + 0.38), y, 0.06, 0.42, hh + 0.2, 0.06, shutters);
+          for (let k = -2; k <= 2; k++) wpart(key, a + sd * (w / 2 + 0.38), y + k * (hh / 6), 0.1, 0.36, 0.03, 0.03, darker(shutters, 0.8)); // louvers
+        }
+      };
+      const wx = garageLeft ? 5.6 : -5.6;
+      win('front', wx, 1.75, 1.6, 1.4, door); // narrow enough that shutters clear the coach light and the corner
+      for (const sz of [-3, 2.5]) { win('right', -sz, 1.8, 1.8, 1.3); win('left', sz, 1.8, 1.8, 1.3); }
+      win('back', 3, 1.8, 3.5, 1.6);
+      // garage door: raised panels, some with a row of windows up top
+      const gWin = rnd() < 0.4;
+      f.box(gx, 0.3, D / 2 + 0.02, 5, 2.5, 0.12, '#e6e2d8');
+      for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) {
+        const px = gx - 1.8 + k * 1.2, py = 0.62 + r * 0.6;
+        if (gWin && r === 3) f.box(px, py - 0.18, D / 2 + 0.09, 0.95, 0.34, 0.04, '#fff', M.glass);
+        else f.box(px, py - 0.2, D / 2 + 0.09, 1.02, 0.42, 0.06, '#f8f6f0');
+      }
+      f.box(gx, 2.8, D / 2 + 0.06, 5.4, 0.18, 0.12, trim);
+      f.box(gx - 2.62, 0.3, D / 2 + 0.06, 0.18, 2.5, 0.12, trim);
+      f.box(gx + 2.62, 0.3, D / 2 + 0.06, 0.18, 2.5, 0.12, trim);
+      // front door: trim, two raised panels, brass knob, coach lights (glow at night)
       f.box(dx, 0.3, D / 2 + 0.02, 1.15, 2.3, 0.12, door);
+      f.box(dx, 2.6, D / 2 + 0.07, 1.5, 0.16, 0.12, trim);
+      f.box(dx - 0.66, 0.3, D / 2 + 0.07, 0.16, 2.3, 0.12, trim);
+      f.box(dx + 0.66, 0.3, D / 2 + 0.07, 0.16, 2.3, 0.12, trim);
+      f.box(dx, 1.55, D / 2 + 0.1, 0.8, 0.8, 0.04, darker(door, 1.12));
+      f.box(dx, 0.55, D / 2 + 0.1, 0.8, 0.8, 0.04, darker(door, 1.12));
+      f.add(GEO.sph, '#d4af37', dx + 0.42, 1.4, D / 2 + 0.14, 0.05, 0.05, 0.05);
+      for (const sd of [-1, 1]) {
+        f.box(dx + sd * 0.86, 1.8, D / 2 + 0.1, 0.2, 0.36, 0.2, '#fff', M.lamp);
+        f.box(dx + sd * 0.86, 2.18, D / 2 + 0.1, 0.26, 0.06, 0.26, '#2a2a2a');
+      }
+      // little porch
       f.box(dx, 0, D / 2 + 1, 2.8, 0.22, 2, '#e7e1d5');
+      this.pad(f, dx, D / 2 + 1, 2.8, 2, 0.22);
       f.add(GEO.cyl, trim, dx - 1.25, 1.75, D / 2 + 1.8, 0.1, 3.1, 0.1);
       f.add(GEO.cyl, trim, dx + 1.25, 1.75, D / 2 + 1.8, 0.1, 3.1, 0.1);
       f.box(dx, 3.2, D / 2 + 1.05, 3, 0.2, 1.9, trim);
-      // windows with shutters
-      const wx = garageLeft ? 5.6 : -5.6;
-      f.box(wx, 1.2, D / 2 + 0.03, 1.8, 1.4, 0.1, '#fff', M.glass);
-      f.box(wx - 1.15, 1.1, D / 2 + 0.05, 0.4, 1.6, 0.08, door);
-      f.box(wx + 1.15, 1.1, D / 2 + 0.05, 0.4, 1.6, 0.08, door);
-      for (const sz of [-3, 2.5]) {
-        f.box(W / 2 + 0.03, 1.2, sz, 0.1, 1.3, 1.8, '#fff', M.glass);
-        f.box(-W / 2 - 0.03, 1.2, sz, 0.1, 1.3, 1.8, '#fff', M.glass);
-      }
-      f.box(-3, 1.2, -D / 2 - 0.03, 3.5, 1.6, 0.1, '#fff', M.glass);
-      // AC unit
+      // AC unit with a fan grille
       f.box(W / 2 + 0.7, 0, -2.5, 1, 0.9, 1, '#b8bcbf');
-      // screened lanai in back
+      f.add(GEO.cyl, '#3a3d40', W / 2 + 0.7, 0.92, -2.5, 0.38, 0.03, 0.38);
+      // screened lanai in back: aluminum frame + screen mesh
       const LD = 4.5;
-      for (const [px, pz] of [[-6, -D / 2 - LD], [6, -D / 2 - LD], [0, -D / 2 - LD], [-6, -D / 2 - LD / 2], [6, -D / 2 - LD / 2]]) {
+      for (const [px, pz] of [[-6, -D / 2 - LD], [6, -D / 2 - LD], [0, -D / 2 - LD], [-6, -D / 2 - LD / 2], [6, -D / 2 - LD / 2], [-3, -D / 2 - LD], [3, -D / 2 - LD]]) {
         f.box(px, 0.2, pz, 0.12, 2.6, 0.12, '#4a3f35');
       }
       f.box(0, 2.8, -D / 2 - LD / 2, 12.2, 0.12, LD + 0.1, '#4a3f35');
+      f.box(0, 1.1, -D / 2 - LD, 12, 0.08, 0.08, '#4a3f35'); // kick rail
       f.box(0, 0, -D / 2 - LD / 2, 12, 0.2, LD, '#d9d2c5');
+      f.box(0, 0.2, -D / 2 - LD, 12, 2.6, 0.02, '#fff', M.screen);
+      f.box(-6, 0.2, -D / 2 - LD / 2, 0.02, 2.6, LD, '#fff', M.screen);
+      f.box(6, 0.2, -D / 2 - LD / 2, 0.02, 2.6, LD, '#fff', M.screen);
       if (rnd() < 0.35) f.box(0, 0.2, -D / 2 - LD / 2, 6, 0.04, 2.5, '#49c6e5');
       f.collide(-W / 2 - 1.2, -D / 2 - LD, W / 2 + 1.2, D / 2 + 0.3, 6, 'house');
       // driveway + walk to street
@@ -491,6 +671,8 @@ export class World {
       const dLen = streetDist - D / 2;
       f.box(gx, 0, D / 2 + dLen / 2, 5.2, 0.05, dLen, '#d4cfc4');
       f.box(dx, 0, D / 2 + 2 + (dLen - 2) / 2, 1.3, 0.045, dLen - 2, '#d4cfc4');
+      this.pad(f, gx, D / 2 + dLen / 2, 5.2, dLen, 0.05);
+      this.pad(f, dx, D / 2 + 2 + (dLen - 2) / 2, 1.3, dLen - 2, 0.045);
       // landscaping
       for (let i = 0; i < 4; i++) {
         const bx = (garageLeft ? 1.2 : -6.6) + i * 1.8;
@@ -523,9 +705,9 @@ export class World {
       // parked cart in driveway (every house has a chance; player's always)
       const cp = f.toWorld(gx, D / 2 + 4.5);
       if (h.owner === 'player') {
-        this.playerCartSpawn = { x: cp.x, z: cp.z, ry: h.facing + Math.PI };
+        this.playerCartSpawn = { x: cp.x, z: cp.z, ry: h.facing }; // backed in: W drives you to the street
       } else if (rnd() < 0.3) {
-        this.cartSpawns.push({ x: cp.x, z: cp.z, ry: h.facing + Math.PI, owner: 'resident', house: h.id });
+        this.cartSpawns.push({ x: cp.x, z: cp.z, ry: h.facing + (Math.round(cp.x * 0.37 + cp.z * 0.73) & 1 ? Math.PI : 0), owner: 'resident', house: h.id });
       }
       h.doorPos = f.toWorld(dx, D / 2 + 1.6);
       h.frontPos = f.toWorld(dx, D / 2 + 4);
@@ -547,11 +729,11 @@ export class World {
     f.box(0, 0, 0, W + 1, 0.4, D + 1, '#d8cfbf');
     f.box(0, 0.4, 0, W, 5.4, D, '#f4ead5');
     f.box(0, 5.8, 0, W + 0.4, 0.35, D + 0.4, '#ffffff');
-    f.add(GEO.pyr, '#c65a3e', 0, 6.15 + 2.3, 0, W + 3, 4.6, D + 3);
+    this.roof(f, 0, 6.15, 0, W + 3, D + 3, 4.6, '#c65a3e');
     // portico
     for (let i = 0; i < 6; i++) f.add(GEO.cyl, '#ffffff', -7.5 + i * 3, 2.9, D / 2 + 3.6, 0.35, 5, 0.35);
     f.box(0, 5.2, D / 2 + 2, 19, 0.6, 4.4, '#ffffff');
-    f.add(GEO.pyr, '#c65a3e', 0, 5.8 + 1.2, D / 2 + 2, 20, 2.4, 5.2);
+    this.roof(f, 0, 5.8, D / 2 + 2, 20, 5.2, 2.4, '#c65a3e');
     f.box(0, 0.4, D / 2 + 0.03, 6, 3.4, 0.15, '#fff', M.glass);
     for (const x of [-15, -11, 11, 15]) f.box(x, 1.4, D / 2 + 0.03, 2.4, 2.4, 0.12, '#fff', M.glass);
     for (const z of [-6, 0, 6]) {
@@ -586,7 +768,7 @@ export class World {
     const g = new Frame(this, ps.x, ps.z, Math.PI);
     g.box(0, 0, 0, ps.sx + 0.6, 0.3, ps.sz + 0.6, '#d8cfbf');
     g.box(0, 0.3, 0, ps.sx, 3.8, ps.sz, '#f4ead5');
-    g.add(GEO.pyr, '#2f6b4a', 0, 4.1 + 1.3, 0, ps.sx + 2, 2.6, ps.sz + 2);
+    this.roof(g, 0, 4.1, 0, ps.sx + 2, ps.sz + 2, 2.6, '#3f7f5a');
     g.box(0, 0.3, ps.sz / 2 + 0.03, 3, 2.6, 0.12, '#fff', M.glass);
     g.box(-4.5, 1.2, ps.sz / 2 + 0.03, 3, 1.8, 0.12, '#fff', M.glass);
     g.box(4.5, 1.2, ps.sz / 2 + 0.03, 3, 1.8, 0.12, '#fff', M.glass);
@@ -695,7 +877,7 @@ export class World {
     if (flat) {
       f.box(0, 5.3, 0, W + 0.3, 0.9, D + 0.3, roof);
     } else {
-      f.add(GEO.pyr, roof, 0, 5.3 + 1.5, 0, W + 2, 3, D + 2);
+      this.roof(f, 0, 5.3, 0, W + 2, D + 2, 3, roof);
     }
     f.box(0, 0.3, D / 2 + 0.03, 3.2, 3, 0.12, '#fff', M.glass);
     f.box(-W / 4 - 1, 1, D / 2 + 0.03, W / 2 - 5, 2.2, 0.12, '#fff', M.glass);
@@ -861,12 +1043,26 @@ export class World {
       const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
     })();
     const pbMat = new THREE.MeshStandardMaterial({ map: pbTex, roughness: 0.85 });
+    const pbNet = (() => {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 32;
+      const g = c.getContext('2d');
+      g.strokeStyle = '#141414'; g.lineWidth = 1.5;
+      for (let x = 0; x <= 256; x += 5) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 32); g.stroke(); }
+      for (let y = 0; y <= 32; y += 5) { g.beginPath(); g.moveTo(0, y); g.lineTo(256, y); g.stroke(); }
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+      return new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide, depthWrite: false });
+    })();
     for (const dx of [-5, 5]) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(9, 18).rotateX(-Math.PI / 2), pbMat);
       m.position.set(pb.x + dx, 0.05, pb.z);
       m.receiveShadow = true;
       this.root.add(m);
-      this.box(pb.x + dx, 0, pb.z, 8, 0.9, 0.06, '#222');
+      const net = new THREE.Mesh(new THREE.PlaneGeometry(8, 0.78), pbNet);
+      net.position.set(pb.x + dx, 0.5, pb.z);
+      this.root.add(net);
+      this.box(pb.x + dx, 0.86, pb.z, 8, 0.07, 0.03, '#f4f4f4'); // white tape
+      this.box(pb.x + dx, 0, pb.z, 0.05, 0.9, 0.03, '#f4f4f4'); // center strap
       this.box(pb.x + dx - 4, 0, pb.z, 0.08, 1, 0.08, '#555');
       this.box(pb.x + dx + 4, 0, pb.z, 0.08, 1, 0.08, '#555');
     }
@@ -879,19 +1075,38 @@ export class World {
     // shuffleboard
     const sb = B.shuffle;
     const sbTex = (() => {
+      const SC = SHUFFLE_COURT;
       const c = document.createElement('canvas');
-      c.width = 1024; c.height = 128;
+      c.width = 2048; c.height = 192;
       const g = c.getContext('2d');
-      g.fillStyle = '#2e7d6b'; g.fillRect(0, 0, 1024, 128);
-      g.fillStyle = '#e8e2d0'; g.fillRect(8, 16, 1008, 96);
-      g.strokeStyle = '#1f3b8a'; g.lineWidth = 4;
-      for (const x0 of [60, 964]) {
-        const dir = x0 < 512 ? 1 : -1;
-        g.beginPath(); g.moveTo(x0, 20); g.lineTo(x0 + dir * 180, 64); g.lineTo(x0, 108); g.closePath(); g.stroke();
-        g.font = 'bold 20px sans-serif'; g.fillStyle = '#1f3b8a';
-        g.fillText('10', x0 + dir * 120, 70); g.fillText('8', x0 + dir * 70, 50); g.fillText('7', x0 + dir * 70, 95);
+      const PX = c.width / SC.len, PY = c.height / SC.w, cy = c.height / 2;
+      g.fillStyle = '#2e7d6b'; g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = '#ece5d1'; g.fillRect(6, cy - SC.play * PY, c.width - 12, SC.play * 2 * PY);
+      // waxed sheen streaks
+      for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(255,255,255,${0.04 + Math.random() * 0.05})`; g.fillRect(Math.random() * c.width, cy - SC.play * PY + Math.random() * SC.play * 2 * PY, 120 + Math.random() * 300, 2); }
+      g.strokeStyle = '#1f3b8a'; g.fillStyle = '#1f3b8a'; g.lineWidth = 4;
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      for (const [x0, dir] of [[0, 1], [c.width, -1]]) {
+        const bx = x0 + dir * SC.base * PX, ax = x0 + dir * SC.apex * PX, hw = SC.half * PY;
+        const ox = x0 + dir * (SC.base - SC.off) * PX;
+        g.strokeRect(Math.min(ox, bx), cy - hw, Math.abs(bx - ox), hw * 2);
+        g.beginPath(); g.moveTo(bx, cy - hw); g.lineTo(ax, cy); g.lineTo(bx, cy + hw); g.closePath(); g.stroke();
+        for (const t of [1 / 3, 2 / 3]) {
+          const lx = ax + (bx - ax) * t;
+          g.beginPath(); g.moveTo(lx, cy - hw * t); g.lineTo(lx, cy + hw * t); g.stroke();
+        }
+        g.beginPath(); g.moveTo(ax + (bx - ax) / 3, cy); g.lineTo(bx, cy); g.stroke();
+        const dl = x0 + dir * SC.dead * PX;
+        g.beginPath(); g.moveTo(dl, cy - SC.play * PY); g.lineTo(dl, cy + SC.play * PY); g.stroke();
+        g.font = 'bold 30px sans-serif';
+        const at = (t) => ax + (bx - ax) * t;
+        g.fillText('10', at(0.2), cy);
+        g.fillText('8', at(0.5), cy - hw * 0.25); g.fillText('8', at(0.5), cy + hw * 0.25);
+        g.fillText('7', at(0.83), cy - hw * 0.42); g.fillText('7', at(0.83), cy + hw * 0.42);
+        g.font = 'bold 18px sans-serif';
+        g.fillText('10', (ox + bx) / 2, cy - 12); g.fillText('OFF', (ox + bx) / 2, cy + 12);
       }
-      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
     })();
     const sbMat = new THREE.MeshStandardMaterial({ map: sbTex, roughness: 0.6 });
     for (let i = 0; i < 4; i++) {
@@ -900,7 +1115,7 @@ export class World {
       m.receiveShadow = true;
       this.root.add(m);
     }
-    this.poi('shuffle', sb.x - 14, sb.z, 'Shuffleboard Courts', 3);
+    this.poi('shuffle', sb.x + 14.2, sb.z - 5, 'Shuffleboard Courts', 3); // at the shooting end of court 0
 
     // duck pond park trees
     for (let i = 0; i < 10; i++) {
@@ -971,7 +1186,11 @@ export class World {
       for (const e of EDGES) if (distToSegment(x, z, e.a.x, e.a.z, e.b.x, e.b.z) < e.width / 2 + 4) { ok = false; break; }
       if (!ok) continue;
       for (const p of PONDS) if (Math.hypot(x - p.x, z - p.z) < p.r * 1.3) ok = false;
-      for (const r of RAMPS) if (Math.hypot(x - r.x, z - r.z) < 22) ok = false;
+      for (const r of RAMPS) {
+        const dx = x - r.x, dz = z - r.z, s = Math.sin(r.a), c = Math.cos(r.a);
+        const u = dx * s + dz * c, v = dx * c - dz * s;
+        if (Math.hypot(dx, dz) < 22 || (u > -6 && u < r.len + 34 && Math.abs(v) < 9)) ok = false;
+      }
       for (const h of HOLES) if (Math.hypot(x - h.green[0], z - h.green[1]) < 20 || Math.hypot(x - h.tee[0], z - h.tee[1]) < 10) ok = false;
       if (!ok) continue;
       const k = rnd();
@@ -1011,11 +1230,16 @@ export class World {
       const out = 320 + rnd() * 120;
       const x = side === 0 ? along : side === 1 ? along : side === 2 ? -out : out;
       const z = side === 0 ? -out : side === 1 ? out : along;
+      // the east side is Boca Beach and the ocean now: keep the scenery off the sand and out of the water
+      const onBeach = x > BEACH.x0 - 12 && (x > BEACH.shore - 4 || (z > BEACH.z0 - 20 && z < BEACH.z1 + 20));
       if (rnd() < 0.6) {
         const w = 10 + rnd() * 6;
-        this.box(x, 0, z, w, 3.2, 10, ['#f6c6a8', '#fbe7a1', '#bde0fe', '#f7cad0', '#fff1e0'][Math.floor(rnd() * 5)]);
-        this.batch.add(M.vc, GEO.pyr, '#c65a3e', mat4(x, 4.3, z, 0, w + 1, 2.2, 11));
-      } else this.palm(x, z, 1.1, false);
+        const col = ['#f6c6a8', '#fbe7a1', '#bde0fe', '#f7cad0', '#fff1e0'][Math.floor(rnd() * 5)];
+        if (onBeach) continue;
+        this.box(x, 0, z, w, 3.2, 10, col);
+        const r = this.roofGeo(w + 1, 11, 2.2);
+        this.batch.add(M.roof, r.geo, '#c65a3e', mat4(x, 3.2, z, r.ry));
+      } else if (!onBeach) this.palm(x, z, 1.1, false);
     }
   }
 
@@ -1113,6 +1337,13 @@ export class World {
   }
 
   locationName(x, z) {
+    if (x > 292) {
+      if (onBoat(x, z)) return 'The Lucky Lady';
+      if (x > BEACH.shore + 2) return Math.abs(z - BEACH.pier.z) < 4 && x < BEACH.pier.x1 ? 'The Pier' : 'Atlantic Ocean';
+      if (Math.abs(z - BEACH.pier.z) < 4 && x > BEACH.pier.x0) return 'The Pier';
+      if (Math.hypot(x - BEACH.bar.x, z - BEACH.bar.z) < 16) return 'The Rusty Pelican';
+      return x < 318 ? 'Beach Rd' : 'Boca Beach Club';
+    }
     if (z < -52) {
       for (const p of PONDS) if (Math.hypot(x - p.x, z - p.z) < p.r * 1.4) return p.name;
       let best = null, bd = 1e9;

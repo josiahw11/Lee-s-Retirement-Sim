@@ -262,3 +262,43 @@ export function makeRadialGlow(color = 'rgba(255,220,150,1)') {
   g.fillRect(0, 0, 64, 64);
   return toTex(c, false);
 }
+
+// Spanish barrel-tile roof, painted near-white so vertex colors tint it. One repeat covers
+// 4 tiles across and 3 courses up the slope.
+export function makeRoofTileTexture() {
+  const S = 256;
+  const c = canvas(S);
+  const g = c.getContext('2d');
+  const rnd = mulberry32(21);
+  g.fillStyle = '#8a8a8a';
+  g.fillRect(0, 0, S, S);
+  const cols = 4, rows = 3, tw = S / cols, th = S / rows;
+  for (let r = 0; r < rows; r++) {
+    const off = (r % 2) * tw * 0.5;
+    for (let k = -1; k <= cols; k++) {
+      const x = k * tw + off;
+      // rounded barrel: bright crown, dark valleys
+      const grad = g.createLinearGradient(x, 0, x + tw, 0);
+      const v = 205 + Math.floor(rnd() * 40);
+      grad.addColorStop(0, `rgb(${v * 0.55},${v * 0.55},${v * 0.55})`);
+      grad.addColorStop(0.45, `rgb(${v},${v},${v})`);
+      grad.addColorStop(0.6, `rgb(${v * 0.95},${v * 0.95},${v * 0.95})`);
+      grad.addColorStop(1, `rgb(${v * 0.5},${v * 0.5},${v * 0.5})`);
+      g.fillStyle = grad;
+      g.fillRect(x + 1, r * th, tw - 2, th);
+      // weathering speckle
+      for (let i = 0; i < 40; i++) {
+        const w = 150 + Math.floor(rnd() * 90);
+        g.fillStyle = `rgba(${w},${w},${w},0.25)`;
+        g.fillRect(x + rnd() * tw, r * th + rnd() * th, 2, 2);
+      }
+    }
+    // the lip shadow where the next course overlaps
+    const sh = g.createLinearGradient(0, r * th + th - 10, 0, r * th + th);
+    sh.addColorStop(0, 'rgba(0,0,0,0)');
+    sh.addColorStop(1, 'rgba(0,0,0,0.45)');
+    g.fillStyle = sh;
+    g.fillRect(0, r * th + th - 10, S, 10);
+  }
+  return toTex(c);
+}

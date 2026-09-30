@@ -1,10 +1,44 @@
 // Golf carts: model + upgrades + arcade physics (drift, air, suspension, splashdown).
 import * as THREE from 'three';
 import { mergeParts, mat4 } from '../gfx/batch.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { M } from '../gfx/materials.js';
 import { GEO } from '../world/world.js';
 import { heightAt, waterLevel, rampHeight } from '../world/terrain.js';
 import { clamp, damp, lerp, wrapAngle } from '../core/utils.js';
+
+// Shared cart primitives (rounded fiberglass panels, fender arcs, tires)
+const RB = new Map();
+function rbox(w, h, d, r) {
+  const k = `${w}:${h}:${d}:${r}`;
+  // more bevel segments only where the curve is big enough to see
+  if (!RB.has(k)) RB.set(k, new RoundedBoxGeometry(w, h, d, r >= 0.1 ? 2 : 1, r));
+  return RB.get(k);
+}
+const FENDER = new THREE.TorusGeometry(0.34, 0.055, 6, 14, Math.PI);
+const SPOKE = new THREE.BoxGeometry(1, 1, 1);
+const TIRE = new Map();
+function tireGeo(r, w) {
+  const k = `${r}:${w}`;
+  if (!TIRE.has(k)) {
+    // a torus reads as a real rounded tire; squash it to the tire width
+    const g = new THREE.TorusGeometry(r * 0.74, r * 0.27, 8, 18);
+    g.scale(1, 1, w / (r * 0.54));
+    g.rotateY(Math.PI / 2);
+    g.userData.shared = true;
+    TIRE.set(k, g);
+  }
+  return TIRE.get(k);
+}
+const TIRE_MAT = new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.92 });
+// Geometry every cart of a kind can share (flagged so rebuild/race cleanup never disposes it)
+const SHARED = new Map();
+function shared(key, make) {
+  if (!SHARED.has(key)) { const g = make(); g.userData.shared = true; SHARED.set(key, g); }
+  return SHARED.get(key);
+}
+const GLASS_MAT = new THREE.MeshStandardMaterial({ color: 0xcfe8f5, transparent: true, opacity: 0.25, roughness: 0.05 });
+const HUB_MAT = new THREE.MeshStandardMaterial({ color: 0xa8adb2, roughness: 0.35, metalness: 0.6 });
 
 const G = 16; // arcade gravity - carts get real air but still land hard
 
@@ -12,6 +46,7 @@ export const CART_COLORS = ['#ffffff', '#f2f0e6', '#1f8a8a', '#e84a5f', '#f2c94c
 
 export class Cart {
   constructor(opts = {}) {
+    this.id = Cart.nextId = (Cart.nextId || 0) + 1;
     this.opts = opts;
     this.kind = opts.kind || 'resident'; // player | resident | security | concession | rival | club
     this.color = opts.color || CART_COLORS[Math.floor(Math.random() * CART_COLORS.length)];
@@ -29,10 +64,13 @@ export class Cart {
     this.grounded = true;
     this.steerAng = 0;
     this.pitch = 0; this.roll = 0;
+    this.spin = 0; // trick spin in the air (body only; the trajectory doesn't care)
+    this.spinLanded = 0;
     this.suspY = 0; this.suspV = 0;
     this.airT = 0;
     this.wheelRot = 0;
-    this.radius = 1.25;
+    this.model = opts.model || 'classic'; // classic | stretch | buggy | hearse
+    this.setModelDims();
     this.driver = null;
     this.passenger = null;
     this.sunk = false;
@@ -41,6 +79,13 @@ export class Cart {
     this.horn = 0;
     this.build();
     this.syncMesh(0);
+  }
+
+  setModelDims() {
+    const m = this.kind === 'scooter' ? 'scooter' : this.model;
+    this.radius = { scooter: 0.65, stretch: 1.6, hearse: 1.45 }[m] || 1.25;
+    this.stretch = m === 'stretch' ? 1.5 : 1; // how much longer than a classic
+    this.wheelbase = 1.7 * this.stretch;
   }
 
   get speed() {
@@ -53,19 +98,28 @@ export class Cart {
 
   stats() {
     const u = this.upgrades;
+    if (this.kind === 'scooter') return { max: 4.2, turbo: 4.2, accel: 3, offroad: 0.95 }; // 9 mph of pure menace
     let max = 11;
     if (this.kind === 'security') max = 12.5;
     if (this.kind === 'rival') max = 12.5;
     if (u.governor) max = 16;
+    // the showroom models: the Stretch is a barge, the Buggy loves sand, the Hearse has something to prove
+    const m = this.model;
+    const mx = m === 'stretch' ? 0.92 : m === 'hearse' ? 1.12 : m === 'buggy' ? 1.04 : 1;
+    const acc = m === 'stretch' ? 0.8 : m === 'hearse' ? 1.15 : 1;
+    max *= mx;
     return {
       max,
       turbo: u.turbo ? max * 1.45 : max,
-      accel: u.governor ? 7.5 : 5.5,
-      offroad: u.lift ? 1.0 : 0.88,
+      accel: (u.governor ? 7.5 : 5.5) * acc,
+      offroad: m === 'buggy' ? 1.08 : u.lift ? 1.0 : 0.88,
     };
   }
 
   rebuild() {
+    // free the old model's own geometry (shared pieces stay cached)
+    this.body.traverse((o) => { if (o.isMesh && o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); });
+    if (this.headMat) this.headMat.dispose();
     this.body.clear();
     this.wheels = [];
     this.build();
@@ -73,69 +127,99 @@ export class Cart {
   }
 
   build() {
-    const u = this.upgrades;
+    if (this.kind === 'scooter') return this.buildScooter();
+    const u = this.model === 'buggy' ? { ...this.upgrades, lift: true } : this.upgrades;
     const lift = u.lift ? 0.22 : 0;
     this.lift = lift;
     this.wheelR = u.lift ? 0.36 : 0.25;
+    this.setModelDims();
+    const S = this.stretch;
     const b = this.body;
     const chassis = new THREE.Group();
     chassis.position.y = lift;
     b.add(chassis);
     this.chassis = chassis;
     // painted panels
-    const paint = mergeParts([
-      [GEO.box, '#fff', mat4(0, 0.47, 0.05, 0, 1.18, 0.26, 2.3)],
-      [GEO.box, '#fff', mat4(0, 0.7, 0.98, 0, 1.12, 0.42, 0.42)],
-      [GEO.sph, '#fff', mat4(0, 0.78, 1.12, 0, 0.56, 0.26, 0.26)],
-      [GEO.box, '#fff', mat4(0, 0.72, -0.92, 0, 1.18, 0.34, 0.6)],
-      [GEO.box, '#fff', mat4(0, 2.02, -0.08, 0, 1.3, 0.07, 1.75)],
-    ]);
+    const roofless = this.model === 'buggy';
+    const paint = shared(roofless ? 'paint:roofless' : 'paint', () => mergeParts([
+      [rbox(1.18, 0.24, 2.3, 0.09), '#fff', mat4(0, 0.47, 0.03)], // tub
+      [rbox(1.12, 0.44, 0.56, 0.12), '#fff', mat4(0, 0.69, 1.0)], // nose cowl
+      [rbox(0.96, 0.08, 0.5, 0.035), '#fff', mat4(0, 0.9, 0.96, 0, 1, 1, 1, 0.1)], // sloped hood panel
+      [rbox(1.06, 0.3, 0.12, 0.05), '#fff', mat4(0, 1.0, 0.7, 0, 1, 1, 1, -0.25)], // dash
+      [rbox(1.18, 0.36, 0.64, 0.12), '#fff', mat4(0, 0.72, -0.92)], // rear body
+      ...(roofless ? [] : [
+        [rbox(1.34, 0.07, 1.82, 0.035), '#fff', mat4(0, 2.02, -0.08)], // roof
+        [rbox(1.3, 0.05, 1.78, 0.02), '#fff', mat4(0, 1.97, -0.08)], // roof lip
+      ]),
+      [FENDER, '#fff', mat4(0.57, 0.3, 0.85, Math.PI / 2)],
+      [FENDER, '#fff', mat4(-0.57, 0.3, 0.85, Math.PI / 2)],
+      [FENDER, '#fff', mat4(0.57, 0.3, -0.85, Math.PI / 2)],
+      [FENDER, '#fff', mat4(-0.57, 0.3, -0.85, Math.PI / 2)],
+    ]));
     const pm = new THREE.Mesh(paint, this.paintMat);
     pm.castShadow = true;
+    pm.scale.z = S;
     chassis.add(pm);
     // trim + seats + posts
     const seat = this.kind === 'security' ? '#1d2b53' : u.leather ? '#6b3a1f' : '#e9dcc0';
+    const seatHi = new THREE.Color(seat).multiplyScalar(1.08).getStyle();
     const parts = [
-      [GEO.box, '#2a2a2a', mat4(0, 0.33, 0.05, 0, 1.2, 0.08, 2.34)],
-      [GEO.box, '#333', mat4(0, 0.61, 0.35, 0, 1.0, 0.03, 0.9)],
-      [GEO.box, seat, mat4(0, 0.82, -0.28, 0, 1.08, 0.16, 0.55)],
-      [GEO.box, seat, mat4(0, 1.12, -0.56, 0, 1.08, 0.46, 0.13, -0.15)],
-      [GEO.cyl, '#bbb', mat4(0.56, 1.35, 0.52, 0, 0.03, 1.3, 0.03)],
-      [GEO.cyl, '#bbb', mat4(-0.56, 1.35, 0.52, 0, 0.03, 1.3, 0.03)],
-      [GEO.cyl, '#bbb', mat4(0.56, 1.45, -0.72, 0, 0.03, 1.1, 0.03)],
-      [GEO.cyl, '#bbb', mat4(-0.56, 1.45, -0.72, 0, 0.03, 1.1, 0.03)],
-      [GEO.torus, '#222', mat4(0.28, 1.12, 0.38, 0, 0.17, 0.17, 1.4, -0.9)],
-      [GEO.cyl, '#222', mat4(0.28, 0.9, 0.5, 0, 0.025, 0.5, 0.025, -0.5)],
-      [GEO.sph, '#fffbe0', mat4(0.36, 0.78, 1.33, 0, 0.09, 0.07, 0.04)],
-      [GEO.sph, '#fffbe0', mat4(-0.36, 0.78, 1.33, 0, 0.09, 0.07, 0.04)],
-      [GEO.box, '#c01818', mat4(0.45, 0.72, -1.23, 0, 0.14, 0.08, 0.02)],
-      [GEO.box, '#c01818', mat4(-0.45, 0.72, -1.23, 0, 0.14, 0.08, 0.02)],
-      [GEO.box, '#2a2a2a', mat4(0, 0.4, 1.25, 0, 1.2, 0.14, 0.12)],
+      [rbox(1.22, 0.08, 2.36, 0.03), '#262626', mat4(0, 0.33, 0.03)], // rocker / frame
+      [rbox(1.0, 0.03, 0.9, 0.01), '#343434', mat4(0, 0.605, 0.33)], // floor mat
+      [rbox(1.08, 0.16, 0.56, 0.07), seat, mat4(0, 0.83, -0.28)], // seat cushion
+      [rbox(1.08, 0.46, 0.14, 0.07), seat, mat4(0, 1.13, -0.57, 0, 1, 1, 1, -0.15)], // backrest
+      [SPOKE, seatHi, mat4(0, 0.915, -0.28, 0, 0.01, 0.005, 0.5)], // seam between the two seats
+      [rbox(1.26, 0.13, 0.14, 0.06), '#222', mat4(0, 0.42, 1.28)], // front bumper
+      [rbox(1.26, 0.13, 0.12, 0.05), '#222', mat4(0, 0.44, -1.25)], // rear bumper
+      [GEO.cyl, '#c9ced1', mat4(0.57, 1.46, 0.5, 0, 0.028, 1.05, 0.028, -0.08)], // front posts (slight rake)
+      [GEO.cyl, '#c9ced1', mat4(-0.57, 1.46, 0.5, 0, 0.028, 1.05, 0.028, -0.08)],
+      [GEO.cyl, '#c9ced1', mat4(0.57, 1.45, -0.74, 0, 0.028, 1.1, 0.028)],
+      [GEO.cyl, '#c9ced1', mat4(-0.57, 1.45, -0.74, 0, 0.028, 1.1, 0.028)],
+      [SPOKE, '#c9ced1', mat4(0, 1.08, 0.56, 0, 1.12, 0.03, 0.03)], // windshield frame bottom
+      [SPOKE, '#c9ced1', mat4(0, 1.96, 0.47, 0, 1.12, 0.03, 0.03)], // windshield frame top
+      [GEO.torus, '#1c1c1c', mat4(0.28, 1.13, 0.38, 0, 0.16, 0.16, 1.3, -0.9)], // steering wheel
+      [SPOKE, '#1c1c1c', mat4(0.28, 1.13, 0.38, 0, 0.3, 0.02, 0.02, -0.9)],
+      [GEO.cyl, '#1c1c1c', mat4(0.28, 0.92, 0.5, 0, 0.022, 0.5, 0.022, -0.5)], // column
+      [GEO.cyl, '#d8dde0', mat4(0.36, 0.8, 1.29, 0, 0.085, 0.05, 0.085, Math.PI / 2)], // headlight bezels
+      [GEO.cyl, '#d8dde0', mat4(-0.36, 0.8, 1.29, 0, 0.085, 0.05, 0.085, Math.PI / 2)],
+      [rbox(0.16, 0.08, 0.03, 0.02), '#c01818', mat4(0.45, 0.74, -1.235)], // taillights
+      [rbox(0.16, 0.08, 0.03, 0.02), '#c01818', mat4(-0.45, 0.74, -1.235)],
+      [rbox(0.2, 0.06, 0.02, 0.02), '#c9a64a', mat4(0, 0.84, 1.285)], // badge
+      [SPOKE, '#3a3a3a', mat4(0.2, 0.62, 0.72, 0, 0.12, 0.03, 0.2)], // pedals
+      [SPOKE, '#3a3a3a', mat4(0.36, 0.62, 0.72, 0, 0.08, 0.03, 0.16)],
     ];
     // rear cargo
     if (this.kind === 'concession') {
-      parts.push([GEO.box, '#1f5fb0', mat4(0, 1.05, -1.25, 0, 1.1, 0.7, 0.8)]);
-      parts.push([GEO.box, '#ffffff', mat4(0, 1.42, -1.25, 0, 1.14, 0.06, 0.84)]);
+      parts.push([rbox(1.1, 0.7, 0.8, 0.06), '#1f5fb0', mat4(0, 1.05, -1.25)]);
+      parts.push([rbox(1.16, 0.06, 0.86, 0.025), '#ffffff', mat4(0, 1.42, -1.25)]);
+      parts.push([rbox(0.9, 0.34, 0.02, 0.01), '#f2c94c', mat4(0, 1.08, -1.66)]); // menu board
     } else if (this.kind === 'player' || u.cooler) {
-      parts.push([GEO.box, '#e84a5f', mat4(0, 1.02, -1.15, 0, 0.7, 0.45, 0.45)]);
-      parts.push([GEO.box, '#ffffff', mat4(0, 1.27, -1.15, 0, 0.72, 0.07, 0.47)]);
+      parts.push([rbox(0.7, 0.44, 0.45, 0.05), '#e84a5f', mat4(0, 1.02, -1.15)]); // cooler
+      parts.push([rbox(0.74, 0.08, 0.49, 0.035), '#ffffff', mat4(0, 1.27, -1.15)]); // lid
+      parts.push([SPOKE, '#ffffff', mat4(0.39, 1.1, -1.15, 0, 0.03, 0.05, 0.16)]); // handles
+      parts.push([SPOKE, '#ffffff', mat4(-0.39, 1.1, -1.15, 0, 0.03, 0.05, 0.16)]);
     } else {
       parts.push([GEO.cyl, '#2f2f2f', mat4(0, 1.2, -1.15, 0, 0.18, 0.9, 0.18, 0.25)]);
       for (let i = 0; i < 4; i++) parts.push([GEO.cyl, '#999', mat4(-0.08 + i * 0.05, 1.72, -1.05 + (i % 2) * 0.05, 0, 0.012, 0.35, 0.012, 0.25)]);
     }
-    const trim = new THREE.Mesh(mergeParts(parts), M.vc);
+    const trimKey = `trim:${this.kind === 'concession' ? 'c' : this.kind === 'player' || u.cooler ? 'p' : 'b'}:${seat}`;
+    const trim = new THREE.Mesh(shared(trimKey, () => mergeParts(parts)), M.vc);
     trim.castShadow = true;
+    trim.scale.z = S;
     chassis.add(trim);
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.8), new THREE.MeshStandardMaterial({ color: 0xcfe8f5, transparent: true, opacity: 0.25, roughness: 0.05 }));
-    glass.position.set(0, 1.6, 0.53);
-    glass.rotation.x = -0.08;
-    chassis.add(glass);
+    if (!roofless) {
+      const glass = new THREE.Mesh(shared('glass', () => new THREE.PlaneGeometry(1.1, 0.86)), GLASS_MAT);
+      glass.position.set(0, 1.52, 0.515 * S);
+      glass.rotation.x = -0.1;
+      chassis.add(glass);
+    }
+    this.buildModelExtras(chassis);
 
     // lights (emissive meshes)
-    this.headMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2c0, emissiveIntensity: 0 });
+    this.headMat = new THREE.MeshStandardMaterial({ color: 0xbfc8cf, roughness: 0.2, metalness: 0.3, emissive: 0xfff2c0, emissiveIntensity: 0 });
     for (const x of [0.36, -0.36]) {
-      const h = new THREE.Mesh(new THREE.CircleGeometry(0.07, 10), this.headMat);
-      h.position.set(x, 0.78, 1.375);
+      const h = new THREE.Mesh(shared('head', () => new THREE.CircleGeometry(0.07, 10)), this.headMat);
+      h.position.set(x, 0.8, 1.318 * S);
       chassis.add(h);
     }
 
@@ -160,8 +244,8 @@ export class Cart {
     }
     if (u.speakers) {
       const sp = mergeParts([
-        [GEO.box, '#111', mat4(0.4, 2.2, -0.75, 0, 0.3, 0.3, 0.25)],
-        [GEO.box, '#111', mat4(-0.4, 2.2, -0.75, 0, 0.3, 0.3, 0.25)],
+        [rbox(0.3, 0.3, 0.25, 0.04), '#111', mat4(0.4, 2.2, -0.75)],
+        [rbox(0.3, 0.3, 0.25, 0.04), '#111', mat4(-0.4, 2.2, -0.75)],
         [GEO.cyl, '#555', mat4(0.4, 2.2, -0.62, 0, 0.1, 0.02, 0.1, Math.PI / 2)],
         [GEO.cyl, '#555', mat4(-0.4, 2.2, -0.62, 0, 0.1, 0.02, 0.1, Math.PI / 2)],
       ]);
@@ -197,16 +281,21 @@ export class Cart {
     // wheels
     const rimCol = u.rims ? '#eeeeee' : '#8a8f94';
     const r = this.wheelR;
-    for (const [x, z] of [[0.55, 0.85], [-0.55, 0.85], [0.55, -0.85], [-0.55, -0.85]]) {
+    const rz = this.model === 'hearse' ? 1.05 : 0.85 * S;
+    for (const [x, z] of [[0.55, 0.85 * S], [-0.55, 0.85 * S], [0.55, -rz], [-0.55, -rz]]) {
       const w = new THREE.Group();
       w.position.set(x * (u.lift ? 1.08 : 1), r, z);
       const spin = new THREE.Group();
       w.add(spin);
-      const tire = new THREE.Mesh(new THREE.CylinderGeometry(r, r, u.lift ? 0.3 : 0.2, 14).rotateZ(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.95 }));
+      const tire = new THREE.Mesh(tireGeo(r, u.lift ? 0.3 : 0.2), TIRE_MAT);
       tire.castShadow = true;
       spin.add(tire);
-      const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.6, r * 0.6, u.lift ? 0.32 : 0.22, 8).rotateZ(Math.PI / 2), u.rims ? M.chrome : new THREE.MeshStandardMaterial({ color: rimCol }));
+      const hub = new THREE.Mesh(shared(`hub:${r}:${!!u.lift}`, () => new THREE.CylinderGeometry(r * 0.52, r * 0.52, u.lift ? 0.24 : 0.16, 14).rotateZ(Math.PI / 2)), u.rims ? M.chrome : HUB_MAT);
       spin.add(hub);
+      const cap = new THREE.Mesh(shared(`cap:${r}`, () => new THREE.SphereGeometry(r * 0.2, 10, 6).scale(0.5, 1, 1)), u.rims ? M.chrome : HUB_MAT);
+      cap.position.x = (x > 0 ? 1 : -1) * (u.lift ? 0.12 : 0.085);
+      spin.add(cap);
+      void rimCol;
       if (u.rims) {
         // spinner blades that keep spinning even when stopped
         const sp = new THREE.Mesh(new THREE.BoxGeometry(0.02, r * 1.1, 0.08), M.chrome);
@@ -218,6 +307,47 @@ export class Cart {
       this.wheels.push({ g: w, spin, front: z > 0 });
     }
     b.position.y = 0;
+  }
+
+  // bolt-ons that make each showroom model look like itself
+  buildModelExtras(chassis) {
+    const m = this.model;
+    if (m === 'classic') return;
+    const parts = [];
+    if (m === 'stretch') {
+      // gold pinstripes, a middle roof post pair, a JUST RETIRED plate and a champagne bucket
+      for (const s of [-1, 1]) {
+        parts.push([rbox(0.02, 0.05, 3.3, 0.01), '#d4af37', mat4(s * 0.6, 0.62, 0.02)]);
+        parts.push([GEO.cyl, '#c9ced1', mat4(s * 0.57, 1.45, -0.2, 0, 0.028, 1.1, 0.028)]);
+      }
+      parts.push([rbox(0.46, 0.16, 0.02, 0.02), '#f4f4f4', mat4(0, 0.58, -1.9)]);
+      parts.push([GEO.cyl, '#c9ced1', mat4(0.36, 1.0, -0.62, 0, 0.1, 0.22, 0.1)]);
+      parts.push([GEO.cyl, '#1f4a2a', mat4(0.36, 1.2, -0.62, 0, 0.035, 0.3, 0.035, 0.2)]);
+    } else if (m === 'buggy') {
+      // roll cage, light bar, snorkel, spare tire
+      for (const s of [-1, 1]) {
+        parts.push([GEO.cyl, '#2a2a2a', mat4(s * 0.55, 1.45, -0.72, 0, 0.035, 1.3, 0.035)]);
+        parts.push([GEO.cyl, '#2a2a2a', mat4(s * 0.55, 1.62, 0.02, 0, 0.03, 1.55, 0.03, Math.PI / 2 - 0.42)]);
+      }
+      parts.push([GEO.cyl, '#2a2a2a', mat4(0, 2.08, -0.72, 0, 0.035, 1.14, 0.035, 0, Math.PI / 2)]);
+      parts.push([rbox(0.9, 0.12, 0.12, 0.03), '#1d1d1d', mat4(0, 2.18, -0.7)]);
+      parts.push([GEO.cyl, '#1d1d1d', mat4(-0.5, 1.2, 0.95, 0, 0.04, 0.9, 0.04)]);
+      parts.push([GEO.torus, '#1c1c1c', mat4(0, 1.0, -1.32, 0, 0.3, 0.3, 0.9)]);
+    } else if (m === 'hearse') {
+      // the long box out back: dark windows, purple curtains, chrome landau bars, a wreath up front
+      parts.push([rbox(1.16, 0.78, 1.25, 0.08), '#141414', mat4(0, 1.05, -1.25)]);
+      parts.push([rbox(1.2, 0.06, 1.3, 0.03), '#141414', mat4(0, 1.46, -1.25)]);
+      for (const s of [-1, 1]) {
+        parts.push([rbox(0.02, 0.4, 0.95, 0.02), '#1a1030', mat4(s * 0.59, 1.1, -1.25)]);
+        parts.push([rbox(0.025, 0.36, 0.3, 0.02), '#5a2a7a', mat4(s * 0.595, 1.1, -0.92)]);
+        parts.push([GEO.torus, '#e8e8e8', mat4(s * 0.6, 1.1, -1.62, Math.PI / 2, 0.14, 0.14, 0.35)]);
+      }
+      parts.push([GEO.torus, '#2f6b4a', mat4(0, 0.85, 1.33, 0, 0.2, 0.2, 0.5)]);
+      for (let i = 0; i < 5; i++) parts.push([GEO.sph, ['#f4f4f4', '#e84a5f', '#f4f4f4', '#f2c94c', '#f4f4f4'][i], mat4(Math.cos(i * 1.25) * 0.2, 0.85 + Math.sin(i * 1.25) * 0.2, 1.36, 0, 0.05, 0.05, 0.05)]);
+    }
+    const mesh = new THREE.Mesh(shared(`extras:${m}`, () => mergeParts(parts)), M.vc);
+    mesh.castShadow = true;
+    chassis.add(mesh);
   }
 
   setPaint(c) {
@@ -241,7 +371,7 @@ export class Cart {
     let steerIn = input.steer || 0;
     if (drunk > 0.05) steerIn += Math.sin(this.t * 1.7) * 0.35 * drunk + Math.sin(this.t * 4.3) * 0.15 * drunk;
     steerIn = clamp(steerIn, -1, 1);
-    const maxSteer = 0.55 - clamp(Math.abs(vf) / 30, 0, 0.25);
+    const maxSteer = 0.55 / (1 + Math.abs(vf) * 0.085);
     this.steerAng = damp(this.steerAng, steerIn * maxSteer, drunk > 0.3 ? 5 : 10, dt);
 
     if (this.grounded && !this.sunk) {
@@ -260,19 +390,25 @@ export class Cart {
       if (!onRoad) vf *= Math.exp(-0.15 * dt);
       const hb = input.handbrake;
       if (hb) vf *= Math.exp(-0.9 * dt);
-      const wheelbase = 1.7;
+      const wheelbase = this.wheelbase;
       let yaw = (vf * Math.tan(this.steerAng)) / wheelbase;
+      yaw = clamp(yaw, -2.3, 2.3);
       if (hb) yaw *= 1.5;
       this.heading = wrapAngle(this.heading + yaw * dt);
-      const grip = hb ? 1.6 : 9;
+      const grip = (hb ? 1.6 : 9) * (input.wet ? 0.6 : 1);
       vl *= Math.exp(-grip * dt);
     } else if (!this.sunk) {
-      this.heading = wrapAngle(this.heading + steerIn * 0.9 * dt);
+      if (input.handbrake) this.spin += steerIn * 9.5 * dt;
+      else this.heading = wrapAngle(this.heading + steerIn * 0.9 * dt);
     }
     if (this.sunk) {
       vf *= Math.exp(-3 * dt);
       vl *= Math.exp(-3 * dt);
     }
+    // how hard the tires are scrubbing (skid marks + squeal): sideways slip, handbrake, hard braking
+    this.skid = this.grounded && !this.sunk
+      ? clamp((Math.abs(vl) - 1.1) / 3, 0, 1) + (input.handbrake && Math.abs(vf) > 3 ? 0.6 : 0) + ((input.throttle || 0) < -0.1 && vf > 8 ? 0.45 : 0)
+      : 0;
 
     const nfx = Math.sin(this.heading), nfz = Math.cos(this.heading);
     this.vx = nfx * vf + nfz * vl;
@@ -318,7 +454,9 @@ export class Cart {
     }
     this._onRamp = rampHeight(this.x, this.z) > 0.05;
     if (!this.grounded) {
-      this.vy -= G * dt;
+      // water drag once you've gone under
+      if (this.sunk) this.vy *= Math.exp(-5 * dt);
+      this.vy -= G * dt * (this.sunk ? 0.15 : 1);
       this.y += this.vy * dt;
       this.airT += dt;
       if (this.y <= ground) {
@@ -328,21 +466,29 @@ export class Cart {
         this.vy = 0;
         this.grounded = true;
         this.lastAir = this.airT;
+        this.spinLanded = this.spin; // 0 for a plain jump, so nothing stale carries into the next landing
+        if (this.spin) {
+          // whatever way the body points is where you're facing now; land crooked and you scrub speed
+          const r = wrapAngle(this.spin);
+          this.heading = wrapAngle(this.heading + r);
+          this.spin = 0;
+          if (Math.abs(r) > 0.8) { this.vx *= 0.45; this.vz *= 0.45; this.suspV -= 3; }
+        }
       }
     }
 
     // water: splashdown
     const wl = waterLevel(this.x, this.z);
     this.inWater = wl !== null && this.y < wl - 0.1;
-    if (this.inWater && !this.sunk && this.grounded) this.sunk = true;
-    if (this.sunk) this.y = Math.max(ground, this.y - dt * 0.6);
+    if (this.inWater && !this.sunk && (this.grounded || this.y < wl - 0.5)) this.sunk = true;
+    if (this.sunk) { this.y = Math.max(ground, this.y - dt * 0.6); this.spin = 0; }
 
     this.syncMesh(dt, vf);
   }
 
   syncMesh(dt, vf = this.forwardSpeed) {
     this.group.position.set(this.x, this.y, this.z);
-    this.group.rotation.y = this.heading;
+    this.group.rotation.y = this.heading + this.spin;
     if (dt > 0) {
       // pitch/roll from terrain under the wheels
       if (this.grounded) {
@@ -397,16 +543,78 @@ export class Cart {
     return { x: this.x + lx * c + lz * s, z: this.z - lx * s + lz * c, y: this.y + this.lift + 0.02 };
   }
 
+  // Mobility scooter: red plastic shroud, tiller with a wire basket, padded captain's seat,
+  // four little wheels, and a tall orange safety flag.
+  buildScooter() {
+    this.lift = 0;
+    this.wheelR = 0.13;
+    const b = this.body;
+    const chassis = new THREE.Group();
+    b.add(chassis);
+    this.chassis = chassis;
+    const paint = new THREE.Mesh(shared('scooter:paint', () => mergeParts([
+      [rbox(0.62, 0.12, 1.3, 0.05), '#fff', mat4(0, 0.2, 0)], // deck
+      [rbox(0.58, 0.3, 0.42, 0.12), '#fff', mat4(0, 0.36, 0.5, 0, 1, 1, 1, 0.2)], // front shroud
+      [rbox(0.6, 0.22, 0.4, 0.1), '#fff', mat4(0, 0.32, -0.46)], // rear cover
+    ])), this.paintMat);
+    paint.castShadow = true;
+    chassis.add(paint);
+    const trim = new THREE.Mesh(shared('scooter:trim', () => mergeParts([
+      [rbox(0.64, 0.05, 1.34, 0.02), '#222', mat4(0, 0.14, 0)], // bumper skirt
+      [rbox(0.46, 0.012, 0.6, 0.005), '#333', mat4(0, 0.265, 0.12)], // rubber floor
+      [GEO.cyl, '#555', mat4(0, 0.5, -0.28, 0, 0.04, 0.3, 0.04)], // seat post
+      [rbox(0.48, 0.1, 0.44, 0.05), '#1c1c1c', mat4(0, 0.68, -0.28)], // seat
+      [rbox(0.46, 0.4, 0.09, 0.045), '#1c1c1c', mat4(0, 0.92, -0.49, 0, 1, 1, 1, -0.15)], // backrest
+      [SPOKE, '#1c1c1c', mat4(0.26, 0.8, -0.26, 0, 0.05, 0.04, 0.34)], // armrests
+      [SPOKE, '#1c1c1c', mat4(-0.26, 0.8, -0.26, 0, 0.05, 0.04, 0.34)],
+      [GEO.cyl, '#666', mat4(0, 0.72, 0.62, 0, 0.035, 0.75, 0.035, -0.35)], // tiller
+      [SPOKE, '#222', mat4(0, 1.05, 0.5, 0, 0.5, 0.035, 0.035)], // handlebar
+      // wire basket: open top, thin walls with a darker rim
+      [SPOKE, '#8a8f94', mat4(0, 0.93, 0.72, 0, 0.36, 0.015, 0.24)],
+      [SPOKE, '#9aa0a6', mat4(0.18, 1.02, 0.72, 0, 0.012, 0.18, 0.24)],
+      [SPOKE, '#9aa0a6', mat4(-0.18, 1.02, 0.72, 0, 0.012, 0.18, 0.24)],
+      [SPOKE, '#9aa0a6', mat4(0, 1.02, 0.84, 0, 0.36, 0.18, 0.012)],
+      [SPOKE, '#9aa0a6', mat4(0, 1.02, 0.6, 0, 0.36, 0.18, 0.012)],
+      [SPOKE, '#5f6468', mat4(0, 1.11, 0.84, 0, 0.37, 0.02, 0.02)],
+      [SPOKE, '#5f6468', mat4(0, 1.11, 0.6, 0, 0.37, 0.02, 0.02)],
+      [SPOKE, '#e8c07a', mat4(0.05, 1.0, 0.72, 0.4, 0.14, 0.12, 0.1)], // a loaf of bread, obviously
+      [GEO.cyl, '#d8d8d8', mat4(0.22, 1.35, -0.55, 0, 0.008, 1.9, 0.008)], // safety flag whip
+      [GEO.box, '#ff6b1a', mat4(0.22, 2.2, -0.62, 0, 0.01, 0.2, 0.26)], // flag
+      [GEO.cyl, '#d8dde0', mat4(0, 0.45, 0.73, 0, 0.06, 0.04, 0.06, Math.PI / 2 - 0.2)], // headlight bezel
+    ])), M.vc);
+    trim.castShadow = true;
+    chassis.add(trim);
+    this.headMat = new THREE.MeshStandardMaterial({ color: 0xbfc8cf, roughness: 0.2, metalness: 0.3, emissive: 0xfff2c0, emissiveIntensity: 0 });
+    const h = new THREE.Mesh(shared('scooter:head', () => new THREE.CircleGeometry(0.045, 10)), this.headMat);
+    h.position.set(0, 0.46, 0.755);
+    h.rotation.x = -0.2;
+    chassis.add(h);
+    const r = this.wheelR;
+    for (const [x, z] of [[0.22, 0.48], [-0.22, 0.48], [0.25, -0.48], [-0.25, -0.48]]) {
+      const w = new THREE.Group();
+      w.position.set(x, r, z);
+      const spin = new THREE.Group();
+      w.add(spin);
+      const tire = new THREE.Mesh(tireGeo(r, 0.08), TIRE_MAT);
+      spin.add(tire);
+      const hub = new THREE.Mesh(shared(`hub:${r}:false`, () => new THREE.CylinderGeometry(r * 0.52, r * 0.52, 0.09, 14).rotateZ(Math.PI / 2)), HUB_MAT);
+      spin.add(hub);
+      b.add(w);
+      this.wheels.push({ g: w, spin, front: z > 0 });
+    }
+  }
+
   exitPoint(side = 1) {
     const s = Math.sin(this.heading), c = Math.cos(this.heading);
-    const lx = 1.5 * side;
+    const lx = (this.kind === 'scooter' ? 0.9 : 1.5) * side;
     return { x: this.x + lx * c, z: this.z - lx * s };
   }
 }
 
 export function seatCharacter(ch, cart, side = 1) {
   cart.chassis.add(ch.root);
-  ch.root.position.set(0.28 * side, 0.9 - 0.85 + 0.0, -0.3);
+  if (cart.kind === 'scooter') ch.root.position.set(0, -0.2, -0.24); // one seat, dead center
+  else ch.root.position.set(0.28 * side, 0.9 - 0.85 + 0.0, -0.3 * (cart.stretch || 1));
   ch.root.rotation.set(0, 0, 0);
   ch.mode = 'sit';
 }

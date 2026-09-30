@@ -2,6 +2,7 @@
 // merged meshes keyed by material, with per-vertex color and an optional wind weight.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { M, vcDepth } from './materials.js';
 
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -74,6 +75,7 @@ export class Batcher {
         merged.computeBoundingSphere();
         const mesh = new THREE.Mesh(merged, mat);
         mesh.castShadow = castShadow && !mat.userData.noShadow;
+        if (mat === M.vc) mesh.customDepthMaterial = vcDepth;
         mesh.receiveShadow = receiveShadow;
         mesh.matrixAutoUpdate = false;
         parent.add(mesh);

@@ -24,6 +24,7 @@ STREETS.forEach((s, i) => {
 });
 node('P7', 265, 60);
 node('GATE', 290, 60);
+node('BCH', 336, 60);
 node('F0', -265, -45);
 node('F1', -200, -45);
 node('F3', -40, -45);
@@ -59,6 +60,7 @@ edge('P3', 'F3', 'road', 'Clubhouse Rd');
 edge('P5', 'F5', 'road', 'Heron Ct');
 edge('P7', 'F7', 'road', 'Commerce St');
 edge('P0', 'F0', 'road', 'Service Rd');
+edge('GATE', 'BCH', 'blvd', 'Beach Rd');
 // Fairway Dr + cart paths
 ['F0', 'F1', 'F3', 'F5', 'F7'].reduce((a, b) => (edge(a, b, 'road', 'Fairway Dr'), b));
 edge('F0', 'M0', 'path', 'Cart Path');
@@ -115,6 +117,12 @@ export const RAMPS = [
   { x: -60, z: -110, a: Math.PI, len: 8, h: 2.2, w: 5, name: 'Grandkids Ramp' },
   { x: -236, z: -34, a: Math.PI / 2, len: 8, h: 2.0, w: 5, name: "Sal's Test Ramp" },
   { x: 176, z: -150, a: -Math.PI / 2 + 0.3, len: 9, h: 2.6, w: 5, name: 'Gator Jump' },
+  // stunt-jump ramps around town (see game/stunts.js)
+  { x: 64, z: 18, a: Math.PI, len: 8, h: 2.2, w: 5, name: 'Pool Party Plunge' },
+  { x: -120, z: 10, a: Math.PI / 2, len: 10, h: 3.6, w: 5, name: 'Duck Pond Clearance' },
+  { x: 0, z: 44, a: 0, len: 8, h: 2.4, w: 5, name: 'Rush Hour Leap' },
+  { x: 352, z: -110, a: 0, len: 9, h: 2.4, w: 5, name: 'Porta-Potty Leap' },
+  { x: 150, z: 14, a: Math.PI / 2, len: 8, h: 2.2, w: 5, name: 'Dumpster Dive' },
 ];
 
 // ---------------- buildings / POIs ----------------
@@ -139,6 +147,10 @@ export const BUILDINGS = {
   parking: { x: -21, z: 32, sx: 28, sz: 38 },
   strip: { x: 197, z: 50, sx: 118, sz: 10 },
 };
+
+// Shuffleboard court markings, in meters measured from a court's end (courts run along x).
+// Painted by world.js and scored by game/shuffleboard.js, so both always agree.
+export const SHUFFLE_COURT = { len: 26, w: 2.4, play: 0.9, base: 1.6, apex: 5.2, half: 0.86, off: 0.55, dead: 7.4 };
 
 // Houses: 6 per side of each residential street.
 export const HOUSE_Z = [88, 112, 136, 196, 220, 244];

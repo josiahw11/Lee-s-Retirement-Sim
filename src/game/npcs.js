@@ -1,9 +1,10 @@
 // NPC entity + behavior. Behaviors are simple state machines tuned for slapstick.
 import { Character, randomLook, randomName } from '../entities/character.js';
 import { seatCharacter } from '../entities/cart.js';
-import { heightAt, waterLevel } from '../world/terrain.js';
+import { heightAt, waterLevel, POOL } from '../world/terrain.js';
 import { clamp, damp, dampAngle, rand, pick, chance, wrapAngle } from '../core/utils.js';
 import { audio } from '../core/audio.js';
+import { routineZone, ROUTINE_ZONES } from './life.js';
 
 let NEXT_ID = 1;
 
@@ -105,6 +106,10 @@ export class NPC {
 
   // Take a hit from something at (fx,fz). Returns true if this knocked them out.
   takeHit(dmg, fx, fz, knock, attacker = null) {
+    if (this.data.aqua) { // the pool is a no-horseplay zone, and Chad WILL stop the music
+      if (Math.random() < 0.5) this.say(pick(['NO HORSEPLAY!', 'Chad! He splashed me!', 'Not during Aqua Jazz!']), 2);
+      return false;
+    }
     if (this.state === 'ko' && !this.air) {
       // hitting a downed geezer: extra shame, no extra damage
       if (attacker === this.game.player) this.game.crime(this.x, this.z, 0.2, "Kicking a man while he's down", 15);
@@ -114,11 +119,12 @@ export class NPC {
     const d = Math.hypot(dx, dz) || 1;
     this.vx += (dx / d) * knock;
     this.vz += (dz / d) * knock;
-    if (knock > 12) {
+    this.hp -= dmg;
+    // big swings launch people who are already hurting (landing = nap time). Bosses keep their feet.
+    if (knock > 12 && !this.data.boss && this.hp < this.maxHp * 0.5) {
       this.vy = 4 + knock * 0.25;
       this.air = true;
     }
-    this.hp -= dmg;
     this.recentlyHit = 1.5;
     this.char.play('flinch', 0.4);
     this.windup = 0;
@@ -135,6 +141,12 @@ export class NPC {
   }
 
   provoke(attacker) {
+    if (this.role === 'streaker') {
+      this.state = 'flee';
+      this.fleeFrom = attacker;
+      this.fleeT = 999;
+      return;
+    }
     if (this.role === 'shopkeeper' || this.role === 'lady' || this.female) {
       if (this.role !== 'gang') {
         this.state = 'flee';
@@ -181,6 +193,49 @@ export class NPC {
   update(dt) {
     const g = this.game;
     const p = g.player;
+    if (this.role === 'fisher') this.char.poseRod = this.state === 'fish';
+    if (this.data.riding) { // in the back of Lee's shuttle cart
+      const c = this.data.riding;
+      this.x = c.x; this.z = c.z; this.y = c.y;
+      this.char.mode = 'sit';
+      if (this.visible) this.char.update(dt);
+      return;
+    }
+    if (this.data.hail && this.state !== 'ko' && !this.air) { // flagging down the shuttle
+      const dx = p.x - this.x, dz = p.z - this.z;
+      this.heading = Math.atan2(dx, dz);
+      this.char.root.position.set(this.x, heightAt(this.x, this.z), this.z);
+      this.char.root.rotation.y = this.heading;
+      this.char.mode = 'idle';
+      this.char.speed = 0;
+      this.data.waveT = (this.data.waveT || 0) - dt;
+      if (this.data.waveT <= 0 && dx * dx + dz * dz < 3600) { this.data.waveT = 1.5; this.char.play('cheer', 1.2); }
+      if (this.visible) this.char.update(dt);
+      return;
+    }
+    if (this.data.stand) { // posed somewhere special (a podium) for a few seconds
+      const st = this.data.stand;
+      st.t -= dt;
+      if (st.t > 0) {
+        this.char.mode = 'idle';
+        this.char.speed = 0;
+        this.char.root.position.set(this.x, st.y, this.z);
+        this.char.root.rotation.y = st.ry;
+        if (this.visible) this.char.update(dt);
+        return;
+      }
+      delete this.data.stand;
+    }
+    if (this.data.aqua) {
+      // water aerobics: chest-deep in the pool, facing the instructor; the class drives the poses
+      this.char.mode = 'idle';
+      this.char.speed = 0;
+      this.y = POOL.y - 1.15;
+      this.char.root.position.set(this.x, this.y, this.z);
+      this.char.root.rotation.y = this.data.face || 0;
+      if (this.visible) this.char.update(dt);
+      return;
+    }
     if (this.cart) {
       this.updateDriving(dt);
       this.char.speed = 0;
@@ -243,7 +298,9 @@ export class NPC {
           if (chance(0.25) && this.distTo(p.x, p.z) < 25) this.say(pick(this.female ? IDLE_BARKS_F : IDLE_BARKS_M), 3.5);
         } else {
           moveX = dx / d; moveZ = dz / d;
-          spd = this.walkSpeed;
+          const raining = g.weather.intensity > 0.5;
+          spd = this.walkSpeed * (raining ? 1.6 : 1);
+          if (raining && chance(dt * 0.05) && this.distTo(p.x, p.z) < 20) this.say(pick(this.female ? ['My PERM!', 'I just had my hair SET!', 'Somebody get me a rain bonnet!'] : ['My hip can feel this rain.', 'Florida. Every. Damn. Day.', 'Where did I park?!']), 2.5);
         }
       }
       // react to the player driving like a maniac close by
@@ -287,7 +344,7 @@ export class NPC {
             // strike!
             const nd = Math.hypot(tx - this.x, tz - this.z);
             if (nd < (this.weapon ? 2.1 : 1.6)) g.npcHits(this, t);
-            this.attackCd = rand(0.7, 1.2);
+            this.attackCd = this.data.boss ? rand(0.45, 0.75) : rand(0.7, 1.2);
           }
         } else if (d > (this.weapon ? 1.8 : 1.3)) {
           moveX = dx / d; moveZ = dz / d;
@@ -341,6 +398,16 @@ export class NPC {
         this.char.play('swing', 0.9);
         this.data.shotT = 0.45;
       }
+    } else if (st === 'lounge' || st === 'fish') {
+      // sunbathing / fishing: stay put
+      this.char.poseRod = st === 'fish';
+      if (this.data.face !== undefined) this.heading = dampAngle(this.heading, this.data.face, 3, dt);
+    } else if (st === 'chat') {
+      const o = this.data.chatWith;
+      if (o) this.faceTo(o.x, o.z, dt, 5);
+    } else if (st === 'party') {
+      // just vibing; dancing is triggered by the party
+      if (this.distTo(p.x, p.z) < 6) this.faceTo(p.x, p.z, dt, 2);
     } else if (st === 'idle') {
       this.wait -= dt;
       if (this.wait <= 0) this.resumeBase();
@@ -405,12 +472,13 @@ export class NPC {
     } else {
       const wl = waterLevel(this.x, this.z);
       this.y = wl !== null ? Math.max(ground, wl - 1.25) : ground;
-      this.char.mode = this.state === 'ko' ? 'ko' : wl !== null && wl - ground > 0.9 ? 'swim' : spd > 0.1 ? 'walk' : 'idle';
-      if (wl !== null && this.state === 'ko' && !this.data.splashed) {
+      this.char.mode = this.state === 'ko' ? 'ko' : this.state === 'lounge' ? 'lounge' : wl !== null && wl - ground > 0.9 ? 'swim' : spd > 0.1 ? 'walk' : 'idle';
+      const wet = wl !== null && wl - ground > 0.3; // the pier and the Lucky Lady's deck sit above the sea
+      if (wet && this.state === 'ko' && !this.data.splashed) {
         this.data.splashed = true;
         g.onSplashdown(this);
       }
-      if (wl === null) this.data.splashed = false;
+      if (!wet) this.data.splashed = false;
     }
     this.char.speed = spd;
 
@@ -421,12 +489,33 @@ export class NPC {
       if (this.state === 'wander' && this.distTo(p.x, p.z) < 14 && chance(0.4) && !this.data.quiet) this.say(pick(this.female ? IDLE_BARKS_F : IDLE_BARKS_M), 3.5);
     }
 
+    // heads turn toward the player (or whoever they're chatting with)
+    const lookable = this.state === 'wander' || this.state === 'static' || this.state === 'idle' || this.state === 'party' || this.state === 'golf' || this.state === 'lounge';
+    if (this.state === 'chat' && this.data.chatWith) this.char.lookAt = this.data.chatWith;
+    else this.char.lookAt = lookable && this.distTo(p.x, p.z) < 9 ? p : null;
+
     this.sync();
     if (this.visible) this.char.update(dt);
   }
 
   pickTarget() {
     const w = this.game.world;
+    // daily routines: evenings at the pool/tiki bar, late nights at home
+    if (this.role === 'resident') {
+      const rz = routineZone(this.game, this);
+      if (rz === 'home') {
+        this.target = { x: this.homePt.x + rand(-3, 3), z: this.homePt.z + rand(-3, 3) };
+        this.stuckT = 0;
+        this.lastPos = { x: this.x, z: this.z };
+        return;
+      }
+      if (rz && Math.hypot(this.x - 40, this.z) < 180) {
+        this.target = w.randomZonePoint(ROUTINE_ZONES[rz]);
+        this.stuckT = 0;
+        this.lastPos = { x: this.x, z: this.z };
+        return;
+      }
+    }
     if (this.homePt && chance(0.5)) {
       this.target = { x: this.homePt.x + rand(-6, 6), z: this.homePt.z + rand(-6, 6) };
     } else if (this.zone) {
@@ -442,7 +531,7 @@ export class NPC {
     const g = this.game;
     const c = this.cart;
     const d = this.driver;
-    let chase = null;
+    let chase = this.data.chase || null;
     if (this.role === 'security' && g.heat.level > 0 && !g.player.ko) {
       c.sirenOn = true;
       const p = g.player;
@@ -475,7 +564,7 @@ export class NPC {
     for (const n of g.npcs) if (!n.cart && n.state !== 'ko' && Math.abs(n.x - c.x) < 8 && Math.abs(n.z - c.z) < 8) obstacles.push(n);
     const inp = d.control(dt, obstacles, chase);
     if (d.honkNow && !chase) {
-      if (Math.hypot(g.player.x - c.x, g.player.z - c.z) < 40) audio.play('horn', { vol: 0.5 });
+      if (Math.hypot(g.player.x - c.x, g.player.z - c.z) < 40) audio.play(c.kind === 'scooter' ? 'meep' : 'horn', { vol: 0.5 });
       if (chance(0.5)) this.say(pick(['MOVE IT, GRANDPA!', 'Some of us have DIALYSIS at 3!', 'Get outta the road!']), 2);
     }
     c.update(dt, inp, g.world.col);

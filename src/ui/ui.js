@@ -80,7 +80,16 @@ export class UI {
     this.el['hud-inv'].innerHTML = `<span>🍺 ${inv.beer}</span><span>💊 ${inv.pills}</span><span>🍵 ${inv.tea}</span><span>⛳ ${inv.balls}/${cap}</span><span>🍷 ${inv.wine}</span><span>💐 ${inv.flowers}</span>`;
     // objective
     const obj = g.quests.current();
-    if (obj) {
+    if (g.race && g.race.running) {
+      const h = g.race.hud();
+      this.el['hud-obj'].classList.remove('hidden');
+      this.el['obj-text'].textContent = h.title;
+      this.el['obj-dist'].textContent = h.sub;
+    } else if (g.waypoint) {
+      this.el['hud-obj'].classList.remove('hidden');
+      this.el['obj-text'].textContent = `📍 ${g.waypoint.label}`;
+      this.el['obj-dist'].textContent = `${Math.round(Math.hypot(g.waypoint.x - p.x, g.waypoint.z - p.z))} m`;
+    } else if (obj) {
       this.el['hud-obj'].classList.remove('hidden');
       this.el['obj-text'].textContent = obj.title;
       const t = obj.target ? obj.target(g) : null;
@@ -146,6 +155,7 @@ export class UI {
     el.textContent = text;
     this.el['world-ui'].appendChild(el);
     this.bubbles.push({ ent, el, t: dur });
+    if (this.onBubble) this.onBubble(ent, text);
   }
 
   float(x, y, z, text, color = '#fff', dur = 1.4) {
@@ -280,9 +290,48 @@ export class UI {
       b.innerHTML = `<span><span class="num">${i + 1}.</span>${c.text}</span>${chk}`;
       b.disabled = !!c.disabled;
       b.onclick = () => this.choose(i);
+      b.onmouseenter = () => this.setSel(i);
       box.appendChild(b);
     });
     this._choices = choices;
+    this.setSel(Math.max(0, choices.findIndex((c) => !c.disabled)));
+  }
+
+  // keyboard / gamepad highlight for dialogue choices
+  setSel(i) {
+    const els = this.el['dlg-choices'].children;
+    const n = els.length;
+    if (!n) return;
+    this.sel = ((i % n) + n) % n;
+    for (let k = 0; k < n; k++) els[k].classList.toggle('sel', k === this.sel);
+  }
+
+  moveSel(d) {
+    if (!this._choices) return;
+    let i = this.sel ?? 0;
+    for (let k = 0; k < this._choices.length; k++) {
+      i = (i + d + this._choices.length) % this._choices.length;
+      if (!this._choices[i].disabled) break;
+    }
+    this.setSel(i);
+  }
+
+  // shop highlight
+  moveShopSel(d) {
+    const items = [...this.el['shop-items'].children];
+    if (!items.length) return;
+    this.shopSel = (((this.shopSel ?? -1) + d) % items.length + items.length) % items.length;
+    items.forEach((el, k) => el.classList.toggle('sel', k === this.shopSel));
+    items[this.shopSel].scrollIntoView({ block: 'nearest' });
+  }
+
+  buyShopSel() {
+    const items = [...this.el['shop-items'].children];
+    if (this.shopSel == null || !items[this.shopSel]) return;
+    const keep = this.shopSel;
+    items[this.shopSel].click();
+    this.shopSel = keep - 1;
+    this.moveShopSel(1);
   }
 
   choose(i) {
