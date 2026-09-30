@@ -27,6 +27,8 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 | Esc | Pause / settings | V | Photo mode (free camera, no HUD) |
 | Z / C | Rotate camera | Scroll | Zoom |
 
+**Touchscreen (phones & tablets, landscape):** controls appear on first touch: a floating stick on the left half walks and drives, dragging the right half looks around, and thumb buttons cover USE, swing, hop/drift, beer, sprint, horn, radio, clubs, pocket sand and pee, plus pause / phone / map up top.
+
 **Gamepad:** left stick move/steer • right stick look • RT/LT gas & brake • A interact • X swing • Y drink • B hop/drift • LB switch club • RB pocket sand • L3 sprint/nitrous • R3 horn • D-pad: radio / pee / map • Start pause • Back phone. Menus: D-pad or arrow keys + A/Enter.
 
 **Reviewer shortcuts:** `]` = +$1,000 • `[` = +1 to all stats • `` ` `` (backtick) = skip 3 hours

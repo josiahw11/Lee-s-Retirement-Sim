@@ -11,6 +11,7 @@ import { World } from './world/world.js';
 import { updateBeach } from './world/beach.js';
 import { UI } from './ui/ui.js';
 import { Minimap } from './ui/minimap.js';
+import { TouchControls } from './ui/touch.js';
 import { Game, defaultState } from './game/game.js';
 
 const $ = (id) => document.getElementById(id);
@@ -26,6 +27,7 @@ const CONTROLS = [
   ['🛺 Driving', [['W / S', 'Gas / brake'], ['A / D', 'Steer'], ['Space', 'Handbrake drift'], ['Shift', 'Nitrous (Sal mod)'], ['H', 'Horn'], ['R', 'Radio station'], ['E', 'Get out']]],
   ['🎥 Camera', [['Mouse', 'Look (click game to lock)'], ['Drag', 'Look (any browser)'], ['Z / C', 'Rotate camera'], ['Scroll', 'Zoom in / out'], ['V', 'Photo mode']]],
   ['📱 Menus', [['Tab', 'Phone: stats, bag, romance'], ['M', 'Map'], ['Esc', 'Pause / settings'], ['1-9 · Enter', 'Pick dialogue choices (arrows move)']]],
+  ['👆 Touchscreen', [['Left thumb', 'Walk / drive (floating stick)'], ['Right drag', 'Look around'], ['USE · 👊 · ⤴', 'Interact · swing · hop/drift'], ['🍺 · 💨', 'Drink · sprint/nitrous'], ['⏸ 📱 🗺️', 'Pause · phone · map']]],
   ['🧪 Demo keys', [[']', '+$1,000'], ['[', '+1 all stats'], ['`', 'Skip 3 hours']]],
 ];
 for (const id of ['controls-grid', 'controls-grid2']) {
@@ -62,9 +64,10 @@ async function boot() {
   ui.camera = camera;
   const minimap = new Minimap($('minimap'), $('bigmap-canvas'));
   const input = new Input(canvas);
+  const touch = new TouchControls(input);
   const camRig = new CameraRig(camera);
   input.onLockFailed = () => {
-    if (!input._lookHinted) {
+    if (!input._lookHinted && !input.touchOn) {
       input._lookHinted = true;
       ui.hint('🖱️ This browser blocks mouse capture — CLICK + DRAG to look around • quick click to swing • Z / C rotate • Scroll to zoom', 9);
     }
@@ -268,6 +271,7 @@ async function boot() {
       dt *= 0.3;
     }
     input.enabled = game.running && !ui.modal && !paused && !game.cut;
+    touch.update(input.enabled, game.running);
 
     // global keys
     if (game.running) {

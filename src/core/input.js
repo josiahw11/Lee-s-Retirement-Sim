@@ -13,6 +13,9 @@ export class Input {
     this.locked = false;
     this.enabled = true; // false while menus/dialogue own the keyboard
     this.lastMouseMove = 0;
+    this.touch = null; // joystick vector {x, y} while a thumb is on it
+    this.touchLook = false;
+    this.touchOn = false;
 
     window.addEventListener('keydown', (e) => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
@@ -61,13 +64,13 @@ export class Input {
     });
   }
 
-  // true when mouse movement should steer the camera
+  // true when mouse (or touch-drag) movement should steer the camera
   get looking() {
-    return this.locked || this.drag.down;
+    return this.locked || this.drag.down || this.touchLook;
   }
 
   requestLock() {
-    if (this.lockFailed) return;
+    if (this.lockFailed || this.touchOn) return;
     if (!this.locked && this.canvas.requestPointerLock) {
       try {
         const p = this.canvas.requestPointerLock();
@@ -98,6 +101,12 @@ export class Input {
       if (pos.includes('KeyW')) s = Math.abs(this.pad.trig) > Math.abs(-a[1]) ? this.pad.trig : -a[1];
       else if (pos.includes('KeyD')) s = a[0];
       else if (pos.includes('KeyA')) s = -a[0];
+      if (Math.abs(s) > Math.abs(v)) v = s;
+    }
+    // on-screen joystick (see ui/touch.js)
+    if (this.enabled && this.touch) {
+      const t = this.touch;
+      const s = pos.includes('KeyW') ? -t.y : pos.includes('KeyD') ? t.x : pos.includes('KeyA') ? -t.x : 0;
       if (Math.abs(s) > Math.abs(v)) v = s;
     }
     return Math.max(-1, Math.min(1, v));

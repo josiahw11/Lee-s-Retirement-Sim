@@ -2029,7 +2029,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     // interaction prompt
     if (!modal && !this.cut) {
       const it = this.findInteraction();
-      this.ui.prompt(it ? `<kbd>E</kbd>${it.label}` : null);
+      this.ui.prompt(it ? `<kbd>${this.input.touchOn ? 'USE' : 'E'}</kbd>${it.label}` : null);
     } else this.ui.prompt(null);
 
     // fountains
