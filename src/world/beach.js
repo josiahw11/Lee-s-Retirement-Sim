@@ -161,19 +161,91 @@ export function buildBeach(world, GEO, heightAt) {
   box(p.x0 - 1, 0, p.z + p.w / 2 + 1, 0.1, 2, 0.1, '#555');
 
   // ---- The Rusty Pelican beach bar (faces the ocean)
+  // An open-air tiki bar: kitchen shack at the back, thatched roof on bamboo posts, bar facing the surf.
   const br = BEACH.bar;
-  box(br.x, 0, br.z, 12, 3.2, 9, '#c9955f');
-  b.add(M.vc, GEO.pyr, '#c9a45a', mat4(br.x, 4.3, br.z, 0, 15, 2.4, 12), (x, y) => Math.max(0, -y) * 0.04);
-  box(br.x + 6.6, 0, br.z, 1.2, 1.1, 7, '#8a5a3b');
-  for (let i = 0; i < 4; i++) b.add(M.vc, GEO.cyl, '#6d5a48', mat4(br.x + 8, 0.4, br.z - 3 + i * 2, 0, 0.25, 0.08, 0.25));
-  col.addBoxC(br.x, br.z, 12, 9, 5, 'building');
-  world.addSign('THE RUSTY PELICAN', { bg: '#3a2a1a', fg: '#ffd166', font: 'bold 70px "Comic Sans MS", cursive', sub: 'COLD BEER • BUSHWACKERS • BAD DECISIONS', subFont: 'bold 24px sans-serif', emissive: 0.45, w: 1024, h: 200 }, br.x + 6.05, 3.4, br.z, Math.PI / 2, 6, 1.2);
-  world.poi('pelican', br.x + 8.5, br.z, 'The Rusty Pelican', 3.4);
+  const bx0 = br.x - 6, bx1 = br.x + 6.2, bz0 = br.z - 4.8, bz1 = br.z + 4.8;
+  // kitchen shack (weathered planks)
+  b.add(M.vc, GEO.box, '#a67c52', mat4(bx0 + 2.5, 1.5, br.z, 0, 5, 3, 9.2));
+  for (let z = bz0 + 0.3; z < bz1; z += 0.45) b.add(M.vc, GEO.box, '#7d5a3a', mat4(bx0 + 5.02, 1.5, z, 0, 0.02, 3, 0.05));
+  b.add(M.vc, GEO.box, '#2a1d12', mat4(bx0 + 5.03, 1.2, br.z + 2.6, 0, 0.02, 2.2, 1.1)); // kitchen door
+  b.add(M.vc, GEO.box, '#fff', mat4(bx0 + 5.03, 1.9, br.z - 1.5, 0, 0.02, 0.9, 2.2)); // order window
+  // bamboo posts
+  const bamboo = (x, z, h) => {
+    b.add(M.vc, GEO.cyl, '#c8a864', mat4(x, h / 2, z, 0, 0.13, h, 0.13));
+    for (let y = 0.5; y < h; y += 0.6) b.add(M.vc, GEO.cyl, '#8a6f3a', mat4(x, y, z, 0, 0.145, 0.05, 0.145));
+    col.addCircle(x, z, 0.2, 4, 'post');
+  };
+  for (const x of [br.x - 0.5, br.x + 3, br.x + 5.9]) for (const z of [bz0 + 0.1, bz1 - 0.1]) bamboo(x, z, 3.3);
+  bamboo(br.x + 5.9, br.z, 3.3);
+  // thatched hip roof with a shaggy straw fringe
+  const rf = world.roofGeo(bx1 - bx0 + 1.6, bz1 - bz0 + 1.6, 2.8);
+  b.add(M.vc, rf.geo, '#c9a45a', mat4((bx0 + bx1) / 2, 3.3, br.z, rf.ry), (x, y) => Math.max(0, 1.5 - y) * 0.03);
+  const fringe = (x0, z0, x1, z1) => {
+    const len = Math.hypot(x1 - x0, z1 - z0), n = Math.round(len / 0.22);
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, l = 0.45 + ((i * 7) % 5) * 0.06;
+      b.add(M.vc, GEO.cone, i % 3 ? '#b8923f' : '#d9b56a', mat4(x0 + (x1 - x0) * t, 3.3 - l / 2, z0 + (z1 - z0) * t, 0, 0.13, l, 0.13, Math.PI), 0.2);
+    }
+  };
+  const ex0 = bx0 - 0.8, ex1 = bx1 + 0.8, ez0 = bz0 - 0.8, ez1 = bz1 + 0.8;
+  fringe(ex0, ez0, ex1, ez0); fringe(ex1, ez0, ex1, ez1); fringe(ex1, ez1, ex0, ez1); fringe(ex0, ez1, ex0, ez0);
+  // the rusty pelican himself, on the ridge
+  const px = (bx0 + bx1) / 2, py = 6.2;
+  b.add(M.vc, GEO.sph, '#9a5a2a', mat4(px, py, br.z, 0, 0.9, 0.6, 0.55));
+  b.add(M.vc, GEO.cyl, '#9a5a2a', mat4(px + 0.6, py + 0.6, br.z, 0, 0.14, 0.7, 0.14, 0, -0.5));
+  b.add(M.vc, GEO.sph, '#9a5a2a', mat4(px + 0.85, py + 1.05, br.z, 0, 0.22, 0.2, 0.2));
+  b.add(M.vc, GEO.cone, '#d98a2a', mat4(px + 1.4, py + 0.95, br.z, 0, 0.1, 0.9, 0.1, 0, -Math.PI / 2 - 0.25));
+  b.add(M.vc, GEO.sph, '#d98a2a', mat4(px + 1.25, py + 0.78, br.z, 0, 0.35, 0.14, 0.12)); // pouch
+  b.add(M.vc, GEO.sph, '#111', mat4(px + 0.97, py + 1.12, br.z + 0.14, 0, 0.035, 0.035, 0.035));
+  b.add(M.vc, GEO.box, '#7a4420', mat4(px - 0.1, py + 0.1, br.z + 0.55, 0, 1.0, 0.08, 0.5, 0.3)); // wings
+  b.add(M.vc, GEO.box, '#7a4420', mat4(px - 0.1, py + 0.1, br.z - 0.55, 0, 1.0, 0.08, 0.5, -0.3));
+  // bar counter facing the surf, stools, bottle shelf
+  b.add(M.vc, GEO.box, '#6b3a1f', mat4(br.x + 4.6, 0.55, br.z, 0, 0.7, 1.1, 7.2));
+  b.add(M.vc, GEO.box, '#3a2412', mat4(br.x + 4.6, 1.13, br.z, 0, 1.0, 0.08, 7.5));
+  for (let z = br.z - 3.4; z <= br.z + 3.4; z += 0.5) b.add(M.vc, GEO.box, '#c8a864', mat4(br.x + 4.96, 0.55, z, 0, 0.02, 1.05, 0.12)); // bamboo facing
+  for (let i = 0; i < 6; i++) {
+    const z = br.z - 3 + i * 1.2;
+    b.add(M.vc, GEO.cyl, '#3a2412', mat4(br.x + 5.6, 0.4, z, 0, 0.04, 0.8, 0.04));
+    b.add(M.vc, GEO.cyl, i % 2 ? '#e84a5f' : '#1f8a8a', mat4(br.x + 5.6, 0.82, z, 0, 0.22, 0.08, 0.22));
+  }
+  col.addBox(br.x + 4.2, br.z - 3.7, br.x + 5, br.z + 3.7, 1.3, 'bar');
+  b.add(M.vc, GEO.box, '#5a3a22', mat4(bx0 + 5.3, 1.6, br.z, 0, 0.3, 0.06, 6));
+  for (let i = 0; i < 14; i++) b.add(M.vc, GEO.cyl, ['#2e7d4f', '#8a4a1f', '#d9a520', '#b8323a', '#e8e0d0'][i % 5], mat4(bx0 + 5.3, 1.8, br.z - 2.8 + i * 0.42, 0, 0.05, 0.32, 0.05));
+  col.addBox(bx0, bz0, bx0 + 5, bz1, 4, 'building');
+  // lanterns under the eaves, tiki torches out front, a surfboard
+  for (let i = 0; i < 6; i++) {
+    const z = bz0 + 0.8 + i * ((bz1 - bz0 - 1.6) / 5);
+    b.add(M.vc, GEO.cyl, '#333', mat4(br.x + 5.2, 2.95, z, 0, 0.01, 0.5, 0.01));
+    b.add(M.lamp, GEO.sph, '#ffcf6b', mat4(br.x + 5.2, 2.6, z, 0, 0.16, 0.2, 0.16));
+  }
+  for (const z of [bz0 - 1.2, bz1 + 1.2]) {
+    b.add(M.vc, GEO.cyl, '#6b4a2a', mat4(br.x + 7.5, 1.1, z, 0, 0.06, 2.2, 0.06));
+    b.add(M.vc, GEO.cyl, '#3a2412', mat4(br.x + 7.5, 2.3, z, 0, 0.12, 0.3, 0.12));
+    b.add(M.lamp, GEO.cone, '#ff8c2a', mat4(br.x + 7.5, 2.62, z, 0, 0.11, 0.38, 0.11)); // flame
+  }
+  b.add(M.vc, GEO.sph, '#3a86ff', mat4(bx0 - 0.4, 1.3, bz1 - 1.5, 0, 0.12, 1.3, 0.3, 0, 0.25));
+  b.add(M.vc, GEO.box, '#fff', mat4(bx0 - 0.39, 1.3, bz1 - 1.5, 0, 0.13, 2.2, 0.04, 0, 0.25));
+  world.addSign('THE RUSTY PELICAN', { bg: '#3a2a1a', fg: '#ffd166', font: 'bold 70px "Comic Sans MS", cursive', sub: 'COLD BEER • BUSHWACKERS • BAD DECISIONS', subFont: 'bold 24px sans-serif', emissive: 0.45, w: 1024, h: 200 }, bx1 + 0.85, 3.05, br.z, Math.PI / 2, 5.5, 1.1);
+  world.poi('pelican', br.x + 6.6, br.z, 'The Rusty Pelican', 3.2);
 
   // ---- bait & tackle shack
   const bt = BEACH.bait;
-  box(bt.x, 0, bt.z, 8, 3, 6, '#7fb7c9');
-  box(bt.x, 3, bt.z, 9, 0.3, 7, '#f4f0e8');
+  box(bt.x, 0, bt.z, 8, 3, 6, '#6fa6b8');
+  for (let y = 0.25; y < 3; y += 0.32) { // weathered clapboard
+    box(bt.x, y, bt.z + 3.01, 8.02, 0.04, 0.02, '#4f8193');
+    box(bt.x, y, bt.z - 3.01, 8.02, 0.04, 0.02, '#4f8193');
+    box(bt.x + 4.01, y, bt.z, 0.02, 0.04, 6.02, '#4f8193');
+  }
+  // corrugated tin roof
+  for (let i = 0; i < 18; i++) box(bt.x - 4.3 + i * 0.5, 3 + (i % 2) * 0.05, bt.z, 0.26, 0.12, 7.2, i % 2 ? '#b7bcc0' : '#9ea4a8');
+  box(bt.x + 4.02, 0, bt.z - 1.6, 0.04, 2.2, 1.1, '#3a2a1a'); // door
+  // buoys, a rack of rods, a LIVE BAIT cooler, an old dinghy on the sand
+  for (let i = 0; i < 5; i++) b.add(M.vc, GEO.sph, ['#ff6b1a', '#fff', '#e84a5f', '#f2c94c', '#fff'][i], mat4(bt.x + 4.1, 2.4 - (i % 2) * 0.35, bt.z + 0.3 + i * 0.5, 0, 0.14, 0.2, 0.14));
+  for (let i = 0; i < 6; i++) b.add(M.vc, GEO.cyl, '#2a2a2a', mat4(bt.x + 4.3, 1.4, bt.z + 2.8 - i * 0.12, 0, 0.012, 2.6, 0.012, 0, 0.12));
+  box(bt.x + 5.2, 0, bt.z + 2.2, 0.9, 0.6, 0.6, '#f4f4f4');
+  box(bt.x + 5.2, 0.6, bt.z + 2.2, 0.94, 0.08, 0.64, '#1f5fb0');
+  b.add(M.vc, GEO.sph, '#b8323a', mat4(bt.x - 1, 0.3, bt.z + 5.5, 0.6, 0.9, 0.35, 2.4));
+  b.add(M.vc, GEO.sph, '#e8e0d0', mat4(bt.x - 1, 0.42, bt.z + 5.5, 0.6, 0.78, 0.2, 2.2));
   col.addBoxC(bt.x, bt.z, 8, 6, 4, 'building');
   world.addSign('BAIT • TACKLE • DETECTORS', { bg: '#23408e', fg: '#fff', font: 'bold 52px sans-serif', sub: '"We Sell Everything Except Bait"', subFont: 'italic 26px sans-serif', w: 1024, h: 180 }, bt.x + 4.05, 2.2, bt.z, Math.PI / 2, 5, 0.9);
   world.poi('bait', bt.x + 5.5, bt.z, 'Bait & Tackle Shack', 3);

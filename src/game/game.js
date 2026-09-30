@@ -262,7 +262,7 @@ export class Game {
     keeper('Flo', true, 193, 47.5, 0, 'buffet', { hair: '#f0d7a1', shirt: 3, glasses: 'readers' });
     keeper('Deb', true, 232, 46.5, 0, 'hoa', { hair: '#bdbdbd', shirt: 2, glasses: 'readers', hat: 'none' });
     keeper('Manny', false, 98, -2, 0, 'tiki', { hat: 'bucket', hatColor: '#f2c94c', shirt: 0, glasses: 'aviator', skin: '#c68863' });
-    keeper('Skip', false, BEACH.bar.x + 7.6, BEACH.bar.z + 2.6, Math.PI / 2, 'pelican', { hat: 'bucket', hatColor: '#ff6b1a', shirt: 7, glasses: 'aviator', skin: '#c68863', hair: '#f0d7a1' });
+    keeper('Skip', false, BEACH.bar.x + 3.7, BEACH.bar.z + 1.2, Math.PI / 2, 'pelican', { hat: 'bucket', hatColor: '#ff6b1a', shirt: 7, glasses: 'aviator', skin: '#c68863', hair: '#f0d7a1' });
     keeper('Captain Roy', false, BEACH.bait.x + 5, BEACH.bait.z + 2.5, Math.PI / 2, 'bait', { hat: 'fedora', hatColor: '#23408e', shirt: 2, mustache: true, belly: 1.4 });
     // beach life
     const vic = this.spawnNPC({ name: 'Vic, Retired Lifeguard', female: false, role: 'lifeguard', x: BEACH.tower.x + 2.6, z: BEACH.tower.z, state: 'static', look: { hat: 'visor', hatColor: '#e84a5f', shirt: 1, shorts: '#e84a5f', glasses: 'aviator', mustache: true, skin: '#9a6545' }, homePt: { x: BEACH.tower.x + 2.6, z: BEACH.tower.z } });
