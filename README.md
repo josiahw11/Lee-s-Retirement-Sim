@@ -31,7 +31,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 
 **Gamepad:** left stick move/steer • right stick look • RT/LT gas & brake • A interact • X swing • Y drink • B hop/drift • LB switch club • RB pocket sand • L3 sprint/nitrous • R3 horn • D-pad: radio / pee / map • Start pause • Back phone. Menus: D-pad or arrow keys + A/Enter.
 
-**Reviewer shortcuts:** `]` = +$1,000 • `[` = +1 to all stats • `` ` `` (backtick) = skip 3 hours
+**Reviewer shortcuts:** `]` = +$1,000 • `[` = +1 to all stats • `` ` `` (backtick) = skip 3 hours. The pause menu (Esc) also has **Jump to Chapter 2 / Chapter 3** and **Summon Hurricane** buttons.
 
 ## What's in the demo
 
@@ -62,9 +62,30 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 - **Wardrobe.** The clubhouse boutique sells 7 Hawaiian shirts, hats, shades and white tube socks. Change outfits at home; style adds Status.
 - **Metal detecting.** A second legal hustle on the beach: the signal meter and beeps speed up near buried loot (quarters, wedding rings, a real Rolex, dentures, a 1715 doubloon).
 - **Weather.** Florida afternoon thunderstorms bring rain, lightning, thunder, slick roads and residents panicking about their perms.
+- **Hurricane Mildred.** Every so often a hurricane comes with a day's warning:
+  - gusting winds shove carts and bend the palms
+  - lawn flamingos and patio chairs fly through the air (and hit you)
+  - the power goes out, and the neighbors throw a hurricane party at the clubhouse
+  - afterwards, the HOA pays a bounty for every stray flamingo you bring back
+- **The Lucky Lady casino boat** (moored off the Boca pier, 6PM–2AM): blackjack at Bernadette's table (charm her and she flashes her hole card; drink and you fumble), the Golden Gam-Gam slots with a progressive jackpot, and a bar.
+- **Closest to the Pin.** Bet the golfers on any tee. Three-press swing, real ball flight with wind and sidespin, and it bounces and rolls differently on green, fringe, rough, sand and water. A hole-in-one pays $500 extra.
+- **Aqua Jazz with Chad** (10AM daily at the pool): a 71-year-old former Chippendale leads water aerobics. Join in for a rhythm game over the live class to earn STR, and the ladies notice.
+- **GRANDR** on your phone. It's a senior dating app:
+  - swipe on singles with live-rendered 3D portraits
+  - a match books a date at a real place and time, and she shows up
+  - win her over with the right topics
+  - stand her up and she leaves you a one-star review
+- **Mobility scooters** putter along at 9 mph and hold up traffic. You can yank a resident off one and steal it.
 - **Voices.** Every resident mumbles in Animal Crossing-style old-folks gibberish.
-- **Chapter 1 story** runs through 12 quest steps, then **Chapter 2: Rhino Rising** (7 steps): a tea shortage, a night-time antler heist, stealing a tooth from Mr. Chompers the gator, home brewing, and a boss fight with Chip's father "The Deuce". Free-roam goals follow.
-- 22 achievements, graphics quality presets (Low/Medium/High), auto-save when you sleep, and three procedural radio stations plus a text-to-speech talk-radio station.
+- **Chapter 1 story** runs through 12 quest steps.
+- **Chapter 2: Rhino Rising** (7 steps): a tea shortage, a night-time antler heist, stealing a tooth from Mr. Chompers the gator, home brewing, and a boss fight with Chip's father "The Deuce".
+- **Chapter 3: High Rollers** (6 steps):
+  - board the Lucky Lady and win at blackjack
+  - bribe "Fingers" Fanucci to rig machine #3, then hit the jackpot
+  - face Captain Dom Moretti: a blackjack duel where the loser goes overboard, a boss brawl, or a bluff
+  - crack his safe, then decide the fate of $48,211 in stolen pensions: return them, split them, or keep them all
+- Free-roam goals follow.
+- 40+ achievements, graphics quality presets (Low/Medium/High), auto-save when you sleep, and three procedural radio stations plus a text-to-speech talk-radio station.
 
 **Characters.** Every resident is a skinned mesh on an 18-bone skeleton (knees, elbows, ankles, blinking eyes, head tracking), with a sculpted lathe torso, pot bellies, set-and-curl bobs, horseshoe fringes, pearls, readers, and socks with sandals. Near and far LODs share one skeleton.
 
