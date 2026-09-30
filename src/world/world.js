@@ -1,5 +1,6 @@
 // Builds the whole Sunset Palms map: ground, roads, houses, course, landmarks, signage.
 import * as THREE from 'three';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Batcher, mat4, mergeParts } from '../gfx/batch.js';
 import { M } from '../gfx/materials.js';
 import { makeDetailTexture, makeAsphaltTexture, makeSignTexture } from '../gfx/textures.js';
@@ -20,11 +21,37 @@ export const GEO = {
   sph: new THREE.SphereGeometry(1, 10, 8),
   ico: new THREE.IcosahedronGeometry(1, 0),
   ico1: new THREE.IcosahedronGeometry(1, 1),
+  ico2: new THREE.IcosahedronGeometry(1, 2),
   pyr: new THREE.ConeGeometry(Math.SQRT1_2, 1, 4).rotateY(Math.PI / 4),
   cone: new THREE.ConeGeometry(1, 1, 10),
   cone8: new THREE.ConeGeometry(1, 1, 8),
   torus: new THREE.TorusGeometry(1, 0.08, 6, 16),
 };
+
+// Hip roof with a short ridge. Base rectangle w x d at y=0, ridge at y=h. UVs run along the
+// eave (u) and up the slope (v) in 1.2 m tile-texture repeats.
+export function hipRoof(w, d, h) {
+  const r = Math.max(0, w - d) / 2, hw = w / 2, hd = d / 2;
+  const slope = Math.hypot(hd, h) / 1.2;
+  const pos = [], uv = [];
+  const tri = (a, b, c) => { for (const p of [a, b, c]) { pos.push(p[0], p[1], p[2]); uv.push(p[3], p[4]); } };
+  // front (+z) and back (-z) trapezoids
+  const F = [[-hw, 0, hd, 0, 0], [hw, 0, hd, w / 1.2, 0], [r, h, 0, (hw + r) / 1.2, slope], [-r, h, 0, (hw - r) / 1.2, slope]];
+  tri(F[0], F[1], F[2]); tri(F[0], F[2], F[3]);
+  const B = [[hw, 0, -hd, 0, 0], [-hw, 0, -hd, w / 1.2, 0], [-r, h, 0, (hw + r) / 1.2, slope], [r, h, 0, (hw - r) / 1.2, slope]];
+  tri(B[0], B[1], B[2]); tri(B[0], B[2], B[3]);
+  // hip triangles
+  tri([hw, 0, hd, 0, 0], [hw, 0, -hd, d / 1.2, 0], [r, h, 0, hd / 1.2, slope]);
+  tri([-hw, 0, -hd, 0, 0], [-hw, 0, hd, d / 1.2, 0], [-r, h, 0, hd / 1.2, slope]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.computeVertexNormals();
+  return g;
+}
+
+const HIP_ROOF = hipRoof(15.8, 13.8, 2.3);
+const darker = (hex, k) => '#' + new THREE.Color(hex).multiplyScalar(k).getHexString();
 
 const _q = new THREE.Quaternion();
 const _up = new THREE.Vector3(0, 1, 0);
@@ -91,39 +118,96 @@ function makePalm(rnd) {
   return g;
 }
 
+// Leafy look for low-poly canopies: lumpy noise displacement (radial from the clump's center so
+// shared corners move together), recomputed flat normals, and a dark-underside / sunlit-top
+// vertex-color gradient with per-vertex jitter.
+const leafNoise = (x, y, z) => (Math.sin(x * 1.9 + Math.sin(z * 2.7)) + Math.sin(y * 2.3 + Math.sin(x * 1.6)) + Math.sin(z * 2.1 + Math.sin(y * 1.8))) / 3;
+const leafHash = (x, y, z) => { const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return h - Math.floor(h); };
+function foliage(g, { cy = 0, minY = -Infinity, amp = 0.1, freq = 3, dark = 0.55, light = 1.15, bloom = null } = {}) {
+  const p = g.attributes.position, c = g.attributes.color;
+  const bc = bloom && new THREE.Color(bloom);
+  g.computeBoundingBox();
+  const y0 = Math.max(g.boundingBox.min.y, minY), y1 = g.boundingBox.max.y;
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    if (y < minY) continue;
+    const dy = y - cy, len = Math.hypot(x, dy, z) || 1;
+    const n = leafNoise(x * freq, y * freq, z * freq) * amp;
+    x += (x / len) * n; y += (dy / len) * n; z += (z / len) * n;
+    p.setXYZ(i, x, y, z);
+    const t = Math.min(1, Math.max(0, (y - y0) / (y1 - y0 || 1)));
+    const k = (dark + (light - dark) * Math.pow(t, 0.8)) * (0.9 + 0.2 * leafHash(x, y, z));
+    // flowering shrubs: blossom clusters on the sunny upper half
+    if (bc && t > 0.25 && leafNoise(x * 9 + 3, y * 9, z * 9 - 2) > 0.2) {
+      const kb = 0.85 + 0.3 * t;
+      c.setXYZ(i, bc.r * kb, bc.g * kb, bc.b * kb);
+    } else c.setXYZ(i, c.getX(i) * k, c.getY(i) * k, c.getZ(i) * k);
+  }
+  // weld shared corners so the clumps shade soft and round instead of faceted
+  g.deleteAttribute('normal');
+  g.deleteAttribute('uv');
+  const welded = mergeVertices(g, 1e-4);
+  welded.computeVertexNormals();
+  const out = welded.toNonIndexed();
+  out.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(out.attributes.position.count * 2), 2));
+  out.computeBoundingSphere();
+  out.computeBoundingBox();
+  return out;
+}
+
 function makePine(rnd) {
   const H = 10 + rnd() * 4;
   const parts = [[GEO.cyl, '#6d5a48', mat4(0, H / 2, 0, 0, 0.28, H, 0.28)]];
   for (let i = 0; i < 4; i++) {
     const r = 1.8 + rnd() * 1.2;
-    parts.push([GEO.ico, i % 2 ? '#2f5d34' : '#3a6b3c', mat4((rnd() - 0.5) * 2, H - 1 + i * 0.9 + rnd() * 0.5, (rnd() - 0.5) * 2, rnd() * 3, r, r * 0.55, r), 0.12]);
+    parts.push([GEO.ico1, i % 2 ? '#2f5d34' : '#3a6b3c', mat4((rnd() - 0.5) * 2, H - 1 + i * 0.9 + rnd() * 0.5, (rnd() - 0.5) * 2, rnd() * 3, r, r * 0.55, r), 0.12]);
   }
-  return mergeParts(parts);
+  return foliage(mergeParts(parts), { cy: H + 0.4, minY: H - 2.2, amp: 0.35, freq: 1.4, dark: 0.62, light: 1.25 });
 }
 
 function makeOak(rnd) {
   const parts = [[GEO.cyl, '#5e4a3a', mat4(0, 1.6, 0, 0, 0.45, 3.2, 0.45)]];
+  // a big soft core plus a shell of smaller clumps gives a leafy, bumpy silhouette
+  parts.push([GEO.ico2, '#4d7c3c', mat4(0, 4.6, 0, 0, 2.6, 1.5, 2.6), 0.06]);
+  for (let i = 0; i < 14; i++) {
+    const a = i * 2.39996 + rnd() * 0.3; // golden-angle spread
+    const up = i / 13; // low ring first, then up over the crown
+    const d = 2.7 * Math.sqrt(1 - up * up * 0.8) + rnd() * 0.4;
+    const r = 0.95 + rnd() * 0.55;
+    parts.push([GEO.ico1, i % 3 ? '#4a7a3a' : '#5a8543', mat4(Math.cos(a) * d, 3.7 + up * 2.0 + rnd() * 0.3, Math.sin(a) * d, rnd() * 3, r, r * 0.8, r), 0.06]);
+  }
+  // the trunk splits into a couple of limbs under the canopy
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + rnd();
+    parts.push([GEO.cyl6, '#5e4a3a', segMatrix(0, 2.6, 0, Math.cos(a) * 1.5, 4.1, Math.sin(a) * 1.5, 0.16)]);
+  }
+  const canopy = foliage(mergeParts(parts), { cy: 4.7, minY: 3.3, amp: 0.18, freq: 2.2, dark: 0.45, light: 1.12 });
+  // spanish moss: thin drapes hanging in little bunches from the canopy's underside
+  const moss = [];
   for (let i = 0; i < 5; i++) {
-    const a = rnd() * Math.PI * 2, d = rnd() * 2.2;
-    const r = 2.2 + rnd() * 1.4;
-    parts.push([GEO.ico1, i % 2 ? '#4a7a3a' : '#557f3f', mat4(Math.cos(a) * d, 4 + rnd() * 1.5, Math.sin(a) * d, rnd() * 3, r, r * 0.75, r), 0.06]);
+    const a = rnd() * Math.PI * 2, d = 1.6 + rnd() * 1.6;
+    for (let j = 0; j < 3; j++) {
+      const len = 0.7 + rnd() * 0.8;
+      moss.push([GEO.cone, j % 2 ? '#7d876f' : '#8c957c', mat4(Math.cos(a) * d + (rnd() - 0.5) * 0.4, 3.35 - len / 2, Math.sin(a) * d + (rnd() - 0.5) * 0.4, 0, 0.06 + rnd() * 0.04, len, 0.06 + rnd() * 0.04, Math.PI), 0.3]);
+    }
   }
-  // spanish moss
-  for (let i = 0; i < 6; i++) {
-    const a = rnd() * Math.PI * 2, d = 1.5 + rnd() * 2;
-    parts.push([GEO.cone, '#9aa58c', mat4(Math.cos(a) * d, 2.9, Math.sin(a) * d, 0, 0.18, 1.3, 0.18, Math.PI), 0.25]);
-  }
-  return mergeParts(parts);
+  const g = mergeGeometries([canopy, mergeParts(moss)], false);
+  g.computeBoundingSphere();
+  g.computeBoundingBox();
+  return g;
 }
 
 function makeBush(rnd, color) {
   const parts = [];
-  const n = 2 + Math.floor(rnd() * 3);
+  const bloom = new THREE.Color(color).getHSL({}).s > 0.55 && new THREE.Color(color).r > 0.6 ? color : null;
+  if (bloom) color = '#3d7436'; // green shrub, pink blossoms
+  const n = 5 + Math.floor(rnd() * 3);
   for (let i = 0; i < n; i++) {
-    const r = 0.5 + rnd() * 0.4;
-    parts.push([GEO.ico1, color, mat4((rnd() - 0.5) * 0.9, r * 0.8, (rnd() - 0.5) * 0.9, rnd() * 3, r, r * 0.85, r), (x, y) => Math.max(0, y) * 0.08]);
+    const r = 0.34 + rnd() * 0.26;
+    const a = (i / n) * Math.PI * 2 + rnd(), d = i === 0 ? 0 : 0.25 + rnd() * 0.35;
+    parts.push([GEO.ico1, color, mat4(Math.cos(a) * d, r * 0.85 + (i === 0 ? 0.2 : rnd() * 0.15), Math.sin(a) * d, rnd() * 3, r, r * 0.85, r), (x, y) => Math.max(0, y) * 0.08]);
   }
-  return mergeParts(parts);
+  return foliage(mergeParts(parts), { cy: 0.45, amp: 0.07, freq: 4.5, dark: 0.5, light: 1.18, bloom });
 }
 
 // ---------- local building frame (rotations are multiples of 90deg) ----------
@@ -460,35 +544,99 @@ export class World {
       f.box(0, 0, 0, W + 0.6, 0.3, D + 0.6, '#d9d2c5');
       f.box(0, 0.3, 0, W, WH, D, h.color);
       f.box(0, 0.3 + WH, 0, W + 0.3, 0.25, D + 0.3, trim);
-      f.add(GEO.pyr, roof, 0, 0.55 + WH + 1.15, 0, W + 1.8, 2.3, D + 1.8);
-      // garage door
-      f.box(gx, 0.3, D / 2 + 0.02, 5, 2.5, 0.12, '#f7f5ef');
-      for (let i = 1; i < 4; i++) f.box(gx, 0.3 + i * 0.62, D / 2 + 0.09, 4.9, 0.04, 0.04, '#d6d2c8');
-      // front door + little porch
+      // roof: tiled hip roof with a fascia board around the overhang
+      const RY = 0.55 + WH, RW = W + 1.8, RD = D + 1.8;
+      f.add(HIP_ROOF, roof, 0, RY, 0, 1, 1, 1, 0, M.roof);
+      f.box(0, RY - 0.22, RD / 2 - 0.04, RW + 0.08, 0.24, 0.08, trim);
+      f.box(0, RY - 0.22, -RD / 2 + 0.04, RW + 0.08, 0.24, 0.08, trim);
+      f.box(RW / 2 - 0.04, RY - 0.22, 0, 0.08, 0.24, RD, trim);
+      f.box(-RW / 2 + 0.04, RY - 0.22, 0, 0.08, 0.24, RD, trim);
+      f.box(0, RY - 0.08, 0, RW, 0.06, RD, darker(h.color, 0.8)); // soffit
+      // ridge + hip caps
+      const ridgeR = (RW - RD) / 2;
+      f.add(GEO.cyl6, roof, 0, RY + 2.3 + 0.03, 0, 0.1, ridgeR * 2 + 0.2, 0.1, 0, M.vc, 0, 0, Math.PI / 2);
+      for (const sx of [1, -1]) for (const sz of [1, -1]) {
+        const a = [sx * ridgeR, RY + 2.3, 0], b = [sx * RW / 2, RY, sz * RD / 2];
+        const m = segMatrix(a[0], a[1] + 0.03, a[2], b[0], b[1] + 0.05, b[2], 0.08);
+        this.batch.add(M.vc, GEO.cyl6, darker(roof, 0.9), f.m.clone().multiply(m));
+      }
+      // roof clutter: plumbing vent, maybe a dish or a solar water heater
+      f.add(GEO.cyl, '#9a9a9a', 2.2, RY + 1.2, -3.2, 0.06, 1.0, 0.06);
+      if (rnd() < 0.3) {
+        f.add(GEO.cyl, '#d8d8d8', -3, RY + 1.35, -3.6, 0.03, 0.6, 0.03);
+        f.add(GEO.sph, '#eeeeee', -3, RY + 1.7, -3.55, 0.32, 0.32, 0.1, 0.5, M.vc, 0, -0.5);
+      } else if (rnd() < 0.25) {
+        const tilt = Math.atan2(2.3, RD / 2);
+        f.add(GEO.box, '#1d2d4a', -1.5, RY + 1.3, -3.3, 2.6, 0.08, 1.6, 0, M.vcShiny, 0, -tilt);
+        f.add(GEO.box, '#c9ccd1', -1.5, RY + 1.26, -3.3, 2.7, 0.06, 1.7, 0, M.vc, 0, -tilt);
+      }
+      // trimmed windows: frame, sill and muntins (wall key: front/back/right/left)
+      const WALL = { front: [0, D / 2, 0], back: [0, -D / 2, Math.PI], right: [W / 2, 0, Math.PI / 2], left: [-W / 2, 0, -Math.PI / 2] };
+      const wpart = (key, a, y, out, sx, sy, sz, color, mat = M.vc) => {
+        const [cx, cz, ry] = WALL[key];
+        const c = Math.cos(ry), s = Math.sin(ry);
+        f.add(GEO.box, color, cx + a * c + out * s, y, cz - a * s + out * c, sx, sy, sz, ry, mat);
+      };
+      const win = (key, a, y, w, hh, shutters = null) => {
+        wpart(key, a, y, 0.03, w, hh, 0.1, '#fff', M.glass);
+        wpart(key, a, y + hh / 2 + 0.07, 0.07, w + 0.28, 0.14, 0.1, trim);
+        wpart(key, a, y - hh / 2 - 0.07, 0.07, w + 0.28, 0.14, 0.1, trim);
+        wpart(key, a - w / 2 - 0.07, y, 0.07, 0.14, hh, 0.1, trim);
+        wpart(key, a + w / 2 + 0.07, y, 0.07, 0.14, hh, 0.1, trim);
+        wpart(key, a, y - hh / 2 - 0.17, 0.12, w + 0.45, 0.08, 0.22, trim); // sill
+        wpart(key, a, y, 0.08, 0.05, hh, 0.04, trim); // muntins
+        wpart(key, a, y, 0.08, w, 0.05, 0.04, trim);
+        if (shutters) for (const sd of [-1, 1]) {
+          wpart(key, a + sd * (w / 2 + 0.38), y, 0.06, 0.42, hh + 0.2, 0.06, shutters);
+          for (let k = -2; k <= 2; k++) wpart(key, a + sd * (w / 2 + 0.38), y + k * (hh / 6), 0.1, 0.36, 0.03, 0.03, darker(shutters, 0.8)); // louvers
+        }
+      };
+      const wx = garageLeft ? 5.4 : -5.4;
+      win('front', wx, 1.75, 1.8, 1.4, door);
+      for (const sz of [-3, 2.5]) { win('right', -sz, 1.8, 1.8, 1.3); win('left', sz, 1.8, 1.8, 1.3); }
+      win('back', 3, 1.8, 3.5, 1.6);
+      // garage door: raised panels, some with a row of windows up top
+      const gWin = rnd() < 0.4;
+      f.box(gx, 0.3, D / 2 + 0.02, 5, 2.5, 0.12, '#e6e2d8');
+      for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) {
+        const px = gx - 1.8 + k * 1.2, py = 0.62 + r * 0.6;
+        if (gWin && r === 3) f.box(px, py - 0.18, D / 2 + 0.09, 0.95, 0.34, 0.04, '#fff', M.glass);
+        else f.box(px, py - 0.2, D / 2 + 0.09, 1.02, 0.42, 0.06, '#f8f6f0');
+      }
+      f.box(gx, 2.8, D / 2 + 0.06, 5.4, 0.18, 0.12, trim);
+      f.box(gx - 2.62, 0.3, D / 2 + 0.06, 0.18, 2.5, 0.12, trim);
+      f.box(gx + 2.62, 0.3, D / 2 + 0.06, 0.18, 2.5, 0.12, trim);
+      // front door: trim, two raised panels, brass knob, coach lights (glow at night)
       f.box(dx, 0.3, D / 2 + 0.02, 1.15, 2.3, 0.12, door);
+      f.box(dx, 2.6, D / 2 + 0.07, 1.5, 0.16, 0.12, trim);
+      f.box(dx - 0.66, 0.3, D / 2 + 0.07, 0.16, 2.3, 0.12, trim);
+      f.box(dx + 0.66, 0.3, D / 2 + 0.07, 0.16, 2.3, 0.12, trim);
+      f.box(dx, 1.55, D / 2 + 0.1, 0.8, 0.8, 0.04, darker(door, 1.12));
+      f.box(dx, 0.55, D / 2 + 0.1, 0.8, 0.8, 0.04, darker(door, 1.12));
+      f.add(GEO.sph, '#d4af37', dx + 0.42, 1.4, D / 2 + 0.14, 0.05, 0.05, 0.05);
+      for (const sd of [-1, 1]) {
+        f.box(dx + sd * 0.95, 1.8, D / 2 + 0.1, 0.2, 0.36, 0.2, '#fff', M.lamp);
+        f.box(dx + sd * 0.95, 2.18, D / 2 + 0.1, 0.26, 0.06, 0.26, '#2a2a2a');
+      }
+      // little porch
       f.box(dx, 0, D / 2 + 1, 2.8, 0.22, 2, '#e7e1d5');
       f.add(GEO.cyl, trim, dx - 1.25, 1.75, D / 2 + 1.8, 0.1, 3.1, 0.1);
       f.add(GEO.cyl, trim, dx + 1.25, 1.75, D / 2 + 1.8, 0.1, 3.1, 0.1);
       f.box(dx, 3.2, D / 2 + 1.05, 3, 0.2, 1.9, trim);
-      // windows with shutters
-      const wx = garageLeft ? 5.6 : -5.6;
-      f.box(wx, 1.2, D / 2 + 0.03, 1.8, 1.4, 0.1, '#fff', M.glass);
-      f.box(wx - 1.15, 1.1, D / 2 + 0.05, 0.4, 1.6, 0.08, door);
-      f.box(wx + 1.15, 1.1, D / 2 + 0.05, 0.4, 1.6, 0.08, door);
-      for (const sz of [-3, 2.5]) {
-        f.box(W / 2 + 0.03, 1.2, sz, 0.1, 1.3, 1.8, '#fff', M.glass);
-        f.box(-W / 2 - 0.03, 1.2, sz, 0.1, 1.3, 1.8, '#fff', M.glass);
-      }
-      f.box(-3, 1.2, -D / 2 - 0.03, 3.5, 1.6, 0.1, '#fff', M.glass);
-      // AC unit
+      // AC unit with a fan grille
       f.box(W / 2 + 0.7, 0, -2.5, 1, 0.9, 1, '#b8bcbf');
-      // screened lanai in back
+      f.add(GEO.cyl, '#3a3d40', W / 2 + 0.7, 0.92, -2.5, 0.38, 0.03, 0.38);
+      // screened lanai in back: aluminum frame + screen mesh
       const LD = 4.5;
-      for (const [px, pz] of [[-6, -D / 2 - LD], [6, -D / 2 - LD], [0, -D / 2 - LD], [-6, -D / 2 - LD / 2], [6, -D / 2 - LD / 2]]) {
+      for (const [px, pz] of [[-6, -D / 2 - LD], [6, -D / 2 - LD], [0, -D / 2 - LD], [-6, -D / 2 - LD / 2], [6, -D / 2 - LD / 2], [-3, -D / 2 - LD], [3, -D / 2 - LD]]) {
         f.box(px, 0.2, pz, 0.12, 2.6, 0.12, '#4a3f35');
       }
       f.box(0, 2.8, -D / 2 - LD / 2, 12.2, 0.12, LD + 0.1, '#4a3f35');
+      f.box(0, 1.1, -D / 2 - LD, 12, 0.08, 0.08, '#4a3f35'); // kick rail
       f.box(0, 0, -D / 2 - LD / 2, 12, 0.2, LD, '#d9d2c5');
+      f.box(0, 0.2, -D / 2 - LD, 12, 2.6, 0.02, '#fff', M.screen);
+      f.box(-6, 0.2, -D / 2 - LD / 2, 0.02, 2.6, LD, '#fff', M.screen);
+      f.box(6, 0.2, -D / 2 - LD / 2, 0.02, 2.6, LD, '#fff', M.screen);
       if (rnd() < 0.35) f.box(0, 0.2, -D / 2 - LD / 2, 6, 0.04, 2.5, '#49c6e5');
       f.collide(-W / 2 - 1.2, -D / 2 - LD, W / 2 + 1.2, D / 2 + 0.3, 6, 'house');
       // driveway + walk to street

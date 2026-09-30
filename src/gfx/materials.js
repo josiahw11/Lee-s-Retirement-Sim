@@ -1,7 +1,7 @@
 // Shared materials. The main vertex-colored material also animates a "wind" attribute
 // so palm fronds and bushes sway without any per-object CPU work.
 import * as THREE from 'three';
-import { makeShirtTexture } from './textures.js';
+import { makeShirtTexture, makeRoofTileTexture } from './textures.js';
 
 export const shared = {
   time: { value: 0 },
@@ -37,6 +37,11 @@ export const M = {
   lamp: new THREE.MeshStandardMaterial({ color: 0xfff1c9, emissive: 0xffd98a, emissiveIntensity: 0, roughness: 0.4 }),
   chrome: new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.12, metalness: 1.0 }),
 };
+// roofs: tile texture tinted by vertex color (UVs are in 1.2 m units, see hipRoof())
+M.roof = new THREE.MeshStandardMaterial({ vertexColors: true, map: makeRoofTileTexture(), roughness: 0.78 });
+// lanai screen mesh
+M.screen = new THREE.MeshStandardMaterial({ color: 0x2c3236, transparent: true, opacity: 0.32, roughness: 0.9, depthWrite: false, side: THREE.DoubleSide });
+M.screen.userData.noShadow = true;
 M.glass.userData.noShadow = true;
 M.lamp.userData.noShadow = true;
 M.neon.userData.noShadow = true;

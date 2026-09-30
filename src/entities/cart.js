@@ -176,7 +176,7 @@ export class Cart {
     chassis.add(glass);
 
     // lights (emissive meshes)
-    this.headMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2c0, emissiveIntensity: 0 });
+    this.headMat = new THREE.MeshStandardMaterial({ color: 0xbfc8cf, roughness: 0.2, metalness: 0.3, emissive: 0xfff2c0, emissiveIntensity: 0 });
     for (const x of [0.36, -0.36]) {
       const h = new THREE.Mesh(new THREE.CircleGeometry(0.07, 10), this.headMat);
       h.position.set(x, 0.8, 1.318);

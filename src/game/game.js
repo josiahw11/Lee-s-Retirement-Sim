@@ -2254,7 +2254,10 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       }
     }
     for (const c of this.carts) {
-      const shadow = Math.hypot(c.x - cam.x, c.z - cam.z) < 60;
+      const d = Math.hypot(c.x - cam.x, c.z - cam.z);
+      const vis = d < (this.drawDist || 170) + 20 || c === this.player.cart;
+      if (vis !== c.group.visible) c.group.visible = vis;
+      const shadow = d < 60;
       if (shadow !== c._shadow) {
         c._shadow = shadow;
         c.group.traverse((o) => { if (o.isMesh) o.castShadow = shadow; });
