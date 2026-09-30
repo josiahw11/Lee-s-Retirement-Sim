@@ -47,6 +47,40 @@ function between(a, b, sx = 1, sz = 1, sy = 1) {
 }
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
+// Short sleeve / shorts leg with a domed top so the fabric caps the shoulder joint
+// (local +y runs from the joint toward the elbow, matching between()).
+const sleeveCache = new Map();
+function sleeveGeo(len, r, dome, lod) {
+  const k = `${len.toFixed(3)}:${r}:${dome}:${lod}`;
+  if (!sleeveCache.has(k)) {
+    const h = len / 2;
+    const prof = dome > 0
+      ? [[0, -h - dome], [r * 0.5, -h - dome * 0.87], [r * 0.8, -h - dome * 0.55], [r * 0.96, -h - dome * 0.2], [r, -h], [r * 0.97, h - 0.012], [r * 0.99, h]]
+      : [[r, -h], [r * 0.97, h - 0.012], [r * 0.99, h]];
+    sleeveCache.set(k, lathe(prof, lod ? 9 : 14));
+  }
+  return sleeveCache.get(k);
+}
+
+// Hair shells hug the skull instead of stacking balls on it.
+// Men: horseshoe fringe around the back and sides (the classic retiree pattern).
+const FRINGE = new THREE.SphereGeometry(1, 20, 6, Math.PI - 0.42, Math.PI + 0.84, 1.12, 0.68);
+// Women: one sculpted set-and-curl bob with the face left open and the ends flipped under.
+const bobCache = new Map();
+function bobGeo(volume, lod) {
+  const k = `${volume}:${lod}`;
+  if (!bobCache.has(k)) {
+    const v = volume;
+    const prof = [[0.148, -0.118], [0.176, -0.132], [0.198 * v, -0.112], [0.204 * v, -0.05], [0.198 * v, 0.03], [0.182 * v, 0.1], [0.148 * v, 0.158], [0.09 * v, 0.19], [0.0, 0.2]];
+    const g = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(Math.max(0.0001, r), y)), lod ? 12 : 22, 0.95, Math.PI * 2 - 1.9);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) * 0.96);
+    g.computeVertexNormals();
+    bobCache.set(k, g);
+  }
+  return bobCache.get(k);
+}
+
 // ---------------------------------------------------------------- torso & dress (lathe)
 function lathe(profile, segs = 20) {
   return new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(Math.max(0.0001, r), y)), segs);
@@ -56,10 +90,10 @@ function torsoGeometry(o) {
   const b = o.belly || 1;
   const prof = o.female
     ? [[0.0, -0.06], [0.19, -0.05], [0.2, 0.05], [0.205, 0.16], [0.215, 0.3], [0.22, 0.4], [0.2, 0.49], [0.14, 0.56], [0.075, 0.59]]
-    : [[0.0, -0.06], [0.2, -0.05], [0.225, 0.03], [0.24 * b, 0.15], [0.245 * Math.sqrt(b), 0.26], [0.235, 0.37], [0.235, 0.45], [0.205, 0.52], [0.13, 0.565], [0.075, 0.59]];
+    : [[0.0, -0.06], [0.2, -0.05], [0.225, 0.03], [0.24 + (b - 1) * 0.07, 0.15], [0.245 + (b - 1) * 0.04, 0.26], [0.235, 0.37], [0.235, 0.45], [0.205, 0.52], [0.13, 0.565], [0.075, 0.59]];
   const g = lathe(prof);
   const p = g.attributes.position;
-  const bellyAmt = o.female ? 0 : Math.max(0, b - 0.9) * 0.2;
+  const bellyAmt = o.female ? 0 : Math.max(0, b - 0.9) * 0.24; // a pot belly sticks out front, not sideways
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i);
     let z = p.getZ(i) * 0.78;
@@ -163,17 +197,13 @@ function bodyParts(o, lod = false) {
   // hair
   if (o.female) {
     const h = o.hair, hd = darker(o.hair, 0.9);
-    sc(T.hi, h, at(0, 0.1, -0.025), 0.188, 0.15, 0.184);
-    sc(T.sph, hd, at(0.124, 0.0, -0.035), 0.085, 0.11, 0.1);
-    sc(T.sph, hd, at(-0.124, 0.0, -0.035), 0.085, 0.11, 0.1);
-    sc(T.sph, h, at(0, 0.01, -0.105), 0.15, 0.12, 0.09);
-    sc(T.sph, h, at(0, 0.128, 0.085), 0.14, 0.055, 0.075); // swept bangs
-    sc(T.hi, hd, at(0, 0.16, -0.04), 0.165, 0.1, 0.16); // teased crown
+    const vol = o.hat ? 1 : 1.06; // no hat = maximum hairspray
+    add(bobGeo(vol, lod), h, mat4(C.x, C.y + 0.03, C.z - 0.03), 'head');
+    add(T.hi, hd, mat4(C.x, C.y + 0.07, C.z - 0.05, 0, 0.17 * vol, 0.15 * vol, 0.16), 'head'); // crown volume inside the shell
+    sc(T.sph, h, at(0, 0.13, 0.08), 0.142, 0.056, 0.08, 'head', 0.25); // swept bangs
   } else {
     const h = o.hair;
-    sc(T.sph, h, at(0.128, 0.02, -0.035), 0.058, 0.075, 0.105);
-    sc(T.sph, h, at(-0.128, 0.02, -0.035), 0.058, 0.075, 0.105);
-    sc(T.sph, h, at(0, 0.005, -0.126), 0.12, 0.085, 0.058);
+    add(FRINGE, h, mat4(C.x, C.y + 0.012, C.z - 0.022, 0, 0.162, 0.178, 0.17), 'head');
     if (o.hair === '#1c1c1c') sc(T.hi, h, at(0, 0.11, -0.01), 0.158, 0.078, 0.164); // dyed, full, suspicious
     else if (o.combover) for (let i = 0; i < 5; i++) cap(at(-0.1 + i * 0.012, 0.15 - i * 0.003, 0.08 - i * 0.04), at(0.11, 0.145 - i * 0.004, 0.06 - i * 0.04), 0.006, h, 'head');
   }
@@ -253,8 +283,8 @@ function bodyParts(o, lod = false) {
   for (const [side, sh, el, ha] of [[1, 'shL', 'elL', 'haL'], [-1, 'shR', 'elR', 'haR']]) {
     const A = ABS[sh], E = ABS[el], H = ABS[ha];
     cap(A, E, 0.058, skin, sh);
-    const sl = between(A, A.clone().lerp(E, 0.58), 0.086, 0.082, 1);
-    add(T.cylLo, sleeve, sl.m.multiply(new THREE.Matrix4().makeScale(1, sl.len, 1)), sh);
+    const sl = between(A, A.clone().lerp(E, 0.58));
+    add(sleeveGeo(sl.len, 0.084, 0.07, lod), sleeve, sl.m, sh);
     cap(E, H, 0.045, skin, el);
     // hand: palm + fingers block + thumb
     sc(T.sph, skin, V(H.x, H.y - 0.05, H.z + 0.006), 0.04, 0.058, 0.028, ha);
