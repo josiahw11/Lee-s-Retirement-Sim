@@ -2,16 +2,50 @@
 
 A 3D open-world retirement sim built on **three.js**. You're Lee (or whoever you name him), 72, freshly "relocated" to a 55+ gated community after The Incident in Boca. Drive golf carts. Drink beer. Deal boner pills. Flirt with widows. Brawl with the country-club set. Take over the HOA.
 
-## Run it
+## Play it on a new computer
 
-```bash
-npm install
-npm run dev
-```
+The game runs in any modern desktop browser (Chrome, Edge, Firefox or Safari) with WebGL, so no game install is needed. There are two ways to get it running.
 
-Then open http://localhost:5173. Add `?play` to the URL to skip the title screen and jump straight in.
+### Option 1: download the ready-to-play file (easiest, no setup)
 
-**Shareable build:** `npm run build` produces `dist/index.html`, one self-contained ~970 KB file. Double-click it and it runs, no server needed.
+1. Sign in to GitHub. The repo is private, so you need an account with access.
+2. Open the repo's **[Releases](https://github.com/josiahw11/Lee-s-Retirement-Sim/releases)** page and download **`sunset-palms.html`** from the latest release.
+3. Double-click the file. It opens in your browser and plays. There's nothing to install and it needs no internet connection.
+
+### Option 2: run it from the source code
+
+This is the way to go if you want the newest version or plan to change the game.
+
+1. **Install Node.js.** Get the **LTS** version from [nodejs.org](https://nodejs.org) (version 20.19 or newer; 22 or 24 recommended) and run the installer with the default options. To check it worked, open a terminal (Windows: *Command Prompt* or *PowerShell*; Mac: *Terminal*) and run `node -v`. It should print a version number.
+2. **Get the code.** The newest version lives on the **`dev`** branch; `main` still holds the original v0.1 demo.
+   - **With Git:**
+     ```bash
+     git clone -b dev https://github.com/josiahw11/Lee-s-Retirement-Sim.git
+     ```
+   - **Without Git:** on the GitHub page, switch the branch dropdown from `main` to `dev`, then choose **Code → Download ZIP** and unzip it anywhere.
+3. **Start the game.**
+   - **Windows:** double-click **`Play Sunset Palms (Windows).bat`** in the game folder.
+   - **Mac:** double-click **`Play Sunset Palms (Mac).command`**. The first time, macOS may block it; right-click it, choose **Open**, then **Open** again. If it says it isn't executable, run `chmod +x "Play Sunset Palms (Mac).command"` once in Terminal from the game folder.
+   - **Any computer, from a terminal:** in the game folder, run:
+     ```bash
+     npm install
+     npm run play
+     ```
+
+   The first launch installs the game's tools (about a minute, needs internet). After that it starts in a few seconds. Your browser opens **http://localhost:5173** automatically; if it doesn't, open that address yourself. Keep the terminal window open while you play, and close it (or press Ctrl+C) to stop the game.
+
+**Tips**
+- Add `?play` to the address (`http://localhost:5173/?play`) to skip the title screen.
+- **Play from a phone or tablet on the same Wi-Fi:** the terminal prints a `Network:` address such as `http://192.168.1.20:5173`. Open that on the other device, in landscape. Touch controls appear on first touch.
+- **Make your own single-file copy:** run `npm run build`, and it writes `dist/index.html`. That one ~1 MB file has everything inlined, so you can double-click it, email it or put it on a USB stick.
+- **Saves** live in the browser's storage, so they're per browser and per address: `localhost:5173` and the downloaded file keep separate saves, and saves don't follow you to another computer.
+
+**Troubleshooting**
+- *`node` / `npm` is not recognized:* Node.js isn't installed, or the terminal was opened before installing it. Install it, then open a new terminal.
+- *"Vite requires Node.js version 20.19+":* your Node is too old. Install the current LTS from nodejs.org.
+- *Port 5173 is already in use:* another copy is running, so close that terminal. Or use the other address Vite prints (for example `http://localhost:5174`).
+- *Black or blank screen:* turn on hardware acceleration in the browser settings, update your graphics drivers, or try Chrome or Edge. In the game's Esc menu, the **Low** graphics preset helps older laptops.
+- *The mouse doesn't turn the camera:* some browsers and embedded panes block mouse capture. Click and drag to look around instead, or use Z / C to rotate the camera.
 
 ## Controls
 
