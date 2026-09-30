@@ -198,7 +198,62 @@ export function buildBeach(world, GEO, heightAt) {
     b.add(M.vc, new THREE.ConeGeometry(1.8, 0.7, 8, 1, true), '#f4f0e8', mat4(x, y + 2.48, z, 0, 1, -1, 1));
     b.add(M.vc, GEO.box, ['#ffffff', '#f2c94c', '#8fd3ff', '#ff9ec7'][i % 4], mat4(x + 1.4, y + 0.03, z + 0.6, 0.3, 1, 0.02, 2));
     world.beachSpots.push({ x: x + 1.4, z: z + 0.6 });
+    // a pair of low beach chairs facing the water, and usually a cooler
+    for (const dz of [-0.8, 0.5]) beachChair(b, GEO, x + 0.9, y, z + dz - 1.4, -Math.PI / 2 + (rnd() - 0.5) * 0.4, ['#e84a5f', '#1f8a8a', '#23408e', '#f2c94c'][(i + (dz > 0 ? 1 : 0)) % 4]);
+    if (rnd() < 0.7) {
+      box(x - 0.9, y, z - 0.6, 0.6, 0.42, 0.4, rnd() < 0.5 ? '#e84a5f' : '#1f6fb5');
+      box(x - 0.9, y + 0.42, z - 0.6, 0.64, 0.07, 0.44, '#f4f4f4');
+    }
   }
+
+  // ---- beach life: sea oats on the dune, sandcastles, driftwood, shells, kayaks, a rinse-off shower
+  const oat = new THREE.ConeGeometry(0.045, 1, 4);
+  for (let i = 0; i < 220; i++) {
+    const x = 327 + rnd() * 20, z = BEACH.z0 + 6 + rnd() * (BEACH.z1 - BEACH.z0 - 12);
+    if (Math.abs(x - 358) < 4.5 || Math.abs(z - 60) < 14 || Math.hypot(x - BEACH.lot.x, z - BEACH.lot.z) < 26) continue;
+    const y = heightAt(x, z);
+    const n = 7 + Math.floor(rnd() * 5);
+    for (let k = 0; k < n; k++) {
+      const h = 0.6 + rnd() * 0.7, lean = (rnd() - 0.5) * 0.5, ry = rnd() * 6.28;
+      b.add(M.vc, oat, k % 2 ? '#b9ae6e' : '#9fa45e', mat4(x + (rnd() - 0.5) * 0.4, y + h / 2, z + (rnd() - 0.5) * 0.4, ry, 1, h, 1, lean, lean * 0.5), (px, py) => Math.max(0, py + 0.5) * 0.18);
+      if (k === 0) b.add(M.vc, GEO.sph, '#d8c38a', mat4(x, y + h, z, 0, 0.05, 0.12, 0.05), 0.2); // seed head
+    }
+  }
+  for (let i = 0; i < 6; i++) {
+    const x = 400 + rnd() * 18, z = BEACH.z0 + 30 + rnd() * (BEACH.z1 - BEACH.z0 - 60);
+    if (Math.abs(z - p.z) < 10) continue;
+    const y = heightAt(x, z);
+    b.add(M.vc, GEO.cyl16, '#d9bf86', mat4(x, y + 0.2, z, 0, 0.7, 0.4, 0.7));
+    b.add(M.vc, GEO.cyl16, '#d4b97f', mat4(x, y + 0.55, z, 0, 0.45, 0.3, 0.45));
+    for (const [dx, dz] of [[0.6, 0.6], [-0.6, 0.6], [0.6, -0.6], [-0.6, -0.6]]) {
+      b.add(M.vc, GEO.cyl, '#d9bf86', mat4(x + dx, y + 0.35, z + dz, 0, 0.16, 0.7, 0.16));
+      b.add(M.vc, GEO.cone, '#cfb277', mat4(x + dx, y + 0.8, z + dz, 0, 0.18, 0.22, 0.18));
+    }
+    b.add(M.vc, GEO.cone, '#cfb277', mat4(x, y + 0.9, z, 0, 0.3, 0.4, 0.3));
+    b.add(M.vc, GEO.cyl, '#ff6fa8', mat4(x, y + 1.25, z, 0, 0.012, 0.35, 0.012)); // a little flag
+    box(x + 0.08, y + 1.3, z, 0.16, 0.1, 0.01, '#ff6fa8');
+  }
+  for (let i = 0; i < 10; i++) {
+    const x = BEACH.shore - 6 + rnd() * 5, z = BEACH.z0 + 15 + rnd() * (BEACH.z1 - BEACH.z0 - 30);
+    if (Math.abs(z - p.z) < 10) continue;
+    const y = heightAt(x, z), len = 1.5 + rnd() * 2.5;
+    b.add(M.vc, GEO.cyl6, '#a89a86', mat4(x, y + 0.1, z, rnd() * 3, 0.12 + rnd() * 0.08, len, 0.12 + rnd() * 0.08, 0, Math.PI / 2));
+  }
+  for (let i = 0; i < 140; i++) {
+    const x = BEACH.shore - 9 + rnd() * 8, z = BEACH.z0 + 5 + rnd() * (BEACH.z1 - BEACH.z0 - 10);
+    b.add(M.vc, GEO.sph, ['#fbe3e8', '#f7d9c4', '#ffffff', '#e8c9a0'][i % 4], mat4(x, heightAt(x, z) + 0.01, z, rnd() * 6, 0.06, 0.025, 0.05));
+  }
+  for (let i = 0; i < 4; i++) {
+    const x = BEACH.shore - 5 - rnd() * 3, z = -120 + i * 70 + rnd() * 20;
+    const y = heightAt(x, z), c1 = ['#f2c94c', '#e84a5f', '#1f8a8a', '#ff8c42'][i];
+    b.add(M.vc, GEO.sph, c1, mat4(x, y + 0.15, z, 0.2, 0.32, 0.14, 1.8));
+    b.add(M.vc, GEO.sph, '#222', mat4(x, y + 0.26, z + 0.1, 0.2, 0.2, 0.05, 0.35)); // cockpit
+    b.add(M.vc, GEO.cyl, '#333', mat4(x + 0.5, y + 0.05, z, 0.2, 0.02, 2.2, 0.02, 0, Math.PI / 2 - 0.1)); // paddle
+  }
+  box(361.8, 0, 60, 0.12, 2.6, 0.12, '#bbb');
+  b.add(M.vc, GEO.cyl, '#bbb', mat4(361.4, 2.55, 60, 0, 0.04, 0.8, 0.04, 0, Math.PI / 2));
+  b.add(M.vc, GEO.cone, '#9a9a9a', mat4(361.05, 2.42, 60, 0, 0.12, 0.12, 0.12, Math.PI));
+  box(361.4, 0, 60, 1.4, 0.06, 1.4, '#c9c3b5');
 
   // ---- seagulls
   world.gulls = [];
@@ -212,6 +267,20 @@ export function buildBeach(world, GEO, heightAt) {
     const m = new THREE.Mesh(gullGeo, M.vc);
     world.root.add(m);
     world.gulls.push({ m, cx: 380 + rnd() * 50, cz: -100 + rnd() * 250, r: 10 + rnd() * 25, h: 10 + rnd() * 10, ph: rnd() * 6.28, w: (0.25 + rnd() * 0.2) * (rnd() < 0.5 ? -1 : 1) });
+  }
+}
+
+// Low-slung aluminum beach chair: webbed seat and back in one color.
+function beachChair(b, GEO, x, y, z, ry, color) {
+  const c = Math.cos(ry), s = Math.sin(ry);
+  const at = (lx, ly, lz) => [x + lx * c + lz * s, y + ly, z - lx * s + lz * c];
+  const part = (geo, col, lx, ly, lz, sx, sy, sz, rx = 0) => { const [px, py, pz] = at(lx, ly, lz); b.add(M.vc, geo, col, mat4(px, py, pz, ry, sx, sy, sz, rx)); };
+  part(GEO.box, color, 0, 0.22, 0.05, 0.55, 0.04, 0.55);
+  part(GEO.box, color, 0, 0.5, -0.28, 0.55, 0.6, 0.04, -0.45);
+  for (const sx of [-0.28, 0.28]) {
+    part(GEO.box, '#d9d9d9', sx, 0.11, 0.25, 0.03, 0.22, 0.03);
+    part(GEO.box, '#d9d9d9', sx, 0.11, -0.2, 0.03, 0.22, 0.03);
+    part(GEO.box, '#d9d9d9', sx, 0.34, 0.02, 0.03, 0.03, 0.5); // arm rest
   }
 }
 
