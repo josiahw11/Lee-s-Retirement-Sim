@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Sunset Palms — Retirement Is a Crime</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -67,11 +67,13 @@
       <div id="hud-weapon"></div>
       <div id="hud-inv"></div>
     </div>
+    <div id="detector" class="hidden"></div>
     <div id="speedo" class="hidden"><b id="speed-n">0</b><span>MPH</span></div>
     <div id="prompt" class="hidden"></div>
     <div id="toasts"></div>
     <div id="splash" class="hidden"></div>
     <div id="hint" class="hidden"></div>
+    <div id="photo-hint" class="hidden">📸 PHOTO MODE — WASD fly • Mouse look • Q/E down/up • Shift fast • V or Esc to exit</div>
   </div>
 
   <div id="world-ui"></div>
@@ -114,11 +116,15 @@
       <div class="pause-title">PAUSED — taking a nap</div>
       <button class="btn big" id="btn-resume">RESUME</button>
       <button class="btn" id="btn-save">SAVE GAME</button>
+      <div class="chapter-jump"><span>Reviewer shortcuts:</span><button class="btn" id="btn-ch2">Jump to Chapter 2</button><button class="btn" id="btn-ch3">Jump to Chapter 3</button><button class="btn" id="btn-ch4">Jump to Chapter 4</button><button class="btn" id="btn-hurricane">Summon Hurricane 🌀</button></div>
       <div class="settings">
         <label>Master volume <input type="range" id="set-master" min="0" max="1" step="0.05" /></label>
         <label>Radio volume <input type="range" id="set-music" min="0" max="1" step="0.05" /></label>
         <label>Mouse sensitivity <input type="range" id="set-sens" min="0.3" max="2.5" step="0.1" /></label>
+        <label>Field of view <input type="range" id="set-fov" min="50" max="85" step="1" /></label>
+        <label class="chk"><input type="checkbox" id="set-invert" /> Invert mouse Y</label>
         <label class="chk"><input type="checkbox" id="set-speech" /> Talk radio voice (text-to-speech)</label>
+        <label>Graphics quality <select id="set-quality"><option value="low">Low (laptops)</option><option value="medium">Medium</option><option value="high">High</option></select></label>
         <label class="chk"><input type="checkbox" id="set-bloom" /> Bloom / glow effects</label>
         <label class="chk"><input type="checkbox" id="set-shadows" /> Shadows</label>
       </div>
@@ -134,6 +140,9 @@
       <button class="btn big" id="btn-controls-close">GOT IT</button>
     </div>
   </div>
+
+  <div id="gazette" class="hidden"></div>
+  <div id="minigame" class="hidden"><div class="mg-box" id="mg-box"></div></div>
 
   <div id="click-to-play" class="hidden">Click to take control 🖱️</div>
 

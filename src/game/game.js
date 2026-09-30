@@ -5,7 +5,40 @@ import { Props, Balls, Pickups } from '../entities/props.js';
 import { NPC } from './npcs.js';
 import { Player } from './player.js';
 import { Driver, COURSE_LOOPS, PATROL_LOOP, nearestNode } from './traffic.js';
-import { Quests } from './quests.js';
+import { Quests, STEPS } from './quests.js';
+import { Race, RACE_TIERS, TRACK } from './race.js';
+import { ChugOff, Bingo, Brew } from './minigames.js';
+import { Shuffleboard } from './shuffleboard.js';
+import { Blackjack, Slots, SafeCrack } from './casino.js';
+import { AerobicsClass, AquaAerobics, talkChad } from './aerobics.js';
+import { Grandr, talkDate } from './grandr.js';
+import { ClosestToPin, golferChallenge } from './golf.js';
+import { Hurricane, hurricanePartyNode } from './hurricane.js';
+import { Wildlife } from './wildlife.js';
+import { Karaoke } from './karaoke.js';
+import { GarageSales, sellerNode } from './garagesale.js';
+import { SeniorGames, commishNode } from './seniorgames.js';
+import { Pickleball } from './pickleball.js';
+import { Stunts, STUNTS } from './stunts.js';
+import { BeerPong, buildPongTable } from './beerpong.js';
+import { Shuttle, dorisNode } from './shuttle.js';
+import { Derby, buildArena, danNode, ARENA, DERBY_EXIT } from './derby.js';
+import { Fishing } from './fishing.js';
+import { BluePill } from './bluepill.js';
+import { spawnBuck, buckNode, buckAround } from './chapter4.js';
+import { Dealership, abeNode } from './dealer.js';
+import { KegStand } from './kegstand.js';
+import { activitiesTab, bindActivities } from './activities.js';
+import { Soundscape } from './soundscape.js';
+import { Weather } from '../gfx/weather.js';
+import { Party } from './party.js';
+import { Events, showGazette } from './events.js';
+import { Life } from './life.js';
+import { Litter } from './litter.js';
+import { SkidMarks } from '../gfx/skids.js';
+import { BEACH, OCEAN, onSand } from '../world/beach.js';
+import { updateTooth, deuceConfront, spawnTooth, spawnDeuce } from './chapter2.js';
+import { spawnBoatCrew, talkCaptain, talkFingers, talkDeckhand, talkPatron, jumpToChapter } from './chapter3.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
 import * as D from './dialogue.js';
 import { NODES, EDGES, HOLES, PONDS, ZONES, STREETS, HOUSES, PLAYER_HOUSE, BUILDINGS } from '../world/layout.js';
@@ -30,11 +63,13 @@ export function defaultState(name = 'Lee') {
     money: 180,
     day: 0, dow: 4, minutes: 8 * 60 + 30,
     stats: { str: { lvl: 2, xp: 0 }, cha: { lvl: 2, xp: 0 }, intim: { lvl: 1, xp: 0 }, stat: { lvl: 1, xp: 0 } },
-    inv: { beer: 0, wine: 0, flowers: 0, pills: 0, tea: 0, balls: 0 },
+    inv: { beer: 0, wine: 0, flowers: 0, pills: 0, tea: 0, balls: 0, teabags: 0, antler: 0, tooth: 0, towel: 0 },
     ballCap: 1, hopper: false, drones: 0, droneBank: 0,
     weapons: ['fists'], weapon: 'fists',
     cart: { color: '#ffffff', upgrades: {} },
-    owned: { polo: false, chain: false, rolex: false },
+    owned: { polo: false, chain: false, rolex: false, detector: false },
+    look: { shirt: 0, hat: 'visor', glasses: 'aviator', sock: '#141414' },
+    wardrobe: { shirt: [0], hat: ['visor'], glasses: ['aviator', 'none'], sock: ['#141414'] },
     romance,
     quest: { step: 0, flags: {}, started: {} },
     flags: {},
@@ -67,8 +102,53 @@ const ACH = {
   blackout: ['Where Am I?', 'Drank until you blacked out.'],
   drunkDrive: ['Designated Driver? Never Heard Of Her', 'Drove hammered for 30 seconds straight.'],
   carjack: ['Grand Theft Golf Cart', 'Yanked a senior out of their own cart.'],
+  cat: ['Neighborhood Hero', 'Rescued a cat from a palm tree (by ramming the tree).'],
+  streaker: ['Indecent Exposure Unit', 'Tackled Earl, the 91-year-old streaker.'],
+  pierJump: ["Ocean's Eleven Feet Deep", 'Drove a golf cart off the end of the pier.'],
+  treasure: ['X Marks The Spot', 'Dug up buried treasure with a metal detector.'],
   gator: ['Gator Bait', 'Got bitten by Mr. Chompers. The sign warned you.'],
+  raceWin: ['Geriatric Grand Prix', 'Won a golf cart race.'],
+  chug: ['Bottoms Up', 'Won a chug-off.'],
+  party: ['Animal House', 'Threw a lawn party at your place.'],
+  bingo: ['Beat the System', "Won Karen's rigged bingo."],
+  raceLegend: ['Senior Speed Demon', 'Won a $500 race against The Widow Maker.'],
+  litterbug: ['Keep Florida Beautiful', 'Flung 24 empty beer cans onto the grounds.'],
+  shuffle: ['Shuffleboard Shark', 'Beat a shuffleboard hustler on his own court.'],
+  blackjack21: ['Twenty-One Gun Salute', 'Hit a natural blackjack on the Lucky Lady.'],
+  jackpot: ['Gam-Gam Jackpot', 'Hit the Golden Gam-Gam progressive jackpot.'],
+  overboard: ['Man Overboard', "Got thrown off a casino boat by a man in a captain's hat."],
+  safecracker: ['Cracked It', "Opened the Captain's safe with nothing but a hearing aid and patience."],
+  robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
+  kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
+  scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
+  angler: ['Old Man and the Sea', 'Landed a fish off Boca Pier.'],
+  silverking: ['The Silver King', 'Landed a Tarpon off the pier. Phil still doesn\'t believe it.'],
+  dentures: ['Finders Keepers', 'Fished somebody\'s dentures out of the Gulf.'],
+  kegstand: ['Upside-Down Legend', 'Set a new keg stand record at the Tiki Hut.'],
+  kegking: ['Keg King', 'Held a keg stand for 20+ seconds. Your liver has filed for divorce.'],
+  dealer: ['Pre-Owned', 'Bought a cart from Honest Abe. No refunds. No questions.'],
+  crashcourse: ['Crash Course', 'Beat Buck Thunderhill and finished Chapter 4.'],
+  derby: ['Last Cart Standing', 'Won the Bumper Brawl demolition derby.'],
+  daisy: ['Driving Miss Daisy', 'Delivered 5 fares in one Senior Shuttle shift.'],
+  crazyshuttle: ['Crazy Shuttle', 'Earned $400+ in a single Senior Shuttle shift.'],
+  pong: ['Pong God', 'Won a game of beer pong at the Tiki Hut. Your liver lost.'],
+  stuntman: ['Stuntman', 'Completed a Unique Stunt Jump.'],
+  knievel: ['Stunt Jump Legend', 'Completed every Unique Stunt Jump in Sunset Palms.'],
+  spin720: ['Hip Replacement 720', 'Landed a 720 in a golf cart.'],
+  pickle: ['Dink Dynasty', 'Won a real game of pickleball. Your knees filed a formal complaint.'],
+  champion: ['Senior Games Champion', 'Stood on the top step of the Senior Games podium.'],
+  triplecrown: ['Triple Crown', 'Gold in all three Senior Games events on one Sunday.'],
+  picker: ['American Picker', 'Bought (or lifted) six things at garage sales.'],
+  karaoke: ['Tiki Hut Idol', 'Got a 90%+ crowd at karaoke night.'],
+  stormchaser: ['Storm Chaser', 'Caught 2.4+ seconds of air in hurricane winds.'],
+  conga: ['Conga Through Mildred', 'Led a conga line at a hurricane party.'],
+  flamingoRescue: ['Flamingo Rescue', 'Returned 10 hurricane-scattered flamingos to the HOA.'],
+  ace: ['Ace!', 'Made a hole in one in a closest-to-the-pin bet.'],
+  grandr: ['Swipe Right on Life', 'Had a five-star Grandr date.'],
+  aquaking: ['Aqua King', 'Scored 90%+ in Aqua Jazz. Chad has never been so threatened.'],
 };
+
+export const MENU_TABS = [['status', 'STATUS'], ['activities', 'TO DO 📍'], ['bag', 'BAG'], ['romance', 'ROMANCE'], ['grandr', 'GRANDR 💘'], ['empire', 'EMPIRE'], ['hoa', 'HOA'], ['help', 'HELP']];
 
 export class Game {
   constructor(ctx) {
@@ -105,6 +185,17 @@ export class Game {
     this.scene.add(this.headlight, this.headlight.target);
     this.neonLight = new THREE.PointLight(0xff2bd6, 0, 7, 1.5);
     this.scene.add(this.neonLight);
+    this.partyLight = new THREE.PointLight(0xff8fd0, 0, 26, 1.4);
+    this.scene.add(this.partyLight);
+    this.weather = new Weather(this.scene);
+    this.storm = null;
+    this.ui.onBubble = (ent, text) => {
+      if (!this.running || text.startsWith('*') || ent === this.player) return;
+      const d = Math.hypot(ent.x - this.player.x, ent.z - this.player.z);
+      if (d > 30) return;
+      ent.voice ??= rand(0.8, 1.2);
+      audio.mumble(text, { female: ent.female, pitch: ent.voice, vol: clamp(1.2 - d / 30, 0.2, 1) });
+    };
     this.populate();
     const ph = PLAYER_HOUSE;
     const cs = this.world.playerCartSpawn;
@@ -207,6 +298,26 @@ export class Game {
     keeper('Flo', true, 193, 47.5, 0, 'buffet', { hair: '#f0d7a1', shirt: 3, glasses: 'readers' });
     keeper('Deb', true, 232, 46.5, 0, 'hoa', { hair: '#bdbdbd', shirt: 2, glasses: 'readers', hat: 'none' });
     keeper('Manny', false, 98, -2, 0, 'tiki', { hat: 'bucket', hatColor: '#f2c94c', shirt: 0, glasses: 'aviator', skin: '#c68863' });
+    keeper('Skip', false, BEACH.bar.x + 3.7, BEACH.bar.z + 1.2, Math.PI / 2, 'pelican', { hat: 'bucket', hatColor: '#ff6b1a', shirt: 7, glasses: 'aviator', skin: '#c68863', hair: '#f0d7a1' });
+    keeper('Captain Roy', false, BEACH.bait.x + 5.2, BEACH.bait.z + 3.4, Math.PI / 2, 'bait', { hat: 'fedora', hatColor: '#23408e', shirt: 2, mustache: true, belly: 1.4 });
+    // beach life
+    const vic = this.spawnNPC({ name: 'Vic, Retired Lifeguard', female: false, role: 'lifeguard', x: BEACH.tower.x + 2.6, z: BEACH.tower.z, state: 'static', look: { hat: 'visor', hatColor: '#e84a5f', shirt: 1, shorts: '#e84a5f', glasses: 'aviator', mustache: true, skin: '#9a6545' }, homePt: { x: BEACH.tower.x + 2.6, z: BEACH.tower.z } });
+    vic.data.face = Math.PI / 2;
+    vic.data.quiet = true;
+    spawnBoatCrew(this);
+    [[452, -1], [458, 1], [508, -1]].forEach(([x, side], i) => {
+      const n = this.spawnNPC({ name: [`Fishin' Phil`, 'Old Man Moe', 'Sully'][i], female: false, role: 'fisher', x, z: BEACH.pier.z + side * 2.2, state: 'fish', look: { hat: 'bucket', hatColor: '#8a9a6a', shirt: 6 } });
+      n.data.face = side > 0 ? 0 : Math.PI;
+      n.char.setHeld('rod');
+      n.data.quiet = true;
+    });
+    (this.world.beachSpots || []).slice(0, 6).forEach((sp) => {
+      const n = this.spawnNPC({ female: chance(0.65), role: 'resident', x: sp.x, z: sp.z, state: 'lounge', look: { hat: 'none', glasses: 'big' } });
+      n.baseState = 'lounge';
+      n.data.face = rand(0, 6.28);
+      n.heading = n.data.face;
+      this.assignWants(n);
+    });
 
     // Karen
     this.named.karen = this.spawnNPC({ name: 'Karen Whitmore', female: true, role: 'karen', x: 230, z: 50, zone: { x0: -10, x1: 250, z0: 44, z1: 52 }, look: { female: true, hair: '#f0d7a1', shirt: 6, hat: 'none', glasses: 'readers', skin: '#f5d3b8' }, walkSpeed: 1.5 });
@@ -214,6 +325,7 @@ export class Game {
 
     // ladies (Tammy is spawned as a beverage cart operator)
     const spots = {
+      beach: { x0: 368, x1: 416, z0: 30, z1: 140 },
       pool: ZONES[1], shuffle: ZONES[2], tiki: { x0: 88, x1: 108, z0: 5, z1: 12 }, pickleball: ZONES[4], clubhouse: ZONES[0],
     };
     for (const def of LADIES) {
@@ -246,6 +358,12 @@ export class Game {
       this.named[r.id] = n;
     }
 
+    // Rocket Ron runs the cart races out of the clubhouse lot
+    this.named.ron = this.spawnNPC({ name: '"Rocket" Ron Delvecchio', female: false, role: 'raceboss', x: -6, z: 47, state: 'static', hp: 70, look: { hat: 'cap', hatColor: '#ff6b1a', shirt: 7, glasses: 'aviator', mustache: true, skin: '#e0ac8a', hair: '#1c1c1c', belly: 1.1 }, homePt: { x: -6, z: 47 } });
+    this.named.ron.data.face = Math.PI;
+    this.named.ron.data.quiet = true;
+    this.addCart({ x: -2.5, z: 44, ry: Math.PI, kind: 'resident', color: '#ff6b1a', upgrades: { governor: true, rims: true, neon: true, flag: true } });
+
     // golfers at tees
     for (const i of [0, 2, 3, 5]) {
       const h = HOLES[i];
@@ -264,6 +382,15 @@ export class Game {
       const c = this.addCart({ x: nd.x + 2, z: nd.z + 2, ry: rand(0, 6), kind: 'resident' });
       const d = this.spawnNPC({ role: 'driver', female: chance(0.4), x: nd.x, z: nd.z });
       d.seatIn(c, new Driver(c, 'cruise', { speed: rand(5, 7) }));
+      d.data.wants = null;
+    }
+    // mobility scooters: nine miles an hour of pure menace, and everyone gets stuck behind them
+    for (const id of ['C1', 'C5', 'S2', 'P4', 'P6']) {
+      const nd = NODES[id];
+      if (!nd) continue;
+      const c = this.addCart({ x: nd.x + 1.5, z: nd.z - 1.5, ry: rand(0, 6), kind: 'scooter', color: pick(['#b8323a', '#b8323a', '#23408e', '#2f6b4a', '#e8e0d0']) });
+      const d = this.spawnNPC({ role: 'driver', female: chance(0.55), x: nd.x, z: nd.z, look: { glasses: 'big' } });
+      d.seatIn(c, new Driver(c, 'cruise', { speed: rand(3.3, 4) }));
       d.data.wants = null;
     }
     // security
@@ -312,15 +439,18 @@ export class Game {
     this.state = state;
     const ph = PLAYER_HOUSE;
     this.playerCart.upgrades = { ...state.cart.upgrades };
+    this.playerCart.model = state.cart.model || 'classic';
     this.playerCart.setPaint(state.cart.color);
     this.playerCart.rebuild();
-    const sp = state.pos || { x: ph.frontPos.x, z: ph.frontPos.z, h: ph.facing };
+    let sp = state.pos || { x: ph.frontPos.x, z: ph.frontPos.z, h: ph.facing };
+    if (Math.abs(sp.x - ARENA.x) < ARENA.w / 2 + 1 && Math.abs(sp.z - ARENA.z) < ARENA.d / 2 + 1) sp = { x: DERBY_EXIT.x, z: DERBY_EXIT.z, h: Math.PI };
     const p = this.player;
     p.x = sp.x; p.z = sp.z; p.heading = sp.h ?? 0; p.y = heightAt(sp.x, sp.z);
     if (state.cartPos) {
       Object.assign(this.playerCart, { x: state.cartPos.x, z: state.cartPos.z, heading: state.cartPos.h, y: heightAt(state.cartPos.x, state.cartPos.z) });
       this.playerCart.syncMesh(0);
     }
+    this.player.setLook(state.look);
     this.player.hp = this.maxHp();
     this.player.char.setHeld(state.weapon === 'fists' ? null : state.weapon);
     this.heat.value = state.heat || 0;
@@ -330,6 +460,9 @@ export class Game {
       if (n) this.recruit(n, true);
     }
     this.spawnDrones();
+    this.seedTreasure();
+    const qid = this.quests.current()?.id;
+    if (qid === 'c2_tooth') spawnTooth(this);
     if (state.quest.flags.beatChip) {
       // Chip keeps his distance now
       this.named.chip.data.retreatAfterKO = true;
@@ -339,11 +472,48 @@ export class Game {
     this.running = true;
     this.camRig.yaw = this.player.heading + Math.PI;
     this.camRig.target.set(this.player.x, this.player.y + 1.5, this.player.z);
+    if (isNew) this.storm = { start: 14, dur: 1.3, warned: false };
+    else this.rollWeather();
     if (isNew) {
       this.camRig.introDur = this.camRig.introT = 4.5;
       this.ui.splash('SUNSET PALMS', 'Day 1. Try to behave. (You won\'t.)', 3.5);
     }
     this.quests.begin();
+    this.worldEvents = new Events(this);
+    this.life = new Life(this);
+    if (this.litter) this.litter.clear();
+    this.litter = new Litter(this);
+    if (this.aerobicsClass) this.aerobicsClass.stop();
+    this.aerobicsClass = new AerobicsClass(this);
+    if (this.grandr) this.grandr.clear();
+    this.grandr = new Grandr(this);
+    if (this.hurricane) this.hurricane.clear();
+    this.hurricane = new Hurricane(this);
+    if (this.wildlife) this.wildlife.clear();
+    this.wildlife = new Wildlife(this);
+    if (this.garageSales) this.garageSales.clear();
+    this.garageSales = new GarageSales(this);
+    if (this.seniorGames) this.seniorGames.clear();
+    this.seniorGames = new SeniorGames(this);
+    this.soundscape = new Soundscape(this);
+    if (this.stunts) this.stunts.clear();
+    this.stunts = new Stunts(this);
+    buildPongTable(this);
+    if (this.shuttle) this.shuttle.clear();
+    this.shuttle = new Shuttle(this);
+    buildArena(this);
+    this.world.poi('derby', ARENA.x, ARENA.z - ARENA.d / 2 - 3, 'Bumper Brawl', 0); // map icon only
+    if (this.derby) this.derby.clear();
+    this.derby = new Derby(this);
+    if (this.bluePill) this.bluePill.clear();
+    this.bluePill = new BluePill(this);
+    if (buckAround(this, STEPS)) spawnBuck(this);
+    if (this.dealer) this.dealer.clear();
+    this.dealer = new Dealership(this);
+    this.world.poi('dealer', -214, 49, "Honest Abe's Carts", 0); // map icon only
+    if (this.skids) this.skids.clear();
+    else this.skids = new SkidMarks(this.scene);
+    this.yesterday = { ...state.counters };
     if (isNew) {
       this.ui.toast(`Welcome to Sunset Palms, ${state.name}.`, 'quest', 6);
       setTimeout(() => this.ui.toast('📋 HOA Notice: Your cart is parked on GRASS. That\'s a warning. — K.W.', 'heat', 7), 3500);
@@ -363,6 +533,7 @@ export class Game {
     const s = this.state;
     s.heat = this.heat.value;
     s.pos = { x: this.player.x, z: this.player.z, h: this.player.heading };
+    if (this.derby && this.derby.phase !== 'idle') s.pos = { x: DERBY_EXIT.x, z: DERBY_EXIT.z, h: Math.PI }; // not inside the hay bales
     const c = this.playerCart;
     s.cartPos = { x: c.x, z: c.z, h: c.heading };
     try {
@@ -492,6 +663,7 @@ export class Game {
     this.achievement('conquest');
     if (perkId === 'titanium') this.giveWeapon('titanium');
     if (perkId === 'legend') {
+      this.celebrate(20);
       this.achievement('tammy');
       this.xp('stat', 12);
     }
@@ -656,10 +828,39 @@ export class Game {
     }
   }
 
+  rollWeather() {
+    this.storm = chance(0.4) ? { start: rand(13.5, 16.5), dur: rand(0.8, 1.8), warned: false } : null;
+  }
+
+  // returns lightning flash (0..1)
+  updateWeather(dt) {
+    const h = this.state.minutes / 60;
+    const s = this.storm;
+    const on = !!s && h >= s.start && h < s.start + s.dur;
+    const hk = this.hurricane ? this.hurricane.k : 0;
+    this.weather.target = Math.max(on ? 1 : 0, hk);
+    if (on && !s.warned && this.running && hk <= 0) {
+      s.warned = true;
+      this.ui.toast('⛈️ Afternoon thunderstorm! Roads are slick and the ladies are worried about their perms.', 'quest', 5);
+    }
+    const flash = this.weather.update(dt, this.camera, () => audio.thunder(rand(0.3, 1.6)));
+    audio.setRain(this.weather.intensity);
+    // wet, shiny roads
+    const k = this.weather.intensity;
+    this.world.roadMat.roughness = 0.92 - k * 0.6;
+    this.world.roadMat.metalness = k * 0.25;
+    this.world.roadMat.color.setScalar(1 - k * 0.35);
+    this.world.pathMat.roughness = 0.9 - k * 0.55;
+    return flash;
+  }
+
   newDay() {
+    this.rollWeather();
+    this.seedTreasure();
     const s = this.state;
     s.day++;
     s.dow = (s.dow + 1) % 7;
+    if (this.hurricane) this.hurricane.newDay();
     s.counters.beersToday = 0;
     for (const n of this.npcs) {
       this.assignWants(n);
@@ -714,6 +915,7 @@ export class Game {
   }
 
   sleep() {
+    if (this.party) this.party.end();
     this.fadeOut(() => {
       const s = this.state;
       const toMorning = ((24 * 60 - s.minutes) + 7 * 60) % 1440 || 1440;
@@ -724,6 +926,7 @@ export class Game {
       this.heat.value = Math.max(0, this.heat.value - 2);
       this.save();
     }, 2.4, '☀️ GOOD MORNING', null);
+    this.after(3.6, () => showGazette(this));
   }
 
   election() {
@@ -734,6 +937,7 @@ export class Game {
       s.hoa.president = true;
       this.xp('stat', 8);
       this.achievement('president');
+      this.celebrate(18, 15, 0);
       this.ui.openDialogue({ name: 'ELECTION RESULTS', title: 'Sunset Palms Clubhouse', text: `${s.name}: ${you} votes\nKaren Whitmore: ${karen} votes\n\nThe room erupts. Someone's oxygen tank falls over. Karen snaps her clipboard in half.\n\nYou are the new HOA PRESIDENT. Visit the HOA Office to issue decrees.`, choices: [{ text: '🎉 "Drinks are on Karen!"', action: () => null }] });
     } else {
       s.hoa.registered = false;
@@ -801,6 +1005,7 @@ export class Game {
   naptime() {
     const p = this.player;
     p.ko = true;
+    p.stand = null;
     p.hp = 0;
     audio.play('sadTrombone');
     this.fadeOut(() => {
@@ -852,14 +1057,16 @@ export class Game {
     p.hp = Math.min(this.maxHp(), p.hp + 4);
     s.counters.beers++;
     s.counters.beersToday++;
+    this.camRig.addShake(0.25); // *crunch*
     this.achievement('firstBeer');
     if (s.counters.beersToday >= 6) this.achievement('sixpack');
     p.char.setHeld(s.weapon === 'fists' ? null : s.weapon);
+    this.litter.toss();
     if (chance(0.5)) {
-      setTimeout(() => {
+      this.after(0.35, () => {
         audio.play('burp');
         this.ui.bubble(p, pick(['*BRAAAAP*', '*buuuurp*', '*URRRP* ...pardon me.', '*BELCH* That\'s the stuff.']), 1.8);
-      }, 350);
+      });
     }
     if (p.cart) this.ui.hint(pick(['Drinking and driving? In THIS economy?', 'Keep it under 12 MPH near Security...']), 2.5);
   }
@@ -907,7 +1114,7 @@ export class Game {
       n.takeHit(dmg, p.x, p.z, knock, p);
       if (!koBefore) {
         this.ui.float(n.x, 2.2, n.z, `-${dmg}`, '#ffd23f', 0.9);
-        if (!wasHostile && !['rival', 'goon', 'husband'].includes(n.role)) this.crime(p.x, p.z, n.role === 'security' ? 1.5 : 0.7, n.role === 'security' ? 'Assaulting an HOA officer' : 'Assault with a golf implement', 22);
+        if (!wasHostile && !['rival', 'goon', 'husband', 'streaker'].includes(n.role)) this.crime(p.x, p.z, n.role === 'security' ? 1.5 : 0.7, n.role === 'security' ? 'Assaulting an HOA officer' : 'Assault with a golf implement', 22);
       }
       hitAny = true;
     }
@@ -957,7 +1164,7 @@ export class Game {
       if (c.sirenOn) for (const n of this.npcs) if (!n.cart && n.state === 'wander' && Math.hypot(n.x - c.x, n.z - c.z) < 25) { n.state = 'flee'; n.fleeFrom = this.player; n.fleeT = 3; }
       return;
     }
-    audio.play(c.upgrades.horn ? 'cucaracha' : 'horn');
+    audio.play(c.kind === 'scooter' ? 'meep' : c.upgrades.horn ? 'cucaracha' : 'horn');
     for (const n of this.npcs) {
       if (n.cart || n.state !== 'wander') continue;
       if (Math.hypot(n.x - c.x, n.z - c.z) < 12) {
@@ -1019,11 +1226,11 @@ export class Game {
       const drv = c.driver;
       if (drv && drv !== p) {
         if (drv.role === 'lady' || drv.role === 'operator') continue; // talk instead
-        if (drv.role === 'security') continue;
-        consider(d + 0.3, { label: `Yank ${drv.name.split(' ')[0]} out of the cart`, cls: 'bad', action: () => this.carjack(c) });
+        if (drv.role === 'security' || drv.role === 'racer') continue;
+        consider(d + 0.3, { label: `Yank ${drv.name.split(' ')[0]} ${c.kind === 'scooter' ? 'off the scooter' : 'out of the cart'}`, cls: 'bad', action: () => this.carjack(c) });
       } else {
         const own = c === this.playerCart;
-        consider(d + 0.2, { label: own ? 'Drive your cart' : `Borrow ${c.kind === 'club' ? 'a club' : "somebody's"} cart`, action: () => this.enterCart(c) });
+        consider(d + 0.2, { label: own ? 'Drive your cart' : c.kind === 'scooter' ? "Borrow somebody's mobility scooter" : `Borrow ${c.kind === 'club' ? 'a club' : "somebody's"} cart`, action: () => this.enterCart(c) });
       }
     }
     for (const n of this.npcs) {
@@ -1039,6 +1246,7 @@ export class Game {
       if (n.cart && n.role !== 'lady' && n.role !== 'operator') continue;
       consider(d - 0.4, { label: `Talk to ${n.name}`, action: () => this.talk(n) });
     }
+    if (this.detector && this.detector.strength > 0.9) consider(0.5, { label: '🔍 Dig here!', action: () => this.dig() });
     for (const poi of Object.values(this.world.pois)) {
       const d = Math.hypot(poi.x - p.x, poi.z - p.z);
       if (d < poi.r) consider(d + 0.1, { label: poi.label, action: () => this.visitPOI(poi) });
@@ -1073,8 +1281,8 @@ export class Game {
     drv.say(pick(['HEY! I\'M DRIVING HERE!', 'HELP! CARJACKING!', 'That\'s MY CART, you hooligan!']), 2.5);
     this.player.enterCart(c);
     this.announceRadio();
-    this.achievement('carjack');
-    this.crime(c.x, c.z, 1.1, 'Grand Theft Golf Cart', 25);
+    this.achievement(c.kind === 'scooter' ? 'scooterjack' : 'carjack');
+    this.crime(c.x, c.z, 1.1, c.kind === 'scooter' ? 'Grand Theft Mobility Scooter' : 'Grand Theft Golf Cart', 25);
     audio.play('oof');
   }
 
@@ -1099,11 +1307,31 @@ export class Game {
       if (r && r !== 'shop') node = r;
       else { n.talking = false; return; }
     } else if (n.role === 'karen') node = D.talkKaren(this, n);
+    else if (n === this.named.deuce) node = this.state.quest.flags.beatDeuce ? { name: n.name, title: 'Humbled Patriarch', text: `"Go away. I'm calling my lawyer. And my other lawyer."`, choices: [] } : deuceConfront(this);
     else if (n.role === 'rival') node = D.talkChip(this, n);
-    else if (n.role === 'golfer') node = D.talkGolfer(this, n);
+    else if (n.role === 'golfer') node = golferChallenge(this, n) || D.talkGolfer(this, n);
     else if (n.role === 'recruit' || n.role === 'gang') node = D.talkRecruit(this, n);
     else if (n.role === 'security') node = this.talkSecurity(n);
+    else if (n.role === 'raceboss') node = this.talkRon(n);
+    else if (n.role === 'racer') node = { name: n.name, title: 'Racer', text: `"Not now, I'm in the zone."`, choices: [] };
     else if (n.role === 'goon') node = { name: n.name, title: "Chip's Crew", text: pick(['"Chip says you\'re \'nouveau riche.\' I don\'t know what that means but I\'m offended."', '"Do you have a tee time? No? Then beat it."']), choices: [] };
+    else if (n.role === 'instructor') node = talkChad(this, n);
+    else if (n.role === 'date') node = talkDate(this, n);
+    else if (n.role === 'seller') node = sellerNode(this, n);
+    else if (n.role === 'commissioner') node = commishNode(this);
+    else if (n.role === 'dispatcher') node = dorisNode(this);
+    else if (n.role === 'derbyman') node = danNode(this);
+    else if (n.role === 'buck') node = buckNode(this);
+    else if (n.role === 'dealer') node = abeNode(this);
+    else if (n.role === 'captain') node = talkCaptain(this, n);
+    else if (n.role === 'mechanic') node = talkFingers(this, n);
+    else if (n.role === 'deckhand') node = talkDeckhand(this, n);
+    else if (n.role === 'patron') node = talkPatron(this, n);
+    else if (n.role === 'fisher') node = { name: n.name, title: 'Pier Fisherman', text: pick([`"Caught a grouper this big once. Wife left me the same day. Worth it."`, `"Shh. You'll scare the fish. And the fish are all I have left."`, `"Some maniac drove a golf cart off this pier last week. Beautiful arc, though."`]), choices: [
+      { text: '🎣 "Mind if I borrow a rod?"', action: () => { this.startMinigame('fish', { spotX: n.x + 4 }); this.ui.closeDialogue(); return 'keep'; } },
+      { text: 'Leave', action: () => null },
+    ] };
+    else if (n.role === 'lifeguard') node = { name: n.name, title: 'Retired Lifeguard (1971-2004)', text: pick([`"Rip currents, jellyfish, and Rhonda. The three dangers of this beach."`, `"If you go past the buoys, I'm not coming in after you. My knees are shot."`, `"Treasure hunters dig all over this sand. Found a Rolex last Tuesday. Real one."`]), choices: [] };
     else if (n.role === 'husband') node = { name: n.name, title: 'Resident', text: '"You lookin\' at my wife? Everybody looks at my wife. Don\'t look at my wife."', choices: [] };
     else node = D.talkResident(this, n);
     if (node) {
@@ -1131,6 +1359,7 @@ export class Game {
   }
 
   visitPOI(poi) {
+    if (poi.id === 'hurricaneParty') { this.ui.openDialogue(hurricanePartyNode(this)); return; }
     const r = D.visit(this, poi);
     if (r && r !== 'shop') this.ui.openDialogue(r);
   }
@@ -1139,7 +1368,7 @@ export class Game {
   npcHits(npc, target) {
     const dmg = npc.dmg * (npc.weapon ? 1.4 : 1);
     audio.play(npc.weapon ? 'bonk' : 'hit', { vol: 0.8 });
-    if (target === this.player) this.damagePlayer(dmg, npc.x, npc.z, npc.weapon ? 6 : 4);
+    if (target === this.player) this.damagePlayer(dmg, npc.x, npc.z, npc.data.boss ? 12 : npc.weapon ? 6 : 4);
     else target.takeHit(dmg, npc.x, npc.z, 4, npc);
   }
 
@@ -1154,6 +1383,10 @@ export class Game {
   }
 
   onKnockout(npc, attacker) {
+    if (this.brawlGroup && this.brawlGroup.includes(npc)) {
+      npc.data.brawlDown = true;
+      npc.data.retreatAfterKO = true;
+    }
     const s = this.state;
     if (attacker === this.player || (attacker && attacker.role === 'gang')) {
       s.counters.knockouts++;
@@ -1174,28 +1407,39 @@ export class Game {
     if (npc.state === 'ko') this.achievement('splash');
   }
 
-  chipBrawl(chip) {
-    this.brawlGroup = [chip, ...this.chipGoons];
-    for (const n of this.brawlGroup) {
+  startBrawl(group, title, sub, onWin) {
+    this.brawlGroup = group;
+    this.brawlOnWin = onWin;
+    for (const n of group) {
+      n.data.brawlDown = false;
+      n.data.retreatAfterKO = false;
       n.hostile = true;
       n.aggro = this.player;
       n.state = 'fight';
       n.hp = n.maxHp;
     }
-    this.ui.splash('BRAWL!', "Chip & the Country Club Boys", 2, '#ff9f1c');
+    this.ui.splash(title, sub, 2, '#ff9f1c');
     audio.play('whistle');
   }
 
-  checkBrawls() {
-    if (this.brawlGroup && this.brawlGroup.every((n) => n.state === 'ko')) {
-      this.brawlGroup = null;
+  chipBrawl(chip) {
+    this.startBrawl([chip, ...this.chipGoons], 'BRAWL!', 'Chip & the Country Club Boys', () => {
       this.state.quest.flags.beatChip = true;
       this.named.chip.data.retreatAfterKO = true;
       for (const g of this.chipGoons) g.data.retreatAfterKO = true;
-      this.named.chip.hostile = false;
       setTimeout(() => this.named.chip.say('Father will hear about this!', 3), 1500);
-      this.ui.splash('VICTORY', 'The Country Club Boys have been humbled.', 2.5);
+    });
+  }
+
+  checkBrawls() {
+    if (this.brawlGroup && this.brawlGroup.every((n) => n.state === 'ko' || n.data.brawlDown)) {
+      const win = this.brawlOnWin;
+      for (const n of this.brawlGroup) n.hostile = false;
+      this.brawlGroup = null;
+      this.brawlOnWin = null;
+      this.ui.splash('VICTORY', 'Another bunch of blue-bloods, napping on the lawn.', 2.5);
       audio.play('success');
+      if (win) win();
     }
     // rival sabotage events
     for (const ev of this.events) {
@@ -1434,9 +1678,11 @@ export class Game {
     const pond = gt.pond;
     let prey = null, bd = Infinity;
     const cands = [this.player, ...this.npcs];
+    gt.rampage = Math.max(0, (gt.rampage || 0) - dt);
     for (const c of cands) {
       if (c !== this.player && c.cart) continue;
-      if (waterAt(c.x, c.z) !== pond) continue;
+      const onLand = gt.rampage > 0 && c === this.player && Math.hypot(c.x - gt.x, c.z - gt.z) < 30;
+      if (!onLand && waterAt(c.x, c.z) !== pond) continue;
       const d = Math.hypot(c.x - gt.x, c.z - gt.z);
       if (d < bd) { bd = d; prey = c; }
     }
@@ -1459,8 +1705,17 @@ export class Game {
       gt.z += Math.cos(gt.heading) * speed * dt;
     }
     const pd = Math.hypot(gt.x - pond.x, gt.z - pond.z), lim = pond.r * 0.85;
-    if (pd > lim) { gt.x = pond.x + ((gt.x - pond.x) / pd) * lim; gt.z = pond.z + ((gt.z - pond.z) / pd) * lim; }
-    const y = WATER_Y - (gt.mode === 'hunt' ? 0.02 : 0.14) + Math.sin(gt.t * 1.4) * 0.03;
+    if (pd > lim && !(gt.rampage > 0)) {
+      if (pd > lim + 1.5) {
+        // stranded on land after a rampage: waddle back to the water
+        const a = Math.atan2(pond.x - gt.x, pond.z - gt.z);
+        gt.heading = dampAngle(gt.heading, a, 4, dt);
+        gt.x += Math.sin(gt.heading) * 3 * dt;
+        gt.z += Math.cos(gt.heading) * 3 * dt;
+      } else { gt.x = pond.x + ((gt.x - pond.x) / pd) * lim; gt.z = pond.z + ((gt.z - pond.z) / pd) * lim; }
+    }
+    const wet = waterAt(gt.x, gt.z) === pond;
+    const y = wet ? WATER_Y - (gt.mode === 'hunt' ? 0.02 : 0.14) + Math.sin(gt.t * 1.4) * 0.03 : heightAt(gt.x, gt.z) + 0.2;
     gt.m.position.set(gt.x, y, gt.z);
     gt.m.rotation.y = gt.heading + Math.sin(gt.t * (gt.mode === 'hunt' ? 9 : 2)) * 0.07;
     if (prey && bd < 2.3 && gt.biteCd <= 0) {
@@ -1481,6 +1736,163 @@ export class Game {
         prey.say(pick(['GATOR! GATOR!', 'MR. CHOMPERS, NO!', 'NOT AGAIN!']), 2);
       }
     }
+  }
+
+  // Launch a volley of fireworks around a point (defaults to over the Duck Pond / near the player).
+  celebrate(n = 10, x = null, z = null) {
+    const p = this.player;
+    const cx = x ?? p.x, cz = z ?? p.z;
+    for (let i = 0; i < n; i++) {
+      this.after(i * rand(0.25, 0.55), () => {
+        audio.listenerX = this.player.x;
+        audio.listenerZ = this.player.z;
+        audio.tone({ freq: 400, to: 1400, type: 'sine', dur: 0.6, vol: 0.03 });
+        this.particles.firework(cx + rand(-30, 30), cz + rand(-30, 30) - 20, heightAt(cx, cz), audio);
+      });
+    }
+  }
+
+  after(seconds, fn) {
+    (this.timers ||= []).push({ t: seconds, fn });
+  }
+
+  startParty() {
+    if (this.party) return;
+    this.spend(250);
+    if (audio.station === 0) audio.setStation(1);
+    this.party = new Party(this);
+  }
+
+  startMinigame(kind, opts = {}) {
+    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke, pickle: Pickleball, pong: BeerPong, fish: Fishing, keg: KegStand }[kind] || ChugOff;
+    if (opts.bet) this.spend(opts.bet);
+    this.ui.modal = 'minigame';
+    if (this.ui.onModalOpen) this.ui.onModalOpen();
+    document.getElementById('minigame').classList.remove('hidden');
+    this.input.pressed.clear();
+    this.minigame = new Cls(this, opts);
+  }
+
+  endMinigame() {
+    this.minigame = null;
+    document.getElementById('minigame').classList.add('hidden');
+    if (this.ui.modal === 'minigame') this.ui.modal = null;
+    if (this.ui.onModalClose) this.ui.onModalClose();
+  }
+
+  // ---------------- metal detecting on the beach ----------------
+  seedTreasure() {
+    this.treasures = [];
+    for (let i = 0; i < 400 && this.treasures.length < 14; i++) {
+      const x = 330 + Math.random() * (BEACH.shore - 334), z = BEACH.z0 + 10 + Math.random() * (BEACH.z1 - BEACH.z0 - 20);
+      if (!onSand(x, z) || this.world.col.query(x, z, 2).some((o) => o.t === 'b' && x > o.x0 - 2 && x < o.x1 + 2 && z > o.z0 - 2 && z < o.z1 + 2)) continue;
+      if (Math.abs(z - BEACH.pier.z) < 5 && x > BEACH.pier.x0) continue;
+      this.treasures.push({ x, z });
+    }
+  }
+
+  updateDetector(dt) {
+    const p = this.player;
+    const on = this.state.owned.detector && !p.cart && onSand(p.x, p.z);
+    const el = document.getElementById('detector');
+    if (!on || !this.treasures) {
+      this.detector = null;
+      if (el) el.classList.add('hidden');
+      return;
+    }
+    let best = Infinity;
+    for (const t of this.treasures) best = Math.min(best, Math.hypot(t.x - p.x, t.z - p.z));
+    const strength = clamp(1 - best / 20, 0, 1);
+    this.detector = { strength };
+    if (el) {
+      el.classList.remove('hidden');
+      const bars = Math.round(strength * 8);
+      el.innerHTML = `🔍 <b>${'▮'.repeat(bars)}<span>${'▯'.repeat(8 - bars)}</span></b>${strength > 0.9 ? ' <em>DIG! [E]</em>' : ''}`;
+    }
+    this.beepT = (this.beepT || 0) - dt;
+    if (strength > 0.05 && this.beepT <= 0) {
+      this.beepT = lerp(1.3, 0.09, strength);
+      audio.tone({ freq: 700 + strength * 1100, type: 'square', dur: 0.05, vol: 0.05 + strength * 0.05 });
+    }
+  }
+
+  dig() {
+    const p = this.player;
+    let bi = -1, bd = Infinity;
+    this.treasures.forEach((t, i) => { const d = Math.hypot(t.x - p.x, t.z - p.z); if (d < bd) { bd = d; bi = i; } });
+    if (bi < 0) return;
+    this.treasures.splice(bi, 1);
+    p.char.play('sand', 0.6);
+    audio.play('pocketSand');
+    this.particles.burst('sand', p.x, p.y + 0.3, p.z, 20, { speed: 2, up: 3, life: 0.8, size: 0.2, gravity: 8 });
+    const loot = pick([
+      ['a handful of quarters', 12], ['a handful of quarters', 18], ['a crusty $20 bill', 20], ['loose change and a Life Saver', 7],
+      [`a lost wedding ring. Somebody's in trouble`, 120], ['a gold Rolex. A REAL one this time', 250],
+      [`somebody's dentures. You pawn them anyway`, 3], ['a Spanish doubloon from 1715!', 400],
+      ['a flip phone with 40 missed calls from "Mom"', 0], ['a vintage can of Schlitz (still sealed)', 0],
+    ]);
+    const [what, cash] = loot;
+    if (cash) this.addMoney(cash, 'metal detecting');
+    if (what.includes('Schlitz')) this.state.inv.beer++;
+    if (what.includes('doubloon')) this.xp('stat', 2);
+    this.state.counters.treasures = (this.state.counters.treasures || 0) + 1;
+    this.achievement('treasure');
+    this.ui.splash('🔍 FOUND IT', `You dug up ${what}.`, 2.4, '#f2c94c');
+    this.detector = null;
+  }
+
+  talkRon(n) {
+    const inRace = this.race && this.race.running;
+    const won = this.state.counters.racesWon || 0;
+    return {
+      name: n.name, title: `Cart Race Bookie • ${won} win${won === 1 ? '' : 's'}`,
+      text: inRace ? `"You're already racing! Go go go!"` : `"They call me Rocket. Partly 'cause I'm fast. Mostly 'cause of my colonoscopy.
+
+One lap of the Back Nine Grand Prix: Fairway Drive, down the west path, across the course, up the east side and home. Hit every checkpoint. Winner takes three times the bet."
+
+${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mph. Sal can fix that.)'}`,
+      choices: inRace ? [] : [
+        ...RACE_TIERS.map((t) => ({ text: `Race: ${t.label} vs ${t.rivals.join(' & ')}`, tag: `win ${money(t.bet * 3)}`, disabled: this.state.money < t.bet, action: () => { this.startRace(t); return null; } })),
+        { text: 'Maybe later', action: () => null },
+      ],
+    };
+  }
+
+  startRace(tier) {
+    if (this.race) { this.race.dispose(); this.race = null; }
+    const p = this.player;
+    if (!p.cart) {
+      const c = this.playerCart;
+      if (c.sunk || c.driver) this.recoverCart();
+      p.enterCart(c);
+    }
+    this.spend(tier.bet);
+    this.race = new Race(this, tier);
+  }
+
+  updateRace(dt) {
+    const r = this.race;
+    if (!r) return;
+    if (r.running) {
+      for (const x of r.racers) x.npc.data.chase = x.done ? null : { x: TRACK[Math.min(x.cp, TRACK.length - 1)][0], z: TRACK[Math.min(x.cp, TRACK.length - 1)][1] };
+      r.update(dt);
+    } else {
+      r.cleanupT -= dt;
+      if (r.cleanupT <= 0) {
+        r.dispose();
+        this.race = null;
+      }
+    }
+  }
+
+  coastGuard() {
+    this.fadeOut(() => {
+      if (this.player.cart) this.player.exitCart();
+      this.teleport(BEACH.pier.x0 - 4, BEACH.pier.z + 6, -Math.PI / 2);
+      this.recoverCart();
+      this.spend(75);
+      this.advanceTime(45);
+    }, 2.6, 'RESCUED', 'The Coast Guard fished you out of the Atlantic. Sal has your cart. That will be $75, and a lecture.', '#4cc9f0');
   }
 
   recoverCart() {
@@ -1531,9 +1943,37 @@ export class Game {
     audio.play('success');
   }
 
+  // reviewer shortcut from the pause menu
+  jumpToChapter(n) {
+    jumpToChapter(this, n, STEPS);
+  }
+
   chapterComplete() {
+    this.celebrate(16);
     this.ui.splash('CHAPTER 1 COMPLETE', `${this.state.name} runs Sunset Palms now. Karen is weeping into her clipboard. Keep playing — Tammy awaits.`, 6, '#7CFC9A');
     audio.play('levelup');
+  }
+
+  // Rear tires lay rubber (or dirt / sand ruts) while the cart scrubs; the player's cart squeals.
+  tireMarks(c, dt, player) {
+    const k = c.skid || 0;
+    if (player) audio.setSkid(k > 0.25 && c.speed > 3 && this.onRoad(c.x, c.z) ? Math.min(1, k) : 0);
+    if (k < 0.25 || c.speed < 2.5) return;
+    const cs = Math.cos(c.heading), sn = Math.sin(c.heading);
+    c._skidKeys ||= [`${c.id}:L`, `${c.id}:R`];
+    for (let w = 0; w < 2; w++) {
+      const lx = w ? -0.55 : 0.55;
+      const x = c.x + lx * cs - 0.85 * sn, z = c.z - lx * sn - 0.85 * cs;
+      if (waterAt(x, z)) continue;
+      const surface = this.onRoad(x, z) ? 'road' : onSand(x, z) ? 'sand' : 'grass';
+      // paved quads sit a few cm above the terrain height
+      this.skids.mark(c._skidKeys[w], x, this.surfaceY(x, z) + 0.005, z, k, surface);
+    }
+  }
+
+  // Height of whatever you'd actually be standing on: terrain + road deck / driveway / porch slab.
+  surfaceY(x, z) {
+    return heightAt(x, z) + Math.max(this.onRoad(x, z) ? 0.04 : 0, this.world.padTop(x, z));
   }
 
   onRoad(x, z) {
@@ -1543,7 +1983,9 @@ export class Game {
       if (distToSegment(x, z, e.a.x, e.a.z, e.b.x, e.b.z) < e.width / 2 + 0.5) return true;
     }
     const B = BUILDINGS;
-    for (const lot of [B.parking, B.strip]) if (Math.abs(x - lot.x) < lot.sx / 2 && Math.abs(z - lot.z) < lot.sz / 2) return true;
+    const pr = BEACH.pier;
+    if (x > pr.x0 && x < pr.x1 && Math.abs(z - pr.z) < pr.w / 2) return true;
+    for (const lot of [B.parking, B.strip, BEACH.lot]) if (Math.abs(x - lot.x) < lot.sx / 2 && Math.abs(z - lot.z) < lot.sz / 2) return true;
     return false;
   }
 
@@ -1630,10 +2072,20 @@ export class Game {
         n.update(dt);
       }
       this.updateCarts(dt);
+      if (this.stunts) this.stunts.update(dt);
+      if (this.shuttle) this.shuttle.update(dt);
+      if (this.derby) this.derby.update(dt);
+      if (this.bluePill) this.bluePill.update(dt);
+      if (this.dealer) this.dealer.update();
       this.updateHeat(dt);
       this.updateEvents(dt);
       this.updateDrones(dt);
       this.updateGator(dt);
+      this.updateRace(dt);
+      if (this.party) {
+        this.party.update(dt, dt * TIME_SCALE);
+        if (!this.party.active) this.party = null;
+      }
       this.props.update(dt, p.x, p.z);
       this.balls.update(dt, this.scene);
       this.pickups.update(dt, p.x, p.z, (pk) => { this.addMoney(pk.amount, ''); });
@@ -1664,6 +2116,50 @@ export class Game {
         this.pendingElection = false;
         this.election();
       }
+      updateTooth(this, dt);
+      this.updateDetector(dt);
+      if (this.worldEvents) this.worldEvents.update(dt);
+      if (this.life) this.life.update(dt);
+      if (this.litter) this.litter.update(dt);
+      if (this.aerobicsClass) this.aerobicsClass.update(dt);
+      if (this.grandr) this.grandr.update();
+      if (this.hurricane) this.hurricane.update(dt);
+      if (this.wildlife) this.wildlife.update(dt);
+      if (this.garageSales) this.garageSales.update();
+      if (this.seniorGames) this.seniorGames.update();
+      if (this.skids) {
+        this.skids.update(dt);
+        // AI carts leave rubber too (race rivals, fleeing drivers)
+        const cam = this.camera.position;
+        for (const c of this.carts) if (c !== this.player.cart && c.skid > 0.55 && Math.abs(c.x - cam.x) + Math.abs(c.z - cam.z) < 120) this.tireMarks(c, dt, false);
+      }
+      if (this.timers && this.timers.length) {
+        for (const tm of this.timers) tm.t -= dt;
+        const due = this.timers.filter((tm) => tm.t <= 0);
+        this.timers = this.timers.filter((tm) => tm.t > 0);
+        for (const tm of due) tm.fn();
+      }
+      if (this.oceanRescueT > 0) {
+        this.oceanRescueT -= dt;
+        if (this.oceanRescueT <= 0) this.coastGuard();
+      }
+      audio.setSurf(p.x > 300 ? clamp(1 - (BEACH.shore - p.x) / 110, 0.25, 1) : clamp(1 - (300 - p.x) / 40, 0, 0.25));
+      const walker = this.named.walker;
+      if (walker && walker.data.zoomT > 0) {
+        walker.data.zoomT -= dt;
+        if (Math.random() < dt * 8) this.particles.emit('dust', walker.x, walker.y + 0.2, walker.z, { vy: 0.5, life: 0.6, size: 0.4, grow: 0.6 });
+        if (walker.data.zoomT <= 0) {
+          walker.walkSpeed = walker.data.baseWalk ?? 0.6;
+          walker.runSpeed = walker.data.baseRun ?? 2.3;
+          if (walker.state !== 'ko' && !walker.hostile) walker.resumeBase();
+          walker.say('...I need a nap.', 2.5);
+        }
+      }
+      const cq = this.quests.current();
+      if (cq && cq.id === 'c2_deuce' && !this.named.deuce && Math.hypot(p.x - 15, p.z - 24) > 45) spawnDeuce(this);
+      if (cq && cq.id === 'c2_deuce' && this.named.deuce && !s.quest.flags.deuceIntro && !p.cart && Math.hypot(this.named.deuce.x - p.x, this.named.deuce.z - p.z) < 14) {
+        this.ui.openDialogue(deuceConfront(this));
+      }
       // Chip confrontation trigger
       const qs = this.quests.current();
       if (qs && qs.id === 'chip' && !s.quest.flags.chipIntro) {
@@ -1675,8 +2171,10 @@ export class Game {
       this.quests.update(dt);
       this.checkAchievements();
     } else {
-      // keep animating characters in dialogue so the world doesn't look frozen
-      for (const n of this.npcs) if (n.talking || n.visible) n.char.update(dt * 0.5);
+      if (modal === 'minigame' && this.minigame) this.minigame.update(dt, input);
+      // keep animating characters in dialogue so the world doesn't look frozen (full speed in Aqua Jazz)
+      const ak = this.minigame && (this.minigame.aqua || this.minigame.fullSpeed) ? 1 : 0.5;
+      for (const n of this.npcs) if (n.talking || n.visible) n.char.update(dt * ak);
       p.char.update(dt);
     }
 
@@ -1686,6 +2184,7 @@ export class Game {
       x: p.x, y: p.y, z: p.z, heading: p.heading, inCart: !!c, speed: c ? c.speed : p.speed,
       boost: c && c.upgrades.turbo && (input.key('ShiftLeft') || input.key('ShiftRight')),
       reversing: c && c.forwardSpeed < -1,
+      drinking: this.drinkT > 0,
     });
     this.updateVisibility();
     this.updateTagsAndMarker();
@@ -1698,7 +2197,7 @@ export class Game {
     // interaction prompt
     if (!modal && !this.cut) {
       const it = this.findInteraction();
-      this.ui.prompt(it ? `<kbd>E</kbd>${it.label}` : null);
+      this.ui.prompt(it ? `<kbd>${this.input.touchOn ? 'USE' : 'E'}</kbd>${it.label}` : null);
     } else this.ui.prompt(null);
 
     // fountains
@@ -1726,10 +2225,10 @@ export class Game {
       for (let j = i + 1; j < list.length; j++) {
         const b = list[j];
         const dx = b.x - a.x, dz = b.z - a.z;
-        if (Math.abs(dx) > 2.6 || Math.abs(dz) > 2.6) continue;
-        const d = Math.hypot(dx, dz);
-        if (d >= 2.4 || d < 0.001) continue;
-        const nx = dx / d, nz = dz / d, pen = 2.4 - d;
+        if (Math.abs(dx) > 2.6 || Math.abs(dz) > 2.6 || Math.abs(a.y - b.y) > 1.2) continue; // one's flying over the other
+        const d = Math.hypot(dx, dz), rr = a.radius + b.radius - 0.1; // 2.4 for two carts, less for skinny scooters
+        if (d >= rr || d < 0.001) continue;
+        const nx = dx / d, nz = dz / d, pen = rr - d;
         a.x -= nx * pen / 2; a.z -= nz * pen / 2;
         b.x += nx * pen / 2; b.z += nz * pen / 2;
         const rv = (b.vx - a.vx) * nx + (b.vz - a.vz) * nz;
@@ -1737,11 +2236,12 @@ export class Game {
           const imp = -rv * 0.9;
           a.vx -= nx * imp; a.vz -= nz * imp;
           b.vx += nx * imp; b.vz += nz * imp;
+          if (a.derby && b.derby && this.derby) this.derby.impact(a, b, -rv, nx, nz);
           if (-rv > 3 && (a === p.cart || b === p.cart)) {
             audio.play('crash', { vol: clamp(-rv / 10, 0.3, 1) });
             this.camRig.addShake(clamp(-rv / 15, 0.1, 0.6));
             const other = a === p.cart ? b : a;
-            if (other.driver && other.driver !== p) {
+            if (other.driver && other.driver !== p && !other.derby) {
               const dr = other.driver;
               if (dr.role === 'security') this.addHeat(1, 'Ramming an HOA vehicle');
               else {
@@ -1778,6 +2278,7 @@ export class Game {
       }
       // dust + nitrous flames
       const spd = pc.speed;
+      this.tireMarks(pc, dt, true);
       if (spd > 6 && !this.onRoad(pc.x, pc.z) && Math.random() < dt * 20) this.particles.emit('dust', pc.x - Math.sin(pc.heading) * 1.2, pc.y + 0.2, pc.z - Math.cos(pc.heading) * 1.2, { vy: 0.6, life: 0.9, size: 0.5, grow: 0.8, drag: 1 });
       if (pc.upgrades.turbo && (this.input.key('ShiftLeft') || this.input.key('ShiftRight')) && spd > 2) {
         for (let i = 0; i < 2; i++) this.particles.emit('spark', pc.x - Math.sin(pc.heading) * 1.4, pc.y + 0.45, pc.z - Math.cos(pc.heading) * 1.4, { vx: -Math.sin(pc.heading) * 4 + rand(-0.5, 0.5), vy: rand(0, 1), vz: -Math.cos(pc.heading) * 4 + rand(-0.5, 0.5), life: 0.3, size: 0.5, grow: -1 });
@@ -1787,8 +2288,13 @@ export class Game {
         audio.play('splash');
         this.particles.burst('drop', pc.x, pc.y + 0.5, pc.z, 40, { speed: 4, up: 7, life: 1.4, size: 0.3, gravity: 12 });
         this.achievement('sunk');
+        if (waterAt(pc.x, pc.z) === OCEAN) {
+          this.achievement('pierJump');
+          this.ui.float(pc.x, pc.y + 3, pc.z, 'PIER JUMP!', '#4cc9f0', 2);
+        }
         this.ui.splash('SPLASHDOWN', pc === this.playerCart ? "Your cart is sleeping with the fishes. Sal can fish it out." : 'Well, that one\'s gone.', 2.5, '#4cc9f0');
         this.sinkExitT = 0.9;
+        if (waterAt(pc.x, pc.z) === OCEAN && pc === this.playerCart) this.oceanRescueT = 2.8;
       }
       if (!pc.sunk) this._sinkHandled = false;
       if (this.sinkExitT > 0) {
@@ -1796,8 +2302,9 @@ export class Game {
         if (this.sinkExitT <= 0 && p.cart === pc) p.exitCart();
       }
 
-      // run over props
-      if (spd > 2.5) {
+      // run over props (and people) — unless you're sailing over their heads
+      const flying = pc.y - heightAt(pc.x, pc.z) > 1;
+      if (spd > 2.5 && !flying) {
         for (const pr of this.props.near(pc.x, pc.z)) {
           if (pr.state !== 'idle') continue;
           if (Math.hypot(pr.x - pc.x, pr.z - pc.z) < 1.4) this.knockProp(pr, pc.vx * 1.1, pc.vz * 1.1, 3 + spd * 0.35);
@@ -1805,7 +2312,7 @@ export class Game {
       }
       // run over people
       for (const n of this.npcs) {
-        if (n.cart || n.air || n.role === 'gang') continue;
+        if (flying || n.cart || n.air || n.role === 'gang' || n.data.aqua || n.data.riding) continue;
         const d = Math.hypot(n.x - pc.x, n.z - pc.z);
         if (d < 1.45 && spd > 3) {
           const wasHostile = n.hostile;
@@ -1822,7 +2329,7 @@ export class Game {
           this.ui.float(n.x, 2.5, n.z, pick(['BOWLING!', 'STRIKE!', 'FORE!!', 'YEET!']), '#ff9f1c', 1.2);
           if (spd > 9) this.slowmo = 0.4;
           if (n.state === 'ko') continue;
-          if (!wasHostile && !['rival', 'goon', 'husband'].includes(n.role)) this.crime(n.x, n.z, n.role === 'security' ? 1.5 : 1, n.role === 'security' ? 'Running over an HOA officer' : 'Vehicular senior-slaughter (attempted)', 25);
+          if (!wasHostile && !['rival', 'goon', 'husband', 'streaker'].includes(n.role)) this.crime(n.x, n.z, n.role === 'security' ? 1.5 : 1, n.role === 'security' ? 'Running over an HOA officer' : 'Vehicular senior-slaughter (attempted)', 25);
           if (n.state === 'drive') continue;
           if (n.hp > 0) n.provoke(p);
         }
@@ -1893,12 +2400,38 @@ export class Game {
 
   updateVisibility() {
     const cam = this.camera.position;
+    // frustum test so off-screen people don't cost draw calls
+    this.camera.updateMatrixWorld();
+    this._pm ||= new THREE.Matrix4();
+    this._frustum ||= new THREE.Frustum();
+    this._sph ||= new THREE.Sphere(new THREE.Vector3(), 1.7);
+    this._pm.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
+    this._frustum.setFromProjectionMatrix(this._pm);
     for (const n of this.npcs) {
       const d = Math.hypot(n.x - cam.x, n.z - cam.z);
-      const vis = d < 170 || n.cart;
+      this._sph.center.set(n.x, n.y + 1, n.z);
+      const inView = d < 22 || this._frustum.intersectsSphere(this._sph);
+      const vis = (d < (this.drawDist || 170) || !!n.cart) && inView;
+      n.char.setNear(d < 40);
       if (vis !== n.visible) {
         n.visible = vis;
         n.char.root.visible = vis;
+      }
+      // only nearby people cast shadows (big draw-call saver)
+      const shadow = d < 55;
+      if (shadow !== n._shadow) {
+        n._shadow = shadow;
+        n.char.root.traverse((o) => { if (o.isMesh) o.castShadow = shadow; });
+      }
+    }
+    for (const c of this.carts) {
+      const d = Math.hypot(c.x - cam.x, c.z - cam.z);
+      const vis = d < (this.drawDist || 170) + 20 || c === this.player.cart;
+      if (vis !== c.group.visible) c.group.visible = vis;
+      const shadow = d < 60;
+      if (shadow !== c._shadow) {
+        c._shadow = shadow;
+        c.group.traverse((o) => { if (o.isMesh) o.castShadow = shadow; });
       }
     }
   }
@@ -1907,7 +2440,9 @@ export class Game {
     const p = this.player;
     const tags = [];
     const q = this.quests.current();
-    const tgt = q && q.target ? q.target(this) : null;
+    // a waypoint from the phone's TO DO tab wins until you get there
+    if (this.waypoint && !this.waypoint.sticky && Math.hypot(this.waypoint.x - p.x, this.waypoint.z - p.z) < 6) { this.ui.toast(`📍 Arrived: ${this.waypoint.label}`, 'quest', 2.5); this.waypoint = null; }
+    const tgt = this.race && this.race.running ? this.race.target() : this.waypoint ? this.waypoint : q && q.target ? q.target(this) : null;
     this.markerPos = tgt ? { x: tgt.x, y: tgt.y ?? heightAt(tgt.x, tgt.z), z: tgt.z } : null;
     for (const n of this.npcs) {
       if (!n.visible) continue;
@@ -1920,6 +2455,13 @@ export class Game {
       else if (n.data.wants === 'pills' && this.state.quest.flags.metDoc) icon = '💊';
       else if (n.data.wants === 'tea' && this.state.quest.flags.metDoc) icon = '🍵';
       else if (n.role === 'lady') { icon = this.state.romance[n.data.lady.id].conquest ? '💞' : '💗'; cls = 'lady'; }
+      else if (n.role === 'date') { icon = '💘'; cls = 'lady'; }
+      else if (n.role === 'seller') icon = '🏷️';
+      else if (n.role === 'commissioner') icon = '🏅';
+      else if (n.role === 'dispatcher') icon = '🚐';
+      else if (n.role === 'derbyman') icon = '💥';
+      else if (n.role === 'buck') icon = '🏁';
+      else if (n.role === 'dealer') icon = '🚙';
       else if (n.role === 'recruit') icon = '⭐';
       else if (n.role === 'gang') icon = '🟢';
       else if (n.role === 'operator') icon = this.concession.find((c) => c.operator === n)?.state.owned ? '✅' : '🛺';
@@ -1946,7 +2488,8 @@ export class Game {
         L.position.set(e.l.x, e.l.y, e.l.z);
       });
     }
-    for (const L of this.lampLights) L.intensity = night * 55;
+    const powerOut = this.hurricane && this.hurricane.outage;
+    for (const L of this.lampLights) L.intensity = powerOut ? 0 : night * 55;
     const lightsOn = night > 0.35;
     for (const c of this.carts) if (c.driver) c.setLights(lightsOn);
     const pc = p.cart;
@@ -1966,15 +2509,19 @@ export class Game {
     const p = this.player;
     const c = p.cart;
     audio.setEngine(!!c && !this.ui.modal, c ? clamp(c.speed / 16, 0, 1) : 0, c ? this.input.axis(['KeyS'], ['KeyW']) : 0);
-    audio.setRadio(!!c && audio.station !== 0 && !this.ui.modal);
+    if (!c || this.ui.modal || this.cut) audio.setSkid(0);
+    const partyNear = this.party && Math.hypot(p.x - this.party.center.x, p.z - this.party.center.z) < 45;
+    audio.setRadio(((!!c && audio.station !== 0) || partyNear) && !this.ui.modal);
     if (c) c.bass = c.upgrades.speakers && audio.station !== 0;
     audio.ambientTick(dt, this.sky.night > 0.6);
+    if (this.soundscape) this.soundscape.update(dt);
   }
 
   // ================================================================ menu (TAB)
   renderMenu(tab) {
     const s = this.state;
-    const tabs = [['status', 'STATUS'], ['bag', 'BAG'], ['romance', 'ROMANCE'], ['empire', 'EMPIRE'], ['hoa', 'HOA'], ['help', 'HELP']];
+    const tabs = MENU_TABS;
+    this.menuTab = tab;
     const tabEl = document.getElementById('menu-tabs');
     tabEl.innerHTML = tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('');
     tabEl.querySelectorAll('button').forEach((b) => (b.onclick = () => this.renderMenu(b.dataset.tab)));
@@ -1994,8 +2541,9 @@ export class Game {
       h += row('stat', '💎 STATUS', 'Cart mods, bling, conquests, power. Gate for high-tier romance.');
       const c = s.counters;
       h += `<h3>Rap Sheet</h3><div class="grid2">
-        <div class="card"><div class="t">🍺 ${c.beers} beers drunk</div><div class="sub">${c.beersToday} today • Max air ${c.maxAir.toFixed(1)}s</div></div>
+        <div class="card"><div class="t">🍺 ${c.beers} beers drunk</div><div class="sub">${c.beersToday} today • Max air ${c.maxAir.toFixed(1)}s • ⭐ ${(s.stunts?.done.length || 0)}/${STUNTS.length} stunt jumps</div></div>
         <div class="card"><div class="t">💊 ${c.pillsSold} Blue Boys / 🍵 ${c.teaSold} teas sold</div><div class="sub">Lifetime earnings ${money(c.earned)}</div></div>
+        <div class="card"><div class="t">🏆 Personal records</div><div class="sub">🍺 Keg stand ${(c.kegBest || 0).toFixed(1)}s • 🎣 Biggest fish ${(c.bigFish || 0).toFixed(1)} lb • 🚐 Best shift ${money(c.bestShift || 0)} (${c.fares || 0} fares) • 💥 Derby wins ${c.derbyWins || 0} • 🌀 Best spin ${(c.bestSpin || 0) * 360}° • 🏁 Races won ${c.racesWon || 0} • 🥤 Pong wins ${c.pongWins || 0}</div></div>
         <div class="card"><div class="t">🦩 ${c.flamingos} flamingos • 📬 ${c.mailboxes} mailboxes</div><div class="sub">🥊 ${c.knockouts} knockouts • 🚨 busted ${c.busted}×</div></div>
         <div class="card"><div class="t">🏆 ${s.achievements.length}/${Object.keys(ACH).length} achievements</div><div class="sub">${s.achievements.map((a) => ACH[a][0]).join(' • ') || 'None yet. Go be terrible.'}</div></div>
       </div>`;
@@ -2014,7 +2562,7 @@ export class Game {
       for (const l of LADIES) {
         const r = s.romance[l.id];
         const n = Math.round(r.aff / 20);
-        const where = { pool: 'Pool deck', shuffle: 'Shuffleboard courts', tiki: 'Tiki Hut bar', pickleball: 'Pickleball courts', clubhouse: 'Clubhouse', cart: 'Beverage cart on the course' }[l.spot];
+        const where = { beach: 'Boca Beach (through the front gate)', pool: 'Pool deck', shuffle: 'Shuffleboard courts', tiki: 'Tiki Hut bar', pickleball: 'Pickleball courts', clubhouse: 'Clubhouse', cart: 'Beverage cart on the course' }[l.spot];
         h += `<div class="card"><div class="t">${l.name} ${r.conquest ? '💞' : ''}</div><div class="sub">Tier ${l.tier} • ${l.title} • ${where}</div><div class="hearts">${'❤'.repeat(n)}${'♡'.repeat(5 - n)}</div><p>${l.bio}</p><p style="opacity:.75">Needs CHA ${l.reqCha} / STATUS ${l.reqStat}${l.needsPimpedCart ? ` / ${l.needsPimpedCart} cart mods` : ''} • Likes: ${l.likes.join(', ') || '—'}${l.dislikes.length ? ` • Hates: ${l.dislikes.join(', ')}` : ''}</p><p><b>Perk:</b> ${r.conquest ? l.perk : '???'}</p></div>`;
       }
       h += '</div>';
@@ -2048,7 +2596,11 @@ export class Game {
         <div class="card"><div class="t">Reviewer shortcuts</div><p>] = +$1,000 • [ = +1 all stats • &#96; (backtick) = skip 3 hours</p></div>
       </div>`;
     }
+    if (tab === 'grandr') h = this.grandr.renderTab();
+    if (tab === 'activities') h = activitiesTab(this);
     body.innerHTML = h;
+    if (tab === 'grandr') this.grandr.bindTab(() => this.renderMenu('grandr'));
+    if (tab === 'activities') bindActivities(this, () => this.renderMenu('activities'));
     const ub = document.getElementById('use-blue');
     if (ub) ub.onclick = () => { s.inv.pills--; s.buffs.blue = 150; this.ui.toast('💊 You took a Blue Boy. Flirting bonus active. Walking is... different.', 'love', 4); this.renderMenu('bag'); };
     const ur = document.getElementById('use-rhino');

@@ -17,6 +17,11 @@ const TALK_LINES = [
   "Traffic report. A golf cart is on fire near the seventh hole. Another is in the pond. Nobody's hurt, just embarrassed.",
   "Ladies, if a man in a Hawaiian shirt offers you rhino horn tea, you say yes. That's not medical advice. That's life advice.",
   "HOA President Karen Whitmore has announced a new rule. Laughter above sixty decibels is now prohibited after eight PM.",
+  "Bumper Brawl! Nightly behind the Liquor Barrel! Six golf carts enter, one leaves, and it's usually on a tow rope. Derby Dan says: no refunds, no hips.",
+  "The Senior Shuttle is hiring. Requirements: a golf cart, a pulse, and a flexible relationship with stop signs. See Dispatcher Doris.",
+  "Beer pong at the Tiki Hut, eleven AM till two. Doctors agree you should not do this. Doctors are not invited.",
+  "Reminder: the plywood ramps on the golf course are not, I repeat NOT, an invitation. The HOA is looking into it. From the air, apparently.",
+  "Pickleball league standings: Deb 'The Dinker' Delgado remains undefeated, unbearable, and unavailable for comment.",
 ];
 
 export class AudioSys {
@@ -205,6 +210,10 @@ export class AudioSys {
       case 'ball':
         this.tone({ freq: rand(1300, 1600), type: 'sine', dur: 0.06, vol: 0.12 * v });
         break;
+      case 'meep': // mobility scooter horn
+        this.tone({ freq: 1320, type: 'square', dur: 0.09, vol: 0.07 * v });
+        this.tone({ freq: 1320, type: 'square', dur: 0.09, vol: 0.07 * v, at: 0.14 });
+        break;
       case 'horn':
         this.tone({ freq: 392, type: 'square', dur: 0.35, vol: 0.12 * v });
         this.tone({ freq: 494, type: 'square', dur: 0.35, vol: 0.1 * v });
@@ -299,6 +308,17 @@ export class AudioSys {
         this.play('canOpen', opt);
         this.play('glug', opt);
         break;
+      case 'crush': // aluminum crumpling in a fist
+        for (let i = 0; i < 6; i++) this.noiseBurst({ dur: 0.03 + rand(0, 0.03), vol: (0.35 + rand(0, 0.2)) * v, type: 'bandpass', freq: 2200 + rand(0, 2500), q: 3, at: i * rand(0.018, 0.04) });
+        this.noiseBurst({ dur: 0.12, vol: 0.18 * v, type: 'lowpass', freq: 900, at: 0.02 });
+        break;
+      case 'clink': { // empty can bouncing on pavement
+        const f = rand(1900, 2600);
+        this.tone({ freq: f, type: 'triangle', dur: 0.09, vol: 0.14 * v });
+        this.tone({ freq: f * 2.76, type: 'sine', dur: 0.06, vol: 0.07 * v });
+        this.noiseBurst({ dur: 0.025, vol: 0.2 * v, type: 'highpass', freq: 3500 });
+        break;
+      }
     }
   }
 
@@ -522,6 +542,126 @@ export class AudioSys {
       const f = rand(2500, 4200);
       const n = Math.floor(rand(2, 5));
       for (let i = 0; i < n; i++) this.tone({ freq: f, to: f * rand(0.7, 1.4), type: 'sine', dur: 0.07, vol: 0.03, at: i * 0.11, bus: this.ambient });
+    }
+  }
+
+  // ---------- weather ----------
+  setRain(level) {
+    if (!this.ready) return;
+    if (!this.rainGain) {
+      const s = this.ctx.createBufferSource();
+      s.buffer = this.noise;
+      s.loop = true;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 2600;
+      const f2 = this.ctx.createBiquadFilter();
+      f2.type = 'highpass';
+      f2.frequency.value = 400;
+      this.rainGain = this.ctx.createGain();
+      this.rainGain.gain.value = 0;
+      s.connect(f).connect(f2).connect(this.rainGain).connect(this.master);
+      s.start();
+    }
+    this.rainGain.gain.setTargetAtTime(level * 0.16, this.ctx.currentTime, 0.4);
+  }
+
+  // tire squeal: band-passed noise with a little wobble, gain follows how hard the tires scrub
+  setSkid(level) {
+    if (!this.ready) return;
+    if (!this.skidGain) {
+      const s = this.ctx.createBufferSource();
+      s.buffer = this.noise;
+      s.loop = true;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = 1500;
+      f.Q.value = 7;
+      const lfo = this.ctx.createOscillator();
+      lfo.frequency.value = 9;
+      const lg = this.ctx.createGain();
+      lg.gain.value = 180;
+      lfo.connect(lg).connect(f.frequency);
+      lfo.start();
+      this.skidGain = this.ctx.createGain();
+      this.skidGain.gain.value = 0;
+      s.connect(f).connect(this.skidGain).connect(this.sfx);
+      s.start();
+    }
+    this.skidGain.gain.setTargetAtTime(level * 0.22, this.ctx.currentTime, level > 0 ? 0.04 : 0.12);
+  }
+
+  setSurf(level) {
+    if (!this.ready) return;
+    if (!this.surfGain) {
+      const s = this.ctx.createBufferSource();
+      s.buffer = this.noise;
+      s.loop = true;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 700;
+      this.surfGain = this.ctx.createGain();
+      this.surfGain.gain.value = 0;
+      // slow swell so it sounds like waves rolling in
+      const lfo = this.ctx.createOscillator();
+      lfo.frequency.value = 0.12;
+      this.surfLfo = this.ctx.createGain();
+      this.surfLfo.gain.value = 0;
+      lfo.connect(this.surfLfo).connect(this.surfGain.gain);
+      lfo.start();
+      s.connect(f).connect(this.surfGain).connect(this.master);
+      s.start();
+    }
+    const t = this.ctx.currentTime;
+    this.surfGain.gain.setTargetAtTime(level * 0.12, t, 0.5);
+    this.surfLfo.gain.setTargetAtTime(level * 0.09, t, 0.5);
+  }
+
+  fireworkPop(dist = 50) {
+    if (!this.ready) return;
+    const v = Math.max(0.15, 1 - dist / 250);
+    const delay = Math.min(0.6, dist / 340);
+    this.noiseBurst({ dur: 0.35, vol: 0.6 * v, type: 'lowpass', freq: 1800, to: 200, at: delay });
+    for (let i = 0; i < 6; i++) this.noiseBurst({ dur: 0.05, vol: 0.2 * v, type: 'highpass', freq: 4000, at: delay + 0.3 + Math.random() * 0.8 });
+  }
+
+  thunder(delay = 0.6) {
+    if (!this.ready) return;
+    this.noiseBurst({ dur: 2.6, vol: 0.7, type: 'lowpass', freq: 300, to: 60, at: delay, attack: 0.05 });
+    this.noiseBurst({ dur: 0.5, vol: 0.4, type: 'lowpass', freq: 1200, to: 200, at: delay });
+    this.tone({ freq: 55, to: 30, type: 'sine', dur: 2, vol: 0.4, at: delay });
+  }
+
+  // ---------- gibberish voices (one blip per syllable, Animal Crossing style) ----------
+  mumble(text, { female = false, pitch = 1, vol = 1 } = {}) {
+    if (!this.ready) return;
+    const syl = Math.min(11, Math.max(2, Math.round(text.replace(/[^a-z]/gi, '').length / 3.2)));
+    const base = (female ? 250 : 130) * pitch;
+    const loud = /!|[A-Z]{3,}/.test(text);
+    let t = this.ctx.currentTime + 0.02;
+    for (let i = 0; i < syl; i++) {
+      const d = 0.07 + Math.random() * 0.05;
+      const o = this.ctx.createOscillator();
+      o.type = 'sawtooth';
+      const f0 = base * (0.85 + Math.random() * 0.4) * (loud ? 1.25 : 1);
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.linearRampToValueAtTime(f0 * (0.9 + Math.random() * 0.2), t + d);
+      // old-person warble
+      const l = this.ctx.createOscillator();
+      l.frequency.value = 7 + Math.random() * 3;
+      const lg = this.ctx.createGain();
+      lg.gain.value = f0 * 0.04;
+      l.connect(lg).connect(o.frequency);
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = [500, 800, 1100, 700, 1500][Math.floor(Math.random() * 5)] * (female ? 1.3 : 1);
+      f.Q.value = 3;
+      const g = this.ctx.createGain();
+      this._env(g, t, 0.01, (loud ? 0.5 : 0.32) * vol, d);
+      o.connect(f).connect(g).connect(this.sfx);
+      o.start(t); l.start(t);
+      o.stop(t + d + 0.05); l.stop(t + d + 0.05);
+      t += d + 0.02 + Math.random() * 0.03;
     }
   }
 

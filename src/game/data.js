@@ -34,6 +34,7 @@ export const SHOPS = {
       { id: 'wine', name: 'Box Wine (Franzia-ish)', price: 18, icon: '🍷', desc: 'The ladies go wild for it.' },
       { id: 'flowers', name: 'Gas Station Flowers', price: 9, icon: '💐', desc: 'Slightly wilted. Still romantic.' },
       { id: 'lotto', name: 'Scratch-Off Ticket', price: 5, icon: '🎟️', desc: "Your retirement plan." },
+      { id: 'teabags', name: 'Earl Grey Tea Bags (box)', price: 4, icon: '🫖', desc: 'For tea. Obviously. Just tea.' },
     ],
   },
   tiki: {
@@ -66,6 +67,40 @@ export const SHOPS = {
       { id: 'tea5', name: 'Rhino Horn Tea ×5', price: 200, icon: '🍵', desc: 'Bulk. The rhino is fine. Probably.' },
       { id: 'chain', name: 'Gold Chain (14k-ish)', price: 400, icon: '📿', desc: '+STATUS. Turns your neck green.' },
       { id: 'rolex', name: '"Rolax" Watch', price: 250, icon: '⌚', desc: '+STATUS. Ticks loudly.' },
+    ],
+  },
+  boutique: {
+    title: 'RESORT WEAR BOUTIQUE', keeper: 'Pierre', greet: ['"Monsieur, zat shirt is... a choice. Let me help you make a better one."', '"Everyzing here is linen, silk, or regret."'],
+    items: [
+      { id: 'shirt_1', name: 'Hibiscus Red Silk Shirt', price: 45, icon: '🌺', desc: 'Says "I own a boat." You do not.' },
+      { id: 'shirt_2', name: 'Navy Palms Shirt', price: 45, icon: '🌴', desc: 'Yacht club energy.' },
+      { id: 'shirt_3', name: 'Sunshine Orange Shirt', price: 45, icon: '🌞', desc: 'Visible from the space station.' },
+      { id: 'shirt_4', name: 'Flamingo Pink Shirt', price: 45, icon: '🦩', desc: 'Real men wear pink. Karen hates it.' },
+      { id: 'shirt_5', name: 'Purple Reign Shirt', price: 60, icon: '👑', desc: 'For the HOA royalty you will become.' },
+      { id: 'shirt_6', name: 'Cream Linen Shirt', price: 60, icon: '🥂', desc: 'Old money. Very old. Like you.' },
+      { id: 'shirt_7', name: 'Electric Blue Shirt', price: 45, icon: '⚡', desc: 'Pairs well with nitrous.' },
+      { id: 'hat_bucket', name: 'Bucket Hat', price: 25, icon: '🪣', desc: 'Fisherman chic.' },
+      { id: 'hat_cap', name: 'Trucker Cap', price: 20, icon: '🧢', desc: 'Says VETERAN. Of what, nobody asks.' },
+      { id: 'hat_fedora', name: 'Straw Fedora', price: 80, icon: '🎩', desc: 'Sinatra, if Sinatra shopped at Costco.' },
+      { id: 'hat_none', name: 'Go Hatless (free)', price: 0, icon: '🦲', desc: 'Let the scalp breathe.' },
+      { id: 'glasses_big', name: 'Jackie O Sunglasses', price: 35, icon: '🕶️', desc: 'Enormous. Mysterious.' },
+      { id: 'glasses_readers', name: 'Drugstore Readers', price: 10, icon: '👓', desc: '+2.50. For reading menus and rap sheets.' },
+      { id: 'socks_white', name: 'Crisp White Tube Socks', price: 8, icon: '🧦', desc: 'Pulled up to the knee. Bold.' },
+    ],
+  },
+  pelican: {
+    title: 'THE RUSTY PELICAN', keeper: 'Skip', greet: ['"Welcome to the Pelican! Shoes optional, dentures recommended."', '"Two-for-one Bushwackers till the sun goes down. Or till you do."'],
+    items: [
+      { id: 'beer2', name: 'Beach Beer (2)', price: 8, icon: '🍺', desc: 'Two cold ones in a koozie.' },
+      { id: 'bushwacker', name: 'Bushwacker', price: 10, icon: '🥤', desc: 'Rum milkshake. Huge buzz, +CHA for a while.' },
+      { id: 'towel', name: 'Beach Towel (gift)', price: 15, icon: '🏖️', desc: 'Rhonda would like this.' },
+    ],
+  },
+  bait: {
+    title: 'BAIT • TACKLE • DETECTORS', keeper: 'Captain Roy', greet: [`"Metal detector? Found my third wife's ring with one of these. Then I lost her too."`],
+    items: [
+      { id: 'detector', name: 'Metal Detector', price: 150, icon: '🔍', desc: 'Legal hustle: beeps near buried loot on the sand. Press E to dig.' },
+      { id: 'sunscreen', name: 'SPF 100 Sunscreen', price: 8, icon: '🧴', desc: 'Heals a bit. Smells like coconut and regret.' },
     ],
   },
   buffet: {
@@ -112,6 +147,13 @@ export const LADIES = [
     spot: 'clubhouse', likes: ['wine'], dislikes: ['beer'],
     perk: "Rival intel + DIRT ON KAREN (unlocks the blackmail route to HOA control).", perkId: 'dirt',
     bio: "Chip's wife. Bored out of her skull. Knows where every body in this HOA is buried.",
+  },
+  {
+    id: 'rhonda', name: 'Rhonda Castellano', tier: 1, title: 'Divorcée from Jersey', reqCha: 3, reqStat: 2,
+    look: { female: true, skin: '#c68863', hair: '#1c1c1c', shirt: 3, hat: 'none', hatColor: '#000', glasses: 'big', belly: 0.95, height: 0.98, sock: '#fff', shoe: '#d9c7b0' },
+    spot: 'beach', likes: ['beer', 'towel'], dislikes: ['flowers'],
+    perk: 'She runs a tab at the Rusty Pelican in your name. Beach drinks are free.', perkId: 'freebar',
+    bio: `Moved down from Paramus with three ex-husbands' alimony and a tan you can see from space. Says "whaddaya" as a complete sentence.`,
   },
   {
     id: 'tammy', name: 'Tammy', tier: 3, title: 'The Fairway Cart Girl', reqCha: 8, reqStat: 8, needsPimpedCart: 3,

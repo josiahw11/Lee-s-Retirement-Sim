@@ -2,6 +2,12 @@
 import { SHOPS, LADIES, PICKUP_LINES, LADY_REACTIONS, RECRUITS, CART_MODS, PAINTS, WEAPONS, DECREES, CONCESSION } from './data.js';
 import { pick, rand, randInt, chance, money, DAYS, fmtTime } from '../core/utils.js';
 import { audio } from '../core/audio.js';
+import { testBatchOn } from './chapter2.js';
+import { casinoNode, cabinNode } from './chapter3.js';
+import { karaokeChoice } from './karaoke.js';
+import { pickleballNode } from './pickleball.js';
+import { pongNode } from './beerpong.js';
+import { kegChoice } from './kegstand.js';
 
 // ---------------------------------------------------------------- helpers
 const C = (g, stat, diff, label) => ({ label: label || stat.toUpperCase().replace('INTIM', 'INT').replace('STAT', 'STA'), chance: g.chance(stat, diff) });
@@ -121,6 +127,7 @@ function dealNode(g, npc, kind) {
     g.state.counters[isTea ? 'teaSold' : 'pillsSold'] += qty;
     npc.data.wants = null;
     npc.data.bought = true;
+    if (!isTea) npc.data.blueT = 90; // side effects kick in right away
     g.crime(npc.x, npc.z, 1.0, 'Distributing "vitamins"', 18, true);
     g.xp('cha', 1);
     g.particles.burst('cash', npc.x, 1.6, npc.z, 5, { speed: 1.5, up: 3, life: 1.2, size: 0.45 });
@@ -188,6 +195,13 @@ export function talkLady(g, npc) {
         : pick(['"*She bats her eyelashes so hard her false lashes nearly fly off.*"', '"If you don\'t ask me out soon, I\'m asking YOU."']);
   const cool = g.state.minutes + g.state.day * 1440 - (r.last || -9999) < 45;
   const node = { name, title, text: greet, choices: [] };
+  if (def.id === 'millie') {
+    node.choices.push({ text: `"Bet you can't out-drink me, Millie."`, tag: 'chug-off $40', disabled: g.state.money < 40, action: () => {
+      g.startMinigame('chug', { opponent: 'Millie Rausch', bet: 40, oppRate: [1.9, 2.6], onWin: () => g.romance('millie', 14), onLose: () => g.romance('millie', 6) });
+      g.ui.closeDialogue();
+      return 'keep';
+    } });
+  }
   node.choices.push({ text: 'Make small talk', disabled: cool, tag: cool ? 'she needs a minute' : '', action: () => {
     r.last = g.absMinutes();
     const d = randInt(3, 6);
@@ -217,7 +231,7 @@ export function talkLady(g, npc) {
     audio.play('fail');
     return end(name, `${pick(LADY_REACTIONS.fail)}\n\n(-5 ❤)`, title);
   } });
-  for (const [item, icon, label] of [['flowers', '💐', 'Gas station flowers'], ['wine', '🍷', 'Box wine'], ['beer', '🍺', 'A warm Geezer Light']]) {
+  for (const [item, icon, label] of [['flowers', '💐', 'Gas station flowers'], ['wine', '🍷', 'Box wine'], ['beer', '🍺', 'A warm Geezer Light'], ['towel', '🏖️', 'A fluffy beach towel']]) {
     if (g.state.inv[item] > 0) {
       node.choices.push({ text: `Give her ${label} ${icon}`, action: () => {
         g.state.inv[item]--;
@@ -241,8 +255,20 @@ export function talkLady(g, npc) {
   return node;
 }
 
+// Signature dates per lady; everyone else gets a random classic.
+const SIGNATURE_DATES = {
+  doris: ['the Golden Coral for the 4:00 early bird', 'She brought her own Tupperware and filled it with shrimp while making direct eye contact with the manager. You have never been more attracted to anyone.'],
+  millie: ['a back-room poker game at the Elks Lodge', 'She cleaned out three retired dentists and a priest, then bought you a round with their money. She calls you "sugar tits." You allow it.'],
+  gloria: ['the Tiki Hut for a Bushwacker crawl', 'She told you about all four ex-husbands in alphabetical order. Husband #3, Sal, "had hands like a surgeon and the morals of a raccoon."'],
+  bev: ['a moonlight pickleball match', 'She beat you 11-0, kissed you at the net, and whispered "Frank bowls on Thursdays." It is Thursday.'],
+  linda: ['the Country Club patio, right under Chip\'s nose', 'You split a $90 bottle of wine on Chip\'s member account. He waved at you from the bar, confused. She squeezed your knee under the table.'],
+  rhonda: ['the Rusty Pelican for dollar-oyster night', 'She ate forty oysters, got into a shouting match with a pelican, and taught you a Jersey hand gesture that got you both banned for a week.'],
+  tammy: ['a midnight cruise in her beverage cart around the back nine', 'She let you drive. At the Lake Serenity ramp she yelled "SEND IT," and you did. As you splashed down, somebody set off fireworks over the clubhouse. It might have been for you. It was definitely for you.'],
+};
+
 function dateNode(g, npc, def, r) {
-  const venue = pick([
+  if (def.id === 'tammy') g.celebrate(14, 52, -112);
+  const venue = SIGNATURE_DATES[def.id] || pick([
     ['the Golden Coral for the 4:00 early bird', 'She ordered the prime rib, then wrapped two dinner rolls in a napkin "for later." A woman after your own heart.'],
     ['a sunset cart ride around the back nine', 'You drove with one hand on the wheel and one on the Geezer Light. She held on for dear life. She loved it.'],
     ['Bingo Night at the clubhouse', 'She won twice. Karen glared the whole time. You held her daubers. It was intimate.'],
@@ -393,6 +419,16 @@ export function talkOperator(g, npc) {
 // ---------------------------------------------------------------- gang
 export function talkRecruit(g, npc) {
   const def = npc.data.recruit;
+  if (def.id === 'walker' && g.state.quest.flags.homebrew && !g.state.quest.flags.testBatch) {
+    return {
+      name: def.name, title: 'Volunteer (unaware)',
+      text: `"What's in the thermos? Smells like a petting zoo."`,
+      choices: [
+        { text: '"Home-brewed Rhino Tea. On the house, Wally."', disabled: g.state.inv.tea <= 0, tag: `🍵 ${g.state.inv.tea}`, action: () => { testBatchOn(g, npc); return end(def.name, '*He drinks the whole thermos. His walker begins to smoke.* "OH. OH MY. WHERE ARE MY SNEAKERS?"'); } },
+        { text: 'Never mind', action: () => null },
+      ],
+    };
+  }
   if (npc.role === 'gang') {
     const guarding = npc.state === 'guard';
     return {
@@ -493,36 +529,45 @@ export function talkGolfer(g, npc) {
 // ---------------------------------------------------------------- POIs / shops
 export function visit(g, poi) {
   const id = poi.id;
+  if (id === 'tiki') return tikiNode(g);
+  if (id === 'casino') return casinoNode(g);
+  if (id === 'cabin') return cabinNode(g);
   if (SHOPS[id]) return openShop(g, id);
   if (id === 'sal') return openSal(g);
   if (id === 'home') return homeNode(g);
   if (id === 'hoa') return hoaNode(g);
   if (id === 'clubhouse') return clubhouseNode(g);
   if (id === 'dumpster') return dumpsterNode(g);
-  if (id === 'gate') return end('Front Gate', '"Sorry, sir. Your kids signed the paperwork. You can leave when you\'re dead, or when you\'re 90 and they need the house." — Gate Guard Hector');
-  if (id === 'pickleball') return betNode(g, 'Pickleball Hustle', '"Twenty bucks says you can\'t return my dink shot, old man." — a 70-year-old in compression sleeves.', 'str', 4, 40);
-  if (id === 'shuffle') return betNode(g, 'Shuffleboard Hustle', 'The shuffleboard sharks of Sunset Palms play for blood. And cash.', 'cha', 3, 30);
+  if (id === 'gate') return end('Front Gate', `"Beach is straight ahead, Mr. ${g.state.name}. Boca Beach Club. Rusty Pelican's got two-for-one Bushwackers. Don't drive on the pier. Everybody drives on the pier." — Gate Guard Hector`);
+  if (id === 'pickleball') return pickleballNode(g);
+  if (id === 'pong') return pongNode(g);
+  if (id === 'shuffle') {
+    const play = (bet, skill) => () => { g.startMinigame('shuffle', { bet, skill }); g.ui.closeDialogue(); return 'keep'; };
+    return {
+      name: 'Shuffleboard Hustle', title: 'The courts',
+      text: 'The shuffleboard sharks of Sunset Palms play for blood. And cash. One frame, four pucks each. Land in the triangle, knock their pucks into the gutter.',
+      choices: [
+        { text: 'Play a friendly frame', tag: `bet ${money(30)}`, disabled: g.state.money < 30, action: play(30, 0.55) },
+        { text: 'Play the house champion', tag: `bet ${money(150)}`, disabled: g.state.money < 150, action: play(150, 0.85) },
+        { text: 'Walk away', action: () => null },
+      ],
+    };
+  }
   if (id === 'pool') return end('The Pool', `The clubhouse pool. 82 degrees and approximately 30% water, 70% sunscreen. ${g.state.bladder > 20 ? '\n\n(Tip: press P while standing in the water. You know you want to.)' : ''}`);
   if (id === 'gazebo') return end('Gazebo', 'Someone carved "MILDRED + ???" into the railing. The ??? has been scratched out and re-carved nine times.');
   return null;
 }
 
-function betNode(g, title, text, stat, diff, bet) {
+function tikiNode(g) {
   return {
-    name: title, title: `Bet ${money(bet)}`,
-    text,
+    name: 'Tiki Hut', title: 'Manny, Bartender',
+    text: pick(['"Welcome to paradise, amigo. Paradise costs six bucks a beer."', '"The regulars are looking for fresh blood. Chug-off? Winner doubles the bet."']),
     choices: [
-      { text: `Play for ${money(bet)}`, check: C(g, stat, diff), disabled: g.state.money < bet, action: () => {
-        g.advanceTime(30);
-        if (g.roll(stat, diff)) {
-          g.addMoney(bet, 'hustle');
-          g.xp(stat, 2);
-          return end(title, pick(['You win! Your opponent throws his paddle into the pond.', 'Victory! Someone yells "HUSTLER!" You take a bow. Your back cracks.']));
-        }
-        g.spend(bet);
-        return end(title, pick(['You lose. Badly. A small crowd gathers to laugh.', 'You lost, and pulled something. Worth it? No.']));
-      } },
-      { text: 'Walk away', action: () => null },
+      { text: 'Order drinks', action: () => { openShop(g, 'tiki'); g.ui.closeDialogue(); return 'keep'; } },
+      { text: 'Challenge the regulars to a CHUG-OFF', tag: 'bet $40', disabled: g.state.money < 40, action: () => { g.startMinigame('chug', { opponent: pick(['Big Sal "The Funnel"', 'Dutch Van Houten', 'Irv the Sponge']), bet: 40 }); g.ui.closeDialogue(); return 'keep'; } },
+      karaokeChoice(g),
+      kegChoice(g),
+      { text: 'Leave', action: () => null },
     ],
   };
 }
@@ -535,9 +580,59 @@ function homeNode(g) {
     text: pick(['Your recliner has a butt-shaped dent that fits you like a glove. The TV is still on Matlock.', 'Home. It smells like Bengay and ambition.']),
     choices: [
       { text: late ? 'Sleep until morning (saves game)' : 'Sleep until morning (it\'s early, but you\'re old)', action: () => { g.sleep(); return null; } },
+      { text: 'Throw a lawn party (booze & snacks)', tag: g.party ? 'party in progress' : '$250', disabled: !!g.party || g.state.money < 250, action: () => { g.startParty(); return null; } },
       { text: 'Take a nap (2 hours, heal)', action: () => { g.fadeOut(() => { g.advanceTime(120); g.player.hp = g.maxHp(); g.state.buzz = Math.max(0, g.state.buzz - 40); }, 1.5, '💤', 'Power nap. You drooled on the remote.'); return null; } },
+      ...brewChoices(g),
+      { text: 'Wardrobe: change your outfit', action: () => wardrobeNode(g) },
       { text: 'Save game', action: () => { g.save(); return end('Home', 'Game saved. Your legacy is secure. Unlike your bladder.'); } },
       { text: 'Leave', action: () => null },
+    ],
+  };
+}
+
+function brewChoices(g) {
+  const st = g.state;
+  const f = st.quest.flags;
+  if (f.homebrew) {
+    return [{ text: 'Brew a batch of Rhino Tea (5 teas)', tag: '$60 materials', disabled: st.money < 60, action: () => {
+      g.spend(60);
+      g.startMinigame('brew', { onWin: () => { st.inv.tea += 5; g.xp('str', 1); }, onLose: () => g.ui.toast('Ruined batch. The materials are gone.', 'heat', 3) });
+      g.ui.closeDialogue();
+      return 'keep';
+    } }];
+  }
+  if (!f.c2Doc) return [];
+  const have = st.inv.teabags > 0 && st.inv.antler > 0 && st.inv.tooth > 0;
+  return [{ text: `Brew Doc's secret Rhino Tea recipe`, disabled: !have, tag: have ? 'first batch' : `need: ${[st.inv.teabags ? '' : 'tea bags', st.inv.antler ? '' : 'antler', st.inv.tooth ? '' : 'gator tooth'].filter(Boolean).join(', ')}`, tagCls: have ? 'good' : 'bad', action: () => {
+    g.startMinigame('brew', { onWin: () => { f.homebrew = true; st.inv.tea += 5; st.inv.teabags--; st.inv.antler = 0; st.inv.tooth = 0; g.xp('str', 2); } });
+    g.ui.closeDialogue();
+    return 'keep';
+  } }];
+}
+
+const SHIRT_NAMES = ['Teal Flamingo (lucky)', 'Hibiscus Red', 'Navy Palms', 'Sunshine Orange', 'Flamingo Pink', 'Purple Reign', 'Cream Linen', 'Electric Blue'];
+const HAT_NAMES = { visor: 'White Visor', bucket: 'Bucket Hat', cap: 'Trucker Cap', fedora: 'Straw Fedora', none: 'No Hat' };
+const GLASS_NAMES = { aviator: 'Aviators', big: 'Jackie O Shades', readers: 'Readers', none: 'No Glasses' };
+function wardrobeNode(g) {
+  const st = g.state;
+  const cycle = (key, list) => {
+    const i = list.indexOf(st.look[key]);
+    st.look[key] = list[(i + 1) % list.length];
+    g.player.setLook(st.look);
+    return wardrobeNode(g);
+  };
+  return {
+    name: 'Wardrobe', title: 'Buy more at the clubhouse boutique',
+    text: `Shirt: ${SHIRT_NAMES[st.look.shirt]}
+Hat: ${HAT_NAMES[st.look.hat] || st.look.hat}
+Glasses: ${GLASS_NAMES[st.look.glasses] || st.look.glasses}
+Socks: ${st.look.sock === '#ffffff' ? 'White tube socks' : 'Black dress socks (with sandals, obviously)'}`,
+    choices: [
+      { text: `Next shirt (${st.wardrobe.shirt.length} owned)`, disabled: st.wardrobe.shirt.length < 2, action: () => cycle('shirt', st.wardrobe.shirt) },
+      { text: `Next hat (${st.wardrobe.hat.length} owned)`, disabled: st.wardrobe.hat.length < 2, action: () => cycle('hat', st.wardrobe.hat) },
+      { text: `Next glasses (${st.wardrobe.glasses.length} owned)`, disabled: st.wardrobe.glasses.length < 2, action: () => cycle('glasses', st.wardrobe.glasses) },
+      { text: 'Swap socks', disabled: st.wardrobe.sock.length < 2, action: () => cycle('sock', st.wardrobe.sock) },
+      { text: 'Looking sharp. Done.', action: () => null },
     ],
   };
 }
@@ -548,17 +643,19 @@ function clubhouseNode(g) {
     name: 'Sunset Palms Clubhouse', title: `${fmtTime(g.state.minutes)}`,
     text: 'The clubhouse smells like coffee, chlorine and quiet desperation. A bulletin board advertises: WATER AEROBICS • BINGO WEDNESDAY • GRIEF SUPPORT (BYOB).',
     choices: [
+      ...(g.state.quest.flags.teaShortage && !g.state.inv.antler ? [{ text: 'Sneak into the Grill Room and shave the moose antlers', disabled: hour > 5 && hour < 21, tag: hour > 5 && hour < 21 ? 'night only (9PM–5AM)' : 'heist', tagCls: 'bad', action: () => {
+        g.state.inv.antler = 1;
+        g.advanceTime(15);
+        g.crime(g.player.x, g.player.z, 1.2, 'Defacing the clubhouse moose', 20, true);
+        audio.play('pocketSand');
+        return end('The Grill Room', 'You tiptoe past a sleeping bingo volunteer, climb onto a bar stool, and shave a generous pile of antler dust into a Ziploc. The moose watches. The moose judges.\n\n(Got ANTLER SHAVINGS)');
+      } }] : []),
+      { text: 'Browse the Resort Wear Boutique (outfits = STATUS)', action: () => { openShop(g, 'boutique'); g.ui.closeDialogue(); return 'keep'; } },
       { text: 'Water aerobics with the ladies (+STR, +CHA, 1 hour)', disabled: hour > 21 || hour < 6, action: () => {
         g.fadeOut(() => { g.advanceTime(60); g.xp('str', 3); g.xp('cha', 1); }, 1.5, '🏊 AEROBICS', 'You were the only man. You were a god among widows.');
         return null;
       } },
-      { text: `Bingo (${money(10)} card)`, disabled: g.state.money < 10, action: () => {
-        g.spend(10);
-        g.advanceTime(60);
-        const w = Math.random();
-        if (w < 0.18) { g.addMoney(120, 'BINGO'); return end('Bingo', '"B-I-N-G-O!" You win $120. Mildred stares at you like she\'s memorizing your face for later.'); }
-        return end('Bingo', pick(['You were one number away. Karen was calling. Suspicious.', 'You fell asleep with the dauber in your mouth. Blue tongue for two days.']));
-      } },
+      { text: `Play Bingo (${money(10)} card, ${money(150)} pot)`, disabled: g.state.money < 10, action: () => { g.startMinigame('bingo', { bet: 10, pot: 150 }); g.ui.closeDialogue(); return 'keep'; } },
       { text: 'Leave', action: () => null },
     ],
   };
@@ -592,6 +689,15 @@ function dumpsterNode(g) {
 function hoaNode(g) {
   const h = g.state.hoa;
   const choices = [];
+  const fl = g.state.inv.flamingos || 0;
+  if (fl > 0) choices.push({ text: `Turn in ${fl} stray flamingo${fl > 1 ? 's' : ''} from the hurricane`, tag: `+$${fl * 25}`, action: () => {
+    g.state.inv.flamingos = 0;
+    g.addMoney(fl * 25, 'flamingo bounty');
+    g.state.hurricane.returned = (g.state.hurricane.returned || 0) + fl;
+    if (g.state.hurricane.returned >= 10) g.achievement('flamingoRescue');
+    g.xp('stat', 1);
+    return end('HOA Office', `*Deb counts ${fl} muddy lawn flamingos, sighs, and pays out $${fl * 25}.* "Do NOT tell Karen where these came from. Half of them were hers."`);
+  } });
   const days = (6 - g.state.dow + 7) % 7;
   if (!h.president && !h.puppet) {
     if (!h.registered) choices.push({ text: 'Register as a candidate for HOA President ($250 filing fee)', disabled: g.state.money < 250, action: () => { g.spend(250); h.registered = true; g.toast('🗳️ You\'re running for HOA President! Campaign by talking to residents.', 'quest', 6); return end('HOA Office', '"Filing accepted." Deb stamps your form with visible disgust. "The election is Sunday at 7 PM in the clubhouse. Good luck. You\'ll need it."'); } });
@@ -647,6 +753,22 @@ function openShop(g, id) {
       choices: [{ text: 'Browse the shop', action: () => { openShop(g, id); g.ui.closeDialogue(); return 'keep'; } }, { text: 'Leave', action: () => null }],
     };
   }
+  if (id === 'doc' && st.quest.flags.teaShortage && !st.quest.flags.c2Doc) {
+    st.quest.flags.c2Doc = true;
+    return {
+      name: 'Doc Pratt', title: 'Mobile Wellness Provider (panicking)',
+      text: `"They raided my guy in Hialeah. Feds, fish & wildlife, a very angry botanist. The Rhino Tea pipeline is DRY, and what's left costs double.
+
+But. I have the original recipe. Three ingredients:
+
+1. Earl Grey tea bags. Liquor Barrel, four bucks.
+2. Antler shavings. There's a moose head in the clubhouse Grill Room. Nobody's looked at it since 1994. Go at night.
+3. A tooth. From Mr. Chompers. He sheds 'em on his sunning rock at Gator Pond. He does NOT like people touching his rock.
+
+Brew it at your place. Low heat. Patience. Then we never pay retail again."`,
+      choices: [{ text: '"A gator tooth. Sure. Totally normal Tuesday."', action: () => null }, { text: 'Browse the van anyway', action: () => { openShop(g, id); g.ui.closeDialogue(); return 'keep'; } }],
+    };
+  }
   if (id === 'doc' && !st.quest.flags.metDoc) {
     st.quest.flags.metDoc = true;
     st.inv.pills += 5;
@@ -661,28 +783,54 @@ function openShop(g, id) {
     greet,
     info: (it) => {
       if (it.id === 'sellballs') return { label: `+${money(st.inv.balls * 2)}`, disabled: st.inv.balls <= 0, desc: `You have ${st.inv.balls} ball${st.inv.balls === 1 ? '' : 's'}. $2 each.` };
+      if (it.id === 'detector') return { owned: st.owned.detector, label: st.owned.detector ? 'OWNED' : null, disabled: st.owned.detector };
+      if (id === 'pelican' && st.perks.freebar && it.id !== 'towel') return { price: 0, label: "FREE (Rhonda's tab)" };
       if (it.id === 'bucket') return { owned: st.ballCap >= 20, label: st.ballCap >= 20 ? 'OWNED' : null, disabled: st.ballCap >= 20 };
       if (it.id === 'hopper') return { owned: st.hopper, label: st.hopper ? 'OWNED' : null, disabled: st.hopper };
       if (it.id === 'drone') return { desc: `${it.desc} Own: ${st.drones}/5`, disabled: st.drones >= 5 };
       if (it.id === 'polo') return { owned: st.owned.polo, label: st.owned.polo ? 'OWNED' : null, disabled: st.owned.polo };
       if (it.id === 'chain' || it.id === 'rolex') return { owned: st.owned[it.id], label: st.owned[it.id] ? 'OWNED' : null, disabled: st.owned[it.id] };
       if (it.id.startsWith('w_')) { const w = it.id.slice(2); return { owned: st.weapons.includes(w), label: st.weapons.includes(w) ? 'OWNED' : null, disabled: st.weapons.includes(w) }; }
+      if (id === 'boutique') {
+        const [kind, val] = it.id.split('_');
+        const v = kind === 'shirt' ? +val : kind === 'socks' ? '#ffffff' : val;
+        const key = kind === 'socks' ? 'sock' : kind;
+        const has = st.wardrobe[key].includes(v);
+        const wearing = st.look[key] === v;
+        return { owned: has, label: wearing ? 'WEARING' : has ? 'WEAR' : null, price: has ? 0 : it.price };
+      }
       if (id === 'buffet') { const early = st.minutes >= 15 * 60 && st.minutes < 17 * 60; return { price: early ? 9 : 18, label: early ? '$9 EARLY BIRD' : '$18' }; }
       if (id === 'tiki' && st.minutes >= 16 * 60 && st.minutes < 18 * 60) return { price: Math.ceil(it.price / 2), label: `${money(Math.ceil(it.price / 2))} HAPPY HR` };
-      if (id === 'doc') return { price: Math.round(it.price * wholesale) };
+      if (id === 'doc') return { price: Math.round(it.price * wholesale * (it.id.startsWith('tea') && st.quest.flags.teaShortage && !st.quest.flags.homebrew ? 2 : 1)) };
       return {};
     },
     buy: (it) => {
       let price = it.price;
       if (id === 'buffet') price = st.minutes >= 15 * 60 && st.minutes < 17 * 60 ? 9 : 18;
       if (id === 'tiki' && st.minutes >= 16 * 60 && st.minutes < 18 * 60) price = Math.ceil(price / 2);
-      if (id === 'doc') price = Math.round(price * wholesale);
+      if (id === 'pelican' && st.perks.freebar && it.id !== 'towel') price = 0;
+      if (id === 'doc') price = Math.round(price * wholesale * (it.id.startsWith('tea') && st.quest.flags.teaShortage && !st.quest.flags.homebrew ? 2 : 1));
       if (it.id === 'sellballs') {
         const n = st.inv.balls;
         if (!n) return;
         st.inv.balls = 0;
         st.counters.ballsSold += n;
         g.addMoney(n * 2, 'golf balls');
+        return;
+      }
+      if (id === 'boutique') {
+        const [kind, val] = it.id.split('_');
+        const v = kind === 'shirt' ? +val : kind === 'socks' ? '#ffffff' : val;
+        const key = kind === 'socks' ? 'sock' : kind;
+        if (!st.wardrobe[key].includes(v)) {
+          if (price > st.money) { audio.play('fail'); g.ui.hint('Pierre does not do layaway.'); return; }
+          if (price) g.spend(price);
+          st.wardrobe[key].push(v);
+          g.xp('stat', price >= 60 ? 2 : price > 0 ? 1 : 0);
+          audio.play('buy');
+        }
+        st.look[key] = v;
+        g.player.setLook(st.look);
         return;
       }
       if (price > st.money) { audio.play('fail'); g.ui.hint("You can't afford that. Fixed income, remember?"); return; }
@@ -695,6 +843,12 @@ function openShop(g, id) {
         case 'beer1': add('beer', 1); st.quest.flags.boughtBeer = true; break;
         case 'wine': add('wine', 1); break;
         case 'flowers': add('flowers', 1); break;
+        case 'teabags': add('teabags', 1); break;
+        case 'beer2': add('beer', 2); st.quest.flags.boughtBeer = true; break;
+        case 'bushwacker': st.buffs.colada = 240; st.buzz = Math.min(100, st.buzz + 32); g.ui.hint('🥤 Brain freeze AND a buzz. Efficient.', 2.5); break;
+        case 'towel': add('towel', 1); break;
+        case 'detector': st.owned.detector = true; g.toast('🔍 Metal detector acquired! Walk the sand and listen for the beeps.', 'quest', 6); break;
+        case 'sunscreen': g.player.hp = Math.min(g.maxHp(), g.player.hp + 20); break;
         case 'lotto': {
           const r = Math.random();
           const win = r < 0.004 ? 1000 : r < 0.05 ? 50 : r < 0.2 ? 10 : 0;

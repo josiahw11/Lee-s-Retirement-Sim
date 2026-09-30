@@ -36,8 +36,24 @@ export class Player {
     this.speed = 0;
   }
 
+  // Swap in a freshly built character with a new outfit, keeping pose/seat/weapon.
+  setLook(overrides) {
+    const old = this.char;
+    const look = { ...PLAYER_LOOK, ...overrides };
+    const ch = new Character(look);
+    const parent = old.root.parent;
+    ch.root.position.copy(old.root.position);
+    ch.root.rotation.copy(old.root.rotation);
+    ch.mode = old.mode;
+    if (parent) parent.add(ch.root);
+    if (old.heldType) ch.setHeld(old.heldType);
+    old.dispose();
+    this.char = ch;
+  }
+
   enterCart(cart) {
     this.cart = cart;
+    this.stand = null;
     cart.driver = this;
     seatCharacter(this.char, cart, 1);
   }
@@ -66,6 +82,18 @@ export class Player {
     this.blind = Math.max(0, this.blind - dt);
     const drunk = g.buzz01();
 
+    if (this.stand && !this.cart) { // posed on a podium for a moment
+      this.stand.t -= dt;
+      if (this.stand.t > 0) {
+        this.char.mode = 'idle';
+        this.char.root.position.set(this.x, this.stand.y, this.z);
+        this.char.root.rotation.y = this.stand.ry;
+        this.char.update(dt);
+        return;
+      }
+      this.stand = null;
+    }
+
     if (this.cart) {
       const c = this.cart;
       const throttle = input.axis(['KeyS', 'ArrowDown'], ['KeyW', 'ArrowUp']);
@@ -79,6 +107,7 @@ export class Player {
         boost: boost && !!c.upgrades.turbo,
         drunk,
         onRoad,
+        wet: g.weather.intensity > 0.3,
       }, g.world.col);
       this.x = c.x;
       this.z = c.z;

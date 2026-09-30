@@ -1,5 +1,8 @@
 // Chapter 1 story chain + free-roam goals afterwards.
 import { money } from '../core/utils.js';
+import { CH2 } from './chapter2.js';
+import { CH3 } from './chapter3.js';
+import { CH4 } from './chapter4.js';
 
 const poi = (id) => (g) => g.world.pois[id];
 
@@ -8,13 +11,13 @@ export const STEPS = [
     id: 'cart', title: 'Hop in your golf cart [E]',
     target: (g) => (g.player.cart ? null : g.playerCart),
     done: (g) => g.player.cart === g.playerCart,
-    start: (g) => g.ui.hint('WASD to walk • Mouse to look • E to get in your cart', 7),
+    start: (g) => g.ui.hint(g.input.touchOn ? 'Left thumb to walk • drag the right side to look • USE to get in your cart' : 'WASD to walk • Mouse (or click-drag) to look • E to get in your cart', 7),
   },
   {
     id: 'beer', title: 'Buy beer at the Liquor Barrel',
     target: poi('liquor'),
     done: (g) => g.state.quest.flags.boughtBeer,
-    start: (g) => g.ui.hint('Drive: W/S gas & brake • A/D steer • SPACE drift • R radio • H horn', 8),
+    start: (g) => g.ui.hint(g.input.touchOn ? 'Drive: stick up/down gas & brake, left/right steer • ⤴ drift • 📻 radio • 📯 horn' : 'Drive: W/S gas & brake • A/D steer • SPACE drift • R radio • H horn', 8),
     reward: (g) => g.xp('cha', 1),
   },
   {
@@ -80,6 +83,8 @@ export const STEPS = [
     reward: (g) => g.chapterComplete(),
   },
 ];
+
+STEPS.push(...CH2, ...CH3, ...CH4);
 
 const FREE = [
   { id: 'tammy', title: 'LEGEND: Win over Tammy the Cart Girl', done: (g) => g.state.romance.tammy.conquest, target: (g) => g.named.tammy },

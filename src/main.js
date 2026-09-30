@@ -6,11 +6,14 @@ import { CameraRig } from './core/camera.js';
 import { SkySystem } from './gfx/sky.js';
 import { Particles } from './gfx/particles.js';
 import { PostFX } from './gfx/postfx.js';
-import { shared, updateNightMaterials } from './gfx/materials.js';
+import { shared, updateNightMaterials, M } from './gfx/materials.js';
 import { World } from './world/world.js';
+import { updateBeach } from './world/beach.js';
+import { updateBoat } from './world/casinoboat.js';
 import { UI } from './ui/ui.js';
 import { Minimap } from './ui/minimap.js';
-import { Game, defaultState } from './game/game.js';
+import { TouchControls } from './ui/touch.js';
+import { Game, defaultState, MENU_TABS } from './game/game.js';
 
 const $ = (id) => document.getElementById(id);
 const nextFrame = () => new Promise((r) => (document.hidden ? setTimeout(r, 0) : requestAnimationFrame(() => setTimeout(r, 0))));
@@ -21,17 +24,15 @@ const setLoad = async (pct, msg) => {
 };
 
 const CONTROLS = [
-  ['WASD', 'Walk / drive'], ['Mouse', 'Look around'],
-  ['Shift', 'Brisk shuffle / Nitrous'], ['Space', 'Hop / drift'],
-  ['E', 'Interact, enter/exit cart'], ['Click / F', 'Swing club / punch'],
-  ['R-Click / G', 'Pocket sand (wedge)'], ['Q / 1-6', 'Switch club'],
-  ['B', 'Drink a beer'], ['P (hold)', 'Pee. Anywhere.'],
-  ['H', 'Horn'], ['R', 'Cart radio'],
-  ['Tab', 'Phone: stats, bag, romance'], ['M', 'Map'],
-  ['Esc', 'Pause / settings'], ['` [ ]', 'Demo: +3h / +stats / +$1k'],
+  ['🚶 On foot', [['WASD', 'Walk'], ['Shift', 'Brisk shuffle'], ['Space', 'Hop'], ['E', 'Talk / use / enter cart'], ['Click · F', 'Swing club / punch'], ['R-click · G', 'Pocket sand (wedge)'], ['Q · 1-6', 'Switch club'], ['B', 'Drink a beer'], ['P (hold)', 'Pee. Anywhere.']]],
+  ['🛺 Driving', [['W / S', 'Gas / brake'], ['A / D', 'Steer'], ['Space', 'Handbrake drift'], ['Shift', 'Nitrous (Sal mod)'], ['H', 'Horn'], ['R', 'Radio station'], ['E', 'Get out']]],
+  ['🎥 Camera', [['Mouse', 'Look (click game to lock)'], ['Drag', 'Look (any browser)'], ['Z / C', 'Rotate camera'], ['Scroll', 'Zoom in / out'], ['V', 'Photo mode']]],
+  ['📱 Menus', [['Tab', 'Phone: stats, bag, romance'], ['M', 'Map'], ['Esc', 'Pause / settings'], ['1-9 · Enter', 'Pick dialogue choices (arrows move)']]],
+  ['👆 Touchscreen', [['Left thumb', 'Walk / drive (floating stick)'], ['Right drag', 'Look around'], ['USE · 👊 · ⤴', 'Interact · swing · hop/drift'], ['🍺 · 💨', 'Drink · sprint/nitrous'], ['⏸ 📱 🗺️', 'Pause · phone · map']]],
+  ['🧪 Demo keys', [[']', '+$1,000'], ['[', '+1 all stats'], ['`', 'Skip 3 hours']]],
 ];
 for (const id of ['controls-grid', 'controls-grid2']) {
-  $(id).innerHTML = CONTROLS.map(([k, d]) => `<span class="kbd">${k}</span><span>${d}</span>`).join('');
+  $(id).innerHTML = CONTROLS.map(([title, rows]) => `<div class="ctl-sec"><h4>${title}</h4>${rows.map(([k, d]) => `<div class="ctl-row"><span class="kbd">${k}</span><span>${d}</span></div>`).join('')}</div>`).join('');
 }
 
 async function boot() {
@@ -64,7 +65,14 @@ async function boot() {
   ui.camera = camera;
   const minimap = new Minimap($('minimap'), $('bigmap-canvas'));
   const input = new Input(canvas);
+  const touch = new TouchControls(input);
   const camRig = new CameraRig(camera);
+  input.onLockFailed = () => {
+    if (!input._lookHinted && !input.touchOn) {
+      input._lookHinted = true;
+      ui.hint('🖱️ This browser blocks mouse capture — CLICK + DRAG to look around • quick click to swing • Z / C rotate • Scroll to zoom', 9);
+    }
+  };
   camRig.col = world.col;
   const game = new Game({ scene, camera, camRig, input, ui, world, particles, sky, post, minimap, renderer });
   console.log(`[boot] game ${Math.round(performance.now() - t0)}ms`);
@@ -87,14 +95,25 @@ async function boot() {
   resize();
 
   // ---------------- settings ----------------
-  const settings = Object.assign({ master: 0.8, music: 0.55, sens: 1, speech: true, bloom: true, shadows: true }, JSON.parse(localStorage.getItem('sunset-palms-settings') || '{}'));
+  const settings = Object.assign({ master: 0.8, music: 0.55, sens: 1, speech: true, bloom: true, shadows: true, quality: 'high', fov: 62, invertY: false }, JSON.parse(localStorage.getItem('sunset-palms-settings') || '{}'));
   const applySettings = () => {
     audio.setVolume('master', settings.master);
     audio.setMusicVolume(settings.music);
     audio.speechEnabled = settings.speech;
     camRig.sensitivity = settings.sens;
+    camRig.baseFov = settings.fov;
+    camRig.invertY = settings.invertY;
     post.bloom.enabled = settings.bloom;
     sky.shadowsEnabled = settings.shadows;
+    const presets = { low: { pr: 0.85, shadow: 1024, draw: 110 }, medium: { pr: 1.15, shadow: 1536, draw: 140 }, high: { pr: 1.6, shadow: 2048, draw: 170 } };
+    const q = presets[settings.quality] || presets.high;
+    const pr = Math.min(window.devicePixelRatio, q.pr);
+    if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); post.composer.setPixelRatio(pr); resize(); }
+    if (sky.sun.shadow.mapSize.x !== q.shadow) {
+      sky.sun.shadow.mapSize.set(q.shadow, q.shadow);
+      if (sky.sun.shadow.map) { sky.sun.shadow.map.dispose(); sky.sun.shadow.map = null; }
+    }
+    game.drawDist = q.draw;
     localStorage.setItem('sunset-palms-settings', JSON.stringify(settings));
   };
   $('set-master').value = settings.master;
@@ -102,6 +121,12 @@ async function boot() {
   $('set-sens').value = settings.sens;
   $('set-speech').checked = settings.speech;
   $('set-bloom').checked = settings.bloom;
+  $('set-quality').value = settings.quality;
+  $('set-fov').value = settings.fov;
+  $('set-invert').checked = settings.invertY;
+  $('set-fov').oninput = (e) => { settings.fov = +e.target.value; applySettings(); };
+  $('set-invert').onchange = (e) => { settings.invertY = e.target.checked; applySettings(); };
+  $('set-quality').onchange = (e) => { settings.quality = e.target.value; applySettings(); };
   $('set-shadows').checked = settings.shadows;
   $('set-master').oninput = (e) => { settings.master = +e.target.value; applySettings(); };
   $('set-music').oninput = (e) => { settings.music = +e.target.value; applySettings(); };
@@ -174,14 +199,25 @@ async function boot() {
   const closeMenu = () => { $('menu').classList.add('hidden'); ui.modal = null; input.requestLock(); };
   const openMap = () => { ui.modal = 'map'; minimap.drawBig(game); $('bigmap').classList.remove('hidden'); input.releaseLock(); };
   const closeMap = () => { $('bigmap').classList.add('hidden'); ui.modal = null; input.requestLock(); };
-  const pause = () => { paused = true; ui.modal = 'pause'; $('pause').classList.remove('hidden'); input.releaseLock(); audio.setRadio(false); audio.setEngine(false, 0, 0); };
+  const pause = () => { paused = true; ui.modal = 'pause'; $('pause').classList.remove('hidden'); input.releaseLock(); audio.setRadio(false); audio.setEngine(false, 0, 0); audio.setSkid(0); };
   const resume = () => { paused = false; $('pause').classList.add('hidden'); ui.modal = null; input.requestLock(); };
   $('btn-resume').onclick = resume;
   $('btn-save').onclick = () => { game.save(); };
+  $('btn-ch2').onclick = () => { game.jumpToChapter(2); resume(); };
+  $('btn-ch3').onclick = () => { game.jumpToChapter(3); resume(); };
+  $('btn-ch4').onclick = () => { game.jumpToChapter(4); resume(); };
+  $('btn-hurricane').onclick = () => { game.hurricane.summon(); resume(); };
   $('btn-quit').onclick = () => { if (confirm('Quit to title? Unsaved progress will be lost.')) location.reload(); };
   $('bigmap').onclick = closeMap;
   ui.onModalClose = () => { if (game.running && !ui.modal) input.requestLock(); };
   ui.onModalOpen = () => input.releaseLock();
+
+  // hidden tab: the loop stops, so silence looping sounds (engine, squeal, rain) until we're back
+  document.addEventListener('visibilitychange', () => {
+    if (!audio.ctx) return;
+    if (document.hidden) audio.ctx.suspend();
+    else audio.ctx.resume();
+  });
 
   canvas.addEventListener('click', () => {
     audio.init();
@@ -190,6 +226,7 @@ async function boot() {
   document.addEventListener('pointerlockchange', () => {
     const locked = document.pointerLockElement === canvas;
     // losing lock with no modal open = player pressed Esc -> pause
+    if (!locked && photo.on) { togglePhoto(); return; }
     if (!locked && game.running && !ui.modal && !paused) pause();
   });
 
@@ -202,13 +239,52 @@ async function boot() {
     requestAnimationFrame(frame);
     tick(Math.min(0.05, clock.getDelta()));
   }
+  // ---------------- photo mode ----------------
+  const photo = { on: false, yaw: 0, pitch: 0 };
+  const togglePhoto = () => {
+    photo.on = !photo.on;
+    document.body.classList.toggle('photo', photo.on);
+    $('photo-hint').classList.toggle('hidden', !photo.on);
+    if (photo.on) {
+      const d = new THREE.Vector3();
+      camera.getWorldDirection(d);
+      photo.yaw = Math.atan2(d.x, d.z);
+      photo.pitch = Math.asin(Math.max(-1, Math.min(1, d.y)));
+      audio.setEngine(false, 0, 0);
+      audio.setSkid(0);
+    }
+  };
+  const updatePhoto = (dt) => {
+    photo.yaw -= input.dx * 0.0022;
+    photo.pitch = Math.max(-1.4, Math.min(1.4, photo.pitch - input.dy * 0.0022));
+    const k = (input.down.has('ShiftLeft') ? 30 : 9) * dt;
+    const f = new THREE.Vector3(Math.sin(photo.yaw) * Math.cos(photo.pitch), Math.sin(photo.pitch), Math.cos(photo.yaw) * Math.cos(photo.pitch));
+    const r = new THREE.Vector3(-Math.cos(photo.yaw), 0, Math.sin(photo.yaw));
+    const mv = (code, v, s) => { if (input.down.has(code)) camera.position.addScaledVector(v, s * k); };
+    mv('KeyW', f, 1); mv('KeyS', f, -1); mv('KeyD', r, 1); mv('KeyA', r, -1);
+    if (input.down.has('KeyE')) camera.position.y += k;
+    if (input.down.has('KeyQ')) camera.position.y -= k;
+    camera.lookAt(camera.position.clone().add(f));
+  };
+
   function tick(dt) {
+    input.pollGamepad();
+    if (game.running && !ui.modal && (input.rawHit('KeyV') || (photo.on && input.rawHit('Escape')))) togglePhoto();
+    if (photo.on) {
+      updatePhoto(dt);
+      const pn = sky.update(game.state.minutes / 60, 0, game.player);
+      updateNightMaterials(pn);
+      post.render(dt, { drunk: 0, damage: 0, blind: 0, rhino: 0, fade: 0, night: pn });
+      input.endFrame();
+      return;
+    }
     // hit-stop / slow-mo for big impacts
     if (game.slowmo > 0) {
       game.slowmo -= dt;
-      dt *= 0.3;
+      dt *= game.slowmoScale || 0.3;
     }
     input.enabled = game.running && !ui.modal && !paused && !game.cut;
+    touch.update(input.enabled, game.running, ui.modal);
 
     // global keys
     if (game.running) {
@@ -220,6 +296,7 @@ async function boot() {
         else if (ui.modal === 'menu') closeMenu();
         else if (ui.modal === 'map') closeMap();
         else if (ui.modal === 'pause') resume();
+        else if (ui.modal === 'minigame' || ui.modal === 'gazette') { /* these handle Esc themselves */ }
         else pause();
       }
       if (input.rawHit('Tab')) {
@@ -231,12 +308,35 @@ async function boot() {
         else if (!ui.modal) openMap();
       }
       if (ui.modal === 'dialogue') {
+        if (input.rawHit('ArrowUp') || input.rawHit('PadUp') || input.rawHit('KeyW')) ui.moveSel(-1);
+        if (input.rawHit('ArrowDown') || input.rawHit('PadDown') || input.rawHit('KeyS')) ui.moveSel(1);
+        if (input.rawHit('PadA') || input.rawHit('Enter')) ui.choose(ui.sel ?? 0);
         for (let i = 1; i <= 9; i++) if (input.rawHit(`Digit${i}`) || input.rawHit(`Numpad${i}`)) ui.choose(i - 1);
         if (input.rawHit('Space') || input.rawHit('Enter')) {
           if (ui.typeI < ui.typeFull.length) ui.choose(0);
         }
       }
-      if (ui.modal === 'shop' && input.rawHit('KeyE')) ui.closeShop();
+      if (ui.modal === 'shop') {
+        if (input.rawHit('PadB')) ui.closeShop();
+        else if (input.rawHit('ArrowUp') || input.rawHit('PadUp') || input.rawHit('ArrowLeft') || input.rawHit('PadLeft')) ui.moveShopSel(-1);
+        else if (input.rawHit('ArrowDown') || input.rawHit('PadDown') || input.rawHit('ArrowRight') || input.rawHit('PadRight')) ui.moveShopSel(1);
+        else if (input.rawHit('Enter') || input.rawHit('PadA')) ui.buyShopSel();
+      }
+      if ((ui.modal === 'menu' || ui.modal === 'map') && input.rawHit('PadB')) { if (ui.modal === 'menu') closeMenu(); else closeMap(); }
+      if (ui.modal === 'menu') {
+        // bumpers flip phone tabs; on Grandr the d-pad swipes and A confirms a match
+        const step = input.rawHit('KeyQ') ? -1 : input.rawHit('KeyG') ? 1 : 0;
+        if (step) {
+          const i = MENU_TABS.findIndex(([k]) => k === game.menuTab);
+          game.renderMenu(MENU_TABS[(i + step + MENU_TABS.length) % MENU_TABS.length][0]);
+        } else if (game.menuTab === 'grandr') {
+          const click = (id) => { const el = $(id); if (el) el.click(); };
+          if ($('gr-ok')) { if (input.rawHit('PadA') || input.rawHit('Enter') || input.rawHit('Space')) click('gr-ok'); }
+          else if (input.rawHit('PadLeft') || input.rawHit('ArrowLeft')) click('gr-no');
+          else if (input.rawHit('PadRight') || input.rawHit('ArrowRight')) click('gr-yes');
+        }
+      }
+      if (ui.modal === 'pause' && input.rawHit('PadA')) resume();
     }
 
     if (!paused) {
@@ -251,15 +351,21 @@ async function boot() {
 
     const focus = game.running ? game.player : { x: 30, z: 5 };
     const hour = game.state.minutes / 60;
-    const night = sky.update(hour, paused ? 0 : dt, focus);
+    let night = sky.update(hour, paused ? 0 : dt, focus);
+    const flash = game.updateWeather(paused ? 0 : dt);
+    sky.applyStorm(game.weather.intensity, flash);
+    night = sky.night;
     updateNightMaterials(night);
+    if (game.hurricane && game.hurricane.outage) { M.lamp.emissiveIntensity = 0.05; M.glass.emissiveIntensity *= 0.12; } // candles only
     for (const m of world.waterMats) {
       m.uniforms.uSky.value.copy(sky.fogColor);
       m.uniforms.uSunDir.value.copy(sky.uniforms.sunDir.value);
       m.uniforms.uNight.value = night;
     }
-    if (!paused) shared.time.value += dt;
+    if (!paused) { shared.time.value += dt; shared.windPhase.value += dt * shared.gust.value; }
     world.updateDucks(shared.time.value);
+    updateBeach(world, shared.time.value);
+    updateBoat(world, dt);
     particles.update(paused ? 0 : dt);
 
     if (game.running) {
@@ -267,7 +373,7 @@ async function boot() {
       ui.updateWorldUI(dt, game);
       mmT -= dt;
       if (mmT <= 0) { mmT = 1 / 30; minimap.draw(game, game.camRig.yaw); }
-      $('click-to-play').classList.toggle('hidden', input.locked || !!ui.modal || paused);
+      $('click-to-play').classList.toggle('hidden', input.locked || input.lockFailed || !!ui.modal || paused);
     }
     post.render(dt, { drunk: game.fx.drunk, damage: game.fx.damage, blind: game.fx.blind, rhino: game.fx.rhino, fade: game.fx.fade, night });
     input.endFrame();
@@ -277,6 +383,7 @@ async function boot() {
   window.__game = game; // handy for debugging in the console
   // Deterministic stepping for automated testing: __sim(seconds, ['KeyW'])
   window.__tick = tick;
+  window.__errors = () => [...(tick._errs || [])];
   window.__sim = (seconds, keys = [], press = []) => {
     for (const k of keys) input.down.add(k);
     for (const k of press) input.pressed.add(k);
