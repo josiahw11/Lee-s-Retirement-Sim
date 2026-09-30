@@ -96,7 +96,8 @@ async function boot() {
     camRig.sensitivity = settings.sens;
     post.bloom.enabled = settings.bloom;
     sky.shadowsEnabled = settings.shadows;
-    const q = { low: { pr: 0.85, shadow: 1024, draw: 110 }, medium: { pr: 1.15, shadow: 1536, draw: 140 }, high: { pr: 1.6, shadow: 2048, draw: 170 } }[settings.quality] || {};
+    const presets = { low: { pr: 0.85, shadow: 1024, draw: 110 }, medium: { pr: 1.15, shadow: 1536, draw: 140 }, high: { pr: 1.6, shadow: 2048, draw: 170 } };
+    const q = presets[settings.quality] || presets.high;
     const pr = Math.min(window.devicePixelRatio, q.pr);
     if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); post.composer.setPixelRatio(pr); resize(); }
     if (sky.sun.shadow.mapSize.x !== q.shadow) {

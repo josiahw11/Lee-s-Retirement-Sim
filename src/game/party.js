@@ -41,9 +41,8 @@ export class Party {
     const keg = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.9, 12), new THREE.MeshStandardMaterial({ color: 0xc0c6cc, metalness: 0.8, roughness: 0.3 }));
     keg.position.set(c.x, heightAt(c.x, c.z) + 0.45, c.z);
     this.group.add(keg);
-    this.light = new THREE.PointLight(0xff8fd0, 0, 26, 1.4);
+    this.light = game.partyLight;
     this.light.position.set(c.x, 4, c.z);
-    this.group.add(this.light);
     game.scene.add(this.group);
     this.mats = mats;
 
@@ -105,7 +104,7 @@ export class Party {
     }
     // Karen crashes the party an hour in
     const karen = g.named.karen;
-    if (this.karenPhase === 0 && this.minutes > 60 && karen) {
+    if (this.karenPhase === 0 && this.minutes > 60 && karen && karen.state !== 'ko' && !karen.hostile) {
       this.karenPhase = 1;
       if (g.state.hoa.decrees.includes('noise') || g.state.hoa.puppet) {
         g.ui.toast('📋 Karen drove by, saw your Noise Exemption, and wept in her car.', 'quest', 5);
@@ -142,10 +141,16 @@ export class Party {
     const g = this.g;
     for (const n of this.guests) {
       if (!g.npcs.includes(n)) continue;
-      if (n.state === 'party' || n.state === 'walkTo') n.resumeBase();
+      if ((n.state === 'party' || n.state === 'walkTo') && !n.hostile) n.resumeBase();
       n.data.walkSpeed = undefined;
     }
-    if (g.named.karen && this.karenPhase >= 1) g.named.karen.resumeBase();
+    const karen = g.named.karen;
+    if (karen && this.karenPhase >= 1) {
+      karen.data.walkSpeed = undefined;
+      karen.data.after = undefined;
+      if (karen.state !== 'ko' && !karen.hostile) karen.resumeBase();
+    }
+    this.light.intensity = 0;
     g.scene.remove(this.group);
     g.state.counters.parties = (g.state.counters.parties || 0) + 1;
     g.achievement('party');

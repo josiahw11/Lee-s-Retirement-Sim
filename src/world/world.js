@@ -38,7 +38,7 @@ export function segMatrix(ax, ay, az, bx, by, bz, r) {
 
 // ---------- reusable vegetation geometry ----------
 function frondGeometry(len, width, droop) {
-  const S = 7;
+  const S = 5;
   const rings = [];
   for (let i = 0; i <= S; i++) {
     const t = i / S;
@@ -69,7 +69,7 @@ function makePalm(rnd) {
     const t = i / S;
     const nx = lx * t * t, ny = H * t, nz = lz * t * t;
     const r = 0.34 - 0.13 * t;
-    parts.push([GEO.cyl, i % 2 ? '#8b6b4a' : '#7a5c3e', segMatrix(px, py - 0.05, pz, nx, ny + 0.05, nz, r)]);
+    parts.push([GEO.cyl6, i % 2 ? '#8b6b4a' : '#7a5c3e', segMatrix(px, py - 0.05, pz, nx, ny + 0.05, nz, r)]);
     px = nx; py = ny; pz = nz;
   }
   const n = 8 + Math.floor(rnd() * 3);

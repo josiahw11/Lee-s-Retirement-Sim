@@ -46,8 +46,8 @@ export class Player {
     ch.root.rotation.copy(old.root.rotation);
     ch.mode = old.mode;
     if (parent) parent.add(ch.root);
-    old.root.removeFromParent();
     if (old.heldType) ch.setHeld(old.heldType);
+    old.dispose();
     this.char = ch;
   }
 

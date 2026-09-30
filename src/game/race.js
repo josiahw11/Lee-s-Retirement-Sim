@@ -19,6 +19,8 @@ export const RACE_TIERS = [
   { bet: 500, label: 'Pink Slips-ish ($500)', speed: 15.0, rivals: ['Rocket Ron', 'The Widow Maker'] },
 ];
 
+const RING = new THREE.TorusGeometry(4.4, 0.28, 8, 28);
+const RING_FINISH = new THREE.TorusGeometry(5.5, 0.28, 8, 28);
 const ringMatOn = new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.85 });
 const ringMatNext = new THREE.MeshBasicMaterial({ color: 0xff6fa8, transparent: true, opacity: 0.45 });
 
@@ -62,7 +64,7 @@ export class Race {
     this.rings = TRACK.map(([x, z], i) => {
       const next = TRACK[(i + 1) % TRACK.length];
       const prev = i === 0 ? [START.x, START.z] : TRACK[i - 1];
-      const m = new THREE.Mesh(new THREE.TorusGeometry(i === TRACK.length - 1 ? 5.5 : 4.4, 0.28, 8, 28), ringMatNext);
+      const m = new THREE.Mesh(i === TRACK.length - 1 ? RING_FINISH : RING, ringMatNext);
       m.position.set(x, heightAt(x, z) + 3, z);
       m.rotation.y = Math.atan2(next[0] - prev[0], next[1] - prev[1]) + Math.PI / 2;
       m.visible = false;
@@ -203,6 +205,7 @@ export class Race {
     for (const r of this.racers) {
       g.removeNPC(r.npc);
       g.scene.remove(r.cart.group);
+      r.cart.group.traverse((o) => { if (o.isMesh && o.geometry) o.geometry.dispose(); });
       g.carts = g.carts.filter((c) => c !== r.cart);
     }
   }

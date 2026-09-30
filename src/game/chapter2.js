@@ -17,8 +17,9 @@ export const CH2 = [
     target: poi('doc'),
     start: (g) => {
       F(g).teaShortage = true;
-      g.ui.splash('CHAPTER 2', 'RHINO RISING', 4, '#ff6fa8');
-      setTimeout(() => g.ui.toast('📱 Text from Doc: "Supplier got raided in Hialeah. Tea prices just doubled. Come to the van. Come ALONE. Or with beer."', 'quest', 8), 2500);
+      // let the CHAPTER 1 COMPLETE card breathe first
+      g.after(6.5, () => g.ui.splash('CHAPTER 2', 'RHINO RISING', 4, '#ff6fa8'));
+      g.after(9, () => g.ui.toast('📱 Text from Doc: "Supplier got raided in Hialeah. Tea prices just doubled. Come to the van. Come ALONE. Or with beer."', 'quest', 8));
     },
     done: (g) => F(g).c2Doc,
   },
@@ -54,7 +55,7 @@ export const CH2 = [
   {
     id: 'c2_deuce', title: 'Chip Wainwright II has come to town. Face "The Deuce" at the clubhouse.',
     target: (g) => g.named.deuce,
-    start: (g) => spawnDeuce(g),
+    start: (g) => g.ui.toast('📱 Text from Linda: "Chip\'s FATHER is flying in. He\'s bringing the limo. Stay away from the clubhouse until you\'re ready."', 'heat', 8),
     done: (g) => F(g).beatDeuce,
     reward: (g) => {
       g.addMoney(1000, "The Deuce's money clip");
@@ -148,6 +149,8 @@ function startDeuceFight(g, deuce) {
 export function testBatchOn(g, walker) {
   F(g).testBatch = true;
   g.state.inv.tea = Math.max(0, g.state.inv.tea - 1);
+  walker.data.baseWalk ??= walker.walkSpeed;
+  walker.data.baseRun ??= walker.runSpeed;
   walker.data.zoomT = 35;
   walker.walkSpeed = 7;
   walker.runSpeed = 9;

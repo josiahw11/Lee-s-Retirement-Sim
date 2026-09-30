@@ -87,7 +87,7 @@ export class ChugOff {
     this.cool -= dt;
     this.oppT -= dt;
     if (input.rawHit('Space') || input.rawHit('Enter') || input.rawHit('PadA')) this.press();
-    if (input.rawHit('Escape')) return this.finish(false, true);
+    if ((input.rawHit('Escape') || input.rawHit('PadB'))) return this.finish(false, true);
     if (this.oppT <= 0) {
       this.theirs++;
       this.oppT = rand(...this.oppRate) * (1 + this.theirs * 0.04);
@@ -165,7 +165,7 @@ export class Brew {
   update(dt, input) {
     if (this.done) return;
     if (input.rawHit('Space') || input.rawHit('Enter') || input.rawHit('PadA')) this.heat();
-    if (input.rawHit('Escape')) return this.finish(false);
+    if ((input.rawHit('Escape') || input.rawHit('PadB'))) return this.finish(false);
     this.t += dt;
     this.temp = Math.max(0, this.temp - dt * (0.1 + this.temp * 0.12));
     const inZone = this.temp >= this.zone.a && this.temp <= this.zone.b;
@@ -292,7 +292,7 @@ export class Bingo {
 
   update(dt, input) {
     if (this.done) return;
-    if (input.rawHit('Escape')) return this.finish('quit');
+    if ((input.rawHit('Escape') || input.rawHit('PadB'))) return this.finish('quit');
     this.t -= dt;
     if (this.t > 0) return;
     this.t = this.interval;

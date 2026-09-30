@@ -374,6 +374,8 @@ export class Character {
 
   dispose() {
     this.root.removeFromParent();
+    // geometry is unique per character (merged parts); materials are shared, keep them
+    this.root.traverse((o) => { if (o.isMesh && o.geometry) o.geometry.dispose(); });
   }
 }
 

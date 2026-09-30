@@ -120,6 +120,8 @@ export class Game {
     this.scene.add(this.headlight, this.headlight.target);
     this.neonLight = new THREE.PointLight(0xff2bd6, 0, 7, 1.5);
     this.scene.add(this.neonLight);
+    this.partyLight = new THREE.PointLight(0xff8fd0, 0, 26, 1.4);
+    this.scene.add(this.partyLight);
     this.weather = new Weather(this.scene);
     this.storm = null;
     this.ui.onBubble = (ent, text) => {
@@ -384,7 +386,6 @@ export class Game {
     this.seedTreasure();
     const qid = this.quests.current()?.id;
     if (qid === 'c2_tooth') spawnTooth(this);
-    if (qid === 'c2_deuce') spawnDeuce(this);
     if (state.quest.flags.beatChip) {
       // Chip keeps his distance now
       this.named.chip.data.retreatAfterKO = true;
@@ -798,6 +799,7 @@ export class Game {
   }
 
   sleep() {
+    if (this.party) this.party.end();
     this.fadeOut(() => {
       const s = this.state;
       const toMorning = ((24 * 60 - s.minutes) + 7 * 60) % 1440 || 1440;
@@ -1244,6 +1246,10 @@ export class Game {
   }
 
   onKnockout(npc, attacker) {
+    if (this.brawlGroup && this.brawlGroup.includes(npc)) {
+      npc.data.brawlDown = true;
+      npc.data.retreatAfterKO = true;
+    }
     const s = this.state;
     if (attacker === this.player || (attacker && attacker.role === 'gang')) {
       s.counters.knockouts++;
@@ -1268,6 +1274,8 @@ export class Game {
     this.brawlGroup = group;
     this.brawlOnWin = onWin;
     for (const n of group) {
+      n.data.brawlDown = false;
+      n.data.retreatAfterKO = false;
       n.hostile = true;
       n.aggro = this.player;
       n.state = 'fight';
@@ -1287,7 +1295,7 @@ export class Game {
   }
 
   checkBrawls() {
-    if (this.brawlGroup && this.brawlGroup.every((n) => n.state === 'ko')) {
+    if (this.brawlGroup && this.brawlGroup.every((n) => n.state === 'ko' || n.data.brawlDown)) {
       const win = this.brawlOnWin;
       for (const n of this.brawlGroup) n.hostile = false;
       this.brawlGroup = null;
@@ -1560,7 +1568,15 @@ export class Game {
       gt.z += Math.cos(gt.heading) * speed * dt;
     }
     const pd = Math.hypot(gt.x - pond.x, gt.z - pond.z), lim = pond.r * 0.85;
-    if (pd > lim && !(gt.rampage > 0)) { gt.x = pond.x + ((gt.x - pond.x) / pd) * lim; gt.z = pond.z + ((gt.z - pond.z) / pd) * lim; }
+    if (pd > lim && !(gt.rampage > 0)) {
+      if (pd > lim + 1.5) {
+        // stranded on land after a rampage: waddle back to the water
+        const a = Math.atan2(pond.x - gt.x, pond.z - gt.z);
+        gt.heading = dampAngle(gt.heading, a, 4, dt);
+        gt.x += Math.sin(gt.heading) * 3 * dt;
+        gt.z += Math.cos(gt.heading) * 3 * dt;
+      } else { gt.x = pond.x + ((gt.x - pond.x) / pd) * lim; gt.z = pond.z + ((gt.z - pond.z) / pd) * lim; }
+    }
     const wet = waterAt(gt.x, gt.z) === pond;
     const y = wet ? WATER_Y - (gt.mode === 'hunt' ? 0.02 : 0.14) + Math.sin(gt.t * 1.4) * 0.03 : heightAt(gt.x, gt.z) + 0.2;
     gt.m.position.set(gt.x, y, gt.z);
@@ -1585,9 +1601,14 @@ export class Game {
     }
   }
 
+  after(seconds, fn) {
+    (this.timers ||= []).push({ t: seconds, fn });
+  }
+
   startParty() {
     if (this.party) return;
     this.spend(250);
+    if (audio.station === 0) audio.setStation(1);
     this.party = new Party(this);
   }
 
@@ -1597,6 +1618,7 @@ export class Game {
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();
     document.getElementById('minigame').classList.remove('hidden');
+    this.input.pressed.clear();
     this.minigame = new Cls(this, opts);
   }
 
@@ -1686,6 +1708,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
   }
 
   startRace(tier) {
+    if (this.race) { this.race.dispose(); this.race = null; }
     const p = this.player;
     if (!p.cart) {
       const c = this.playerCart;
@@ -1911,6 +1934,12 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       }
       updateTooth(this, dt);
       this.updateDetector(dt);
+      if (this.timers && this.timers.length) {
+        for (const tm of this.timers) tm.t -= dt;
+        const due = this.timers.filter((tm) => tm.t <= 0);
+        this.timers = this.timers.filter((tm) => tm.t > 0);
+        for (const tm of due) tm.fn();
+      }
       if (this.oceanRescueT > 0) {
         this.oceanRescueT -= dt;
         if (this.oceanRescueT <= 0) this.coastGuard();
@@ -1920,9 +1949,15 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (walker && walker.data.zoomT > 0) {
         walker.data.zoomT -= dt;
         if (Math.random() < dt * 8) this.particles.emit('dust', walker.x, walker.y + 0.2, walker.z, { vy: 0.5, life: 0.6, size: 0.4, grow: 0.6 });
-        if (walker.data.zoomT <= 0) { walker.walkSpeed = 0.6; walker.runSpeed = 2.3; walker.resumeBase(); walker.say('...I need a nap.', 2.5); }
+        if (walker.data.zoomT <= 0) {
+          walker.walkSpeed = walker.data.baseWalk ?? 0.6;
+          walker.runSpeed = walker.data.baseRun ?? 2.3;
+          if (walker.state !== 'ko' && !walker.hostile) walker.resumeBase();
+          walker.say('...I need a nap.', 2.5);
+        }
       }
       const cq = this.quests.current();
+      if (cq && cq.id === 'c2_deuce' && !this.named.deuce && Math.hypot(p.x - 15, p.z - 24) > 45) spawnDeuce(this);
       if (cq && cq.id === 'c2_deuce' && this.named.deuce && !s.quest.flags.deuceIntro && !p.cart && Math.hypot(this.named.deuce.x - p.x, this.named.deuce.z - p.z) < 14) {
         this.ui.openDialogue(deuceConfront(this));
       }
@@ -2168,6 +2203,19 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
         n.visible = vis;
         n.char.root.visible = vis;
       }
+      // only nearby people cast shadows (big draw-call saver)
+      const shadow = d < 55;
+      if (shadow !== n._shadow) {
+        n._shadow = shadow;
+        n.char.root.traverse((o) => { if (o.isMesh) o.castShadow = shadow; });
+      }
+    }
+    for (const c of this.carts) {
+      const shadow = Math.hypot(c.x - cam.x, c.z - cam.z) < 60;
+      if (shadow !== c._shadow) {
+        c._shadow = shadow;
+        c.group.traverse((o) => { if (o.isMesh) o.castShadow = shadow; });
+      }
     }
   }
 
@@ -2235,7 +2283,6 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     const c = p.cart;
     audio.setEngine(!!c && !this.ui.modal, c ? clamp(c.speed / 16, 0, 1) : 0, c ? this.input.axis(['KeyS'], ['KeyW']) : 0);
     const partyNear = this.party && Math.hypot(p.x - this.party.center.x, p.z - this.party.center.z) < 45;
-    if (partyNear && audio.station === 0) audio.setStation(1);
     audio.setRadio(((!!c && audio.station !== 0) || partyNear) && !this.ui.modal);
     if (c) c.bass = c.upgrades.speakers && audio.station !== 0;
     audio.ambientTick(dt, this.sky.night > 0.6);
