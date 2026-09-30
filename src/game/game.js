@@ -17,6 +17,7 @@ import { Hurricane, hurricanePartyNode } from './hurricane.js';
 import { Wildlife } from './wildlife.js';
 import { Karaoke } from './karaoke.js';
 import { GarageSales, sellerNode } from './garagesale.js';
+import { SeniorGames, commishNode } from './seniorgames.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
@@ -108,6 +109,8 @@ const ACH = {
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
   scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
+  champion: ['Senior Games Champion', 'Stood on the top step of the Senior Games podium.'],
+  triplecrown: ['Triple Crown', 'Gold in all three Senior Games events on one Sunday.'],
   picker: ['American Picker', 'Bought (or lifted) six things at garage sales.'],
   karaoke: ['Tiki Hut Idol', 'Got a 90%+ crowd at karaoke night.'],
   stormchaser: ['Storm Chaser', 'Caught 2.4+ seconds of air in hurricane winds.'],
@@ -459,6 +462,8 @@ export class Game {
     this.wildlife = new Wildlife(this);
     if (this.garageSales) this.garageSales.clear();
     this.garageSales = new GarageSales(this);
+    if (this.seniorGames) this.seniorGames.clear();
+    this.seniorGames = new SeniorGames(this);
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -1264,6 +1269,7 @@ export class Game {
     else if (n.role === 'instructor') node = talkChad(this, n);
     else if (n.role === 'date') node = talkDate(this, n);
     else if (n.role === 'seller') node = sellerNode(this, n);
+    else if (n.role === 'commissioner') node = commishNode(this);
     else if (n.role === 'captain') node = talkCaptain(this, n);
     else if (n.role === 'mechanic') node = talkFingers(this, n);
     else if (n.role === 'deckhand') node = talkDeckhand(this, n);
@@ -2059,6 +2065,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (this.hurricane) this.hurricane.update(dt);
       if (this.wildlife) this.wildlife.update(dt);
       if (this.garageSales) this.garageSales.update();
+      if (this.seniorGames) this.seniorGames.update();
       if (this.skids) {
         this.skids.update(dt);
         // AI carts leave rubber too (race rivals, fleeing drivers)
@@ -2385,6 +2392,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       else if (n.role === 'lady') { icon = this.state.romance[n.data.lady.id].conquest ? '💞' : '💗'; cls = 'lady'; }
       else if (n.role === 'date') { icon = '💘'; cls = 'lady'; }
       else if (n.role === 'seller') icon = '🏷️';
+      else if (n.role === 'commissioner') icon = '🏅';
       else if (n.role === 'recruit') icon = '⭐';
       else if (n.role === 'gang') icon = '🟢';
       else if (n.role === 'operator') icon = this.concession.find((c) => c.operator === n)?.state.owned ? '✅' : '🛺';

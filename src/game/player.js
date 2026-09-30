@@ -81,6 +81,18 @@ export class Player {
     this.blind = Math.max(0, this.blind - dt);
     const drunk = g.buzz01();
 
+    if (this.stand && !this.cart) { // posed on a podium for a moment
+      this.stand.t -= dt;
+      if (this.stand.t > 0) {
+        this.char.mode = 'idle';
+        this.char.root.position.set(this.x, this.stand.y, this.z);
+        this.char.root.rotation.y = this.stand.ry;
+        this.char.update(dt);
+        return;
+      }
+      this.stand = null;
+    }
+
     if (this.cart) {
       const c = this.cart;
       const throttle = input.axis(['KeyS', 'ArrowDown'], ['KeyW', 'ArrowUp']);

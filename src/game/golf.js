@@ -329,6 +329,7 @@ export class ClosestToPin {
     const mine = this.balls.find((b) => b.who === 'me');
     const theirs = this.balls.find((b) => b.who === 'them');
     const dm = mine ? this.dist(mine) : Infinity, dt = theirs ? this.dist(theirs) : Infinity;
+    this.result = conceded ? 'lose' : dm === 0 ? 'ace' : dm < dt ? 'win' : dm === dt ? 'tie' : 'lose';
     if (conceded) { this.msg = 'You concede. The golfers chuckle and pocket your money.'; audio.play('sadTrombone'); }
     else if (dm === 0) {
       g.addMoney(this.bet * 2 + 500, 'HOLE IN ONE');
@@ -357,7 +358,7 @@ export class ClosestToPin {
     if (this.opp && this.oppHome) { this.opp.x = this.oppHome.x; this.opp.z = this.oppHome.z; }
     document.getElementById('minigame').classList.remove('mg-3d');
     g.endMinigame();
-    if (this.onDone) this.onDone();
+    if (this.onDone) this.onDone(this.result);
   }
 }
 

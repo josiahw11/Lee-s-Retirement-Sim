@@ -189,6 +189,19 @@ export class NPC {
   update(dt) {
     const g = this.game;
     const p = g.player;
+    if (this.data.stand) { // posed somewhere special (a podium) for a few seconds
+      const st = this.data.stand;
+      st.t -= dt;
+      if (st.t > 0) {
+        this.char.mode = 'idle';
+        this.char.speed = 0;
+        this.char.root.position.set(this.x, st.y, this.z);
+        this.char.root.rotation.y = st.ry;
+        if (this.visible) this.char.update(dt);
+        return;
+      }
+      delete this.data.stand;
+    }
     if (this.data.aqua) {
       // water aerobics: chest-deep in the pool, facing the instructor; the class drives the poses
       this.char.mode = 'idle';
