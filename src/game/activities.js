@@ -19,6 +19,7 @@ export const ACTIVITIES = [
   { id: 'karaoke', icon: '🎤', name: 'Karaoke Night', desc: 'Sign up with DJ Manny at the Tiki Hut. Three original bangers.', ...daily(19, 23), at: (g) => g.world.pois.tiki },
   { id: 'earlybird', icon: '🍤', name: 'Early Bird Rush', desc: 'The Golden Coral gets mobbed at 3PM. Do not get between a senior and the prime rib.', ...daily(15, 16), at: (g) => g.world.pois.buffet },
   { id: 'golf', icon: '⛳', name: 'Closest to the Pin', desc: 'Challenge the golfers on the tees of Palmetto Links. Bet $50–$200.', open: () => true, when: 'Anytime', at: () => ({ x: HOLES[3].tee[0] + 1, z: HOLES[3].tee[1] }) },
+  { id: 'pickle', icon: '🏓', name: 'Pickleball Hustle', desc: 'A real rally on the community courts. Dink, smash, and stay out of the kitchen. Bet $40, or $150 vs the club champ.', open: () => true, when: 'Anytime', at: (g) => g.world.pois.pickleball },
   { id: 'shuffle', icon: '🥌', name: 'Shuffleboard Hustle', desc: 'A real frame on the courts against a shark.', open: () => true, when: 'Anytime', at: (g) => g.world.pois.shuffle },
   { id: 'chug', icon: '🍺', name: 'Chug-Off', desc: 'Challenge the Tiki Hut regulars.', open: () => true, when: 'Anytime', at: (g) => g.world.pois.tiki },
   { id: 'race', icon: '🏁', name: 'Back Nine Grand Prix', desc: '"Rocket" Ron runs cart races from the clubhouse lot.', open: () => true, when: 'Anytime', at: (g) => g.named.ron },

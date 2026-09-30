@@ -13,7 +13,7 @@ import { updateBoat } from './world/casinoboat.js';
 import { UI } from './ui/ui.js';
 import { Minimap } from './ui/minimap.js';
 import { TouchControls } from './ui/touch.js';
-import { Game, defaultState } from './game/game.js';
+import { Game, defaultState, MENU_TABS } from './game/game.js';
 
 const $ = (id) => document.getElementById(id);
 const nextFrame = () => new Promise((r) => (document.hidden ? setTimeout(r, 0) : requestAnimationFrame(() => setTimeout(r, 0))));
@@ -322,6 +322,19 @@ async function boot() {
         else if (input.rawHit('Enter') || input.rawHit('PadA')) ui.buyShopSel();
       }
       if ((ui.modal === 'menu' || ui.modal === 'map') && input.rawHit('PadB')) { if (ui.modal === 'menu') closeMenu(); else closeMap(); }
+      if (ui.modal === 'menu') {
+        // bumpers flip phone tabs; on Grandr the d-pad swipes and A confirms a match
+        const step = input.rawHit('KeyQ') ? -1 : input.rawHit('KeyG') ? 1 : 0;
+        if (step) {
+          const i = MENU_TABS.findIndex(([k]) => k === game.menuTab);
+          game.renderMenu(MENU_TABS[(i + step + MENU_TABS.length) % MENU_TABS.length][0]);
+        } else if (game.menuTab === 'grandr') {
+          const click = (id) => { const el = $(id); if (el) el.click(); };
+          if ($('gr-ok')) { if (input.rawHit('PadA')) click('gr-ok'); }
+          else if (input.rawHit('PadLeft') || input.rawHit('ArrowLeft')) click('gr-no');
+          else if (input.rawHit('PadRight') || input.rawHit('ArrowRight')) click('gr-yes');
+        }
+      }
       if (ui.modal === 'pause' && input.rawHit('PadA')) resume();
     }
 

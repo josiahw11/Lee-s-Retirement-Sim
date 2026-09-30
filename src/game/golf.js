@@ -90,8 +90,8 @@ export class ClosestToPin {
     document.getElementById('gf-swing').addEventListener('pointerdown', (e) => { e.preventDefault(); this.press(); });
     // aim line: dots toward the pin
     this.aimDots = new THREE.Group();
-    const dg = new THREE.CircleGeometry(0.18, 10).rotateX(-Math.PI / 2);
-    const dm = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false });
+    const dg = this.dotGeo = new THREE.CircleGeometry(0.18, 10).rotateX(-Math.PI / 2);
+    const dm = this.dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false });
     for (let i = 1; i <= 14; i++) { const m = new THREE.Mesh(dg, dm); m.position.z = i * 2.2; this.aimDots.add(m); }
     this.aimDots.position.set(this.tee.x, this.tee.y, this.tee.z);
     this.group.add(this.aimDots);
@@ -184,7 +184,8 @@ export class ClosestToPin {
       // trees swat low balls
       if (b.y < gy + 7) {
         for (const o of this.g.world.col.query(b.x, b.z, 0.4)) {
-          if (o.t === 'c' && o.tag === 'tree' && Math.hypot(b.x - o.x, b.z - o.z) < o.r + 0.6) {
+          if (o.t === 'c' && o.tag === 'tree' && o !== b.tree && Math.hypot(b.x - o.x, b.z - o.z) < o.r + 0.6) {
+            b.tree = o; // one bounce per tree, not one per substep while the ball is still in the branches
             b.vx *= -0.3; b.vz *= -0.3; b.vy = Math.min(b.vy, 0);
             if (!b.sim) { this.msg = 'THWACK! Right into a tree.'; audio.play('thud', { vol: 0.6 }); this.render(); }
             break;
@@ -353,6 +354,7 @@ export class ClosestToPin {
     const g = this.g;
     g.scene.remove(this.group);
     for (const b of this.balls) b.mesh.material.dispose();
+    this.dotGeo.dispose(); this.dotMat.dispose();
     g.camRig.cinematic = null;
     g.player.char.setHeld(this.prevHeld && this.prevHeld !== 'fists' ? this.prevHeld : (g.state.weapon === 'fists' ? null : g.state.weapon));
     if (this.opp && this.oppHome) { this.opp.x = this.oppHome.x; this.opp.z = this.oppHome.z; }

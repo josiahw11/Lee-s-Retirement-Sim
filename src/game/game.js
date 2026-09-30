@@ -18,6 +18,7 @@ import { Wildlife } from './wildlife.js';
 import { Karaoke } from './karaoke.js';
 import { GarageSales, sellerNode } from './garagesale.js';
 import { SeniorGames, commishNode } from './seniorgames.js';
+import { Pickleball } from './pickleball.js';
 import { activitiesTab, bindActivities } from './activities.js';
 import { Soundscape } from './soundscape.js';
 import { Weather } from '../gfx/weather.js';
@@ -111,6 +112,7 @@ const ACH = {
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
   scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
+  pickle: ['Dink Dynasty', 'Won a real game of pickleball. Your knees filed a formal complaint.'],
   champion: ['Senior Games Champion', 'Stood on the top step of the Senior Games podium.'],
   triplecrown: ['Triple Crown', 'Gold in all three Senior Games events on one Sunday.'],
   picker: ['American Picker', 'Bought (or lifted) six things at garage sales.'],
@@ -122,6 +124,8 @@ const ACH = {
   grandr: ['Swipe Right on Life', 'Had a five-star Grandr date.'],
   aquaking: ['Aqua King', 'Scored 90%+ in Aqua Jazz. Chad has never been so threatened.'],
 };
+
+export const MENU_TABS = [['status', 'STATUS'], ['activities', 'TO DO 📍'], ['bag', 'BAG'], ['romance', 'ROMANCE'], ['grandr', 'GRANDR 💘'], ['empire', 'EMPIRE'], ['hoa', 'HOA'], ['help', 'HELP']];
 
 export class Game {
   constructor(ctx) {
@@ -1711,7 +1715,7 @@ export class Game {
   }
 
   startMinigame(kind, opts = {}) {
-    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke }[kind] || ChugOff;
+    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke, pickle: Pickleball }[kind] || ChugOff;
     if (opts.bet) this.spend(opts.bet);
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();
@@ -2115,7 +2119,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     } else {
       if (modal === 'minigame' && this.minigame) this.minigame.update(dt, input);
       // keep animating characters in dialogue so the world doesn't look frozen (full speed in Aqua Jazz)
-      const ak = this.minigame && this.minigame.aqua ? 1 : 0.5;
+      const ak = this.minigame && (this.minigame.aqua || this.minigame.fullSpeed) ? 1 : 0.5;
       for (const n of this.npcs) if (n.talking || n.visible) n.char.update(dt * ak);
       p.char.update(dt);
     }
@@ -2168,9 +2172,9 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
         const b = list[j];
         const dx = b.x - a.x, dz = b.z - a.z;
         if (Math.abs(dx) > 2.6 || Math.abs(dz) > 2.6) continue;
-        const d = Math.hypot(dx, dz);
-        if (d >= 2.4 || d < 0.001) continue;
-        const nx = dx / d, nz = dz / d, pen = 2.4 - d;
+        const d = Math.hypot(dx, dz), rr = a.radius + b.radius - 0.1; // 2.4 for two carts, less for skinny scooters
+        if (d >= rr || d < 0.001) continue;
+        const nx = dx / d, nz = dz / d, pen = rr - d;
         a.x -= nx * pen / 2; a.z -= nz * pen / 2;
         b.x += nx * pen / 2; b.z += nz * pen / 2;
         const rv = (b.vx - a.vx) * nx + (b.vz - a.vz) * nz;
@@ -2252,7 +2256,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       }
       // run over people
       for (const n of this.npcs) {
-        if (n.cart || n.air || n.role === 'gang') continue;
+        if (n.cart || n.air || n.role === 'gang' || n.data.aqua) continue;
         const d = Math.hypot(n.x - pc.x, n.z - pc.z);
         if (d < 1.45 && spd > 3) {
           const wasHostile = n.hostile;
@@ -2456,7 +2460,8 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
   // ================================================================ menu (TAB)
   renderMenu(tab) {
     const s = this.state;
-    const tabs = [['status', 'STATUS'], ['activities', 'TO DO 📍'], ['bag', 'BAG'], ['romance', 'ROMANCE'], ['grandr', 'GRANDR 💘'], ['empire', 'EMPIRE'], ['hoa', 'HOA'], ['help', 'HELP']];
+    const tabs = MENU_TABS;
+    this.menuTab = tab;
     const tabEl = document.getElementById('menu-tabs');
     tabEl.innerHTML = tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('');
     tabEl.querySelectorAll('button').forEach((b) => (b.onclick = () => this.renderMenu(b.dataset.tab)));

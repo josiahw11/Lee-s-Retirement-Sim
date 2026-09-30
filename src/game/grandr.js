@@ -194,6 +194,8 @@ export class Grandr {
         this.despawn(d);
       }
     }
+    // finished dates only live on as reviews: keep the save from growing forever
+    if (this.st.dates.some((d) => d.status !== 'pending' && !this.live.has(d.id))) this.st.dates = this.st.dates.filter((d) => d.status === 'pending' || this.live.has(d.id));
   }
 
   despawn(d) {

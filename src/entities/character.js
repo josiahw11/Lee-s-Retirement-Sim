@@ -384,6 +384,10 @@ export function makeHeld(type) {
   } else if (type === 'mic') {
     parts.push([GEO.cyl, '#1c1c1c', mat4(0, 0, 0.02, 0, 0.025, 0.2, 0.025)]);
     parts.push([GEO.sph, '#9aa0a6', mat4(0, 0.13, 0.02, 0, 0.045, 0.05, 0.045)]);
+  } else if (type === 'paddle') {
+    parts.push([GEO.cyl, '#222', mat4(0, -0.02, 0, 0, 0.02, 0.13, 0.02)]); // grip
+    parts.push([GEO.cyl16, '#1f8a8a', mat4(0, -0.2, 0.01, 0, 0.1, 0.012, 0.12, Math.PI / 2)]); // face
+    parts.push([GEO.cyl16, '#f2f2f2', mat4(0, -0.2, 0.01, 0, 0.106, 0.009, 0.126, Math.PI / 2)]); // edge guard
   } else if (type === 'fists' || !type) {
     return null;
   } else {

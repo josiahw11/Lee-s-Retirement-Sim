@@ -181,6 +181,7 @@ export class AquaAerobics {
     aquaMove(p.char, move);
     if (!best || bd > 0.2) {
       this.combo = 0;
+      this.stray = (this.stray || 0) + 1; // flailing counts against you, so mashing every arrow doesn't pay
       this.msg = pick(['Wrong move! Chad sighs into the headset.', 'Off beat! Gloria splashes you.', '"THE OTHER LEFT!"']);
       this.render();
       return;
@@ -198,7 +199,7 @@ export class AquaAerobics {
   }
 
   accuracy() {
-    const judged = this.perfect + this.good + this.miss;
+    const judged = this.perfect + this.good + this.miss + (this.stray || 0) * 0.5;
     return judged ? (this.perfect + this.good * 0.6) / judged : 0;
   }
 
@@ -257,9 +258,12 @@ export class AquaAerobics {
     this.notes.forEach((n, i) => {
       const el = this.noteEls[i];
       const u = (n.t - this.t) / W;
+      const show = u >= -0.08 && u <= 1;
+      if (show !== el._show) { el._show = show; el.style.display = show ? '' : 'none'; }
+      if (!show) return;
       el.style.left = `${12 + u * 88}%`;
-      el.style.display = u < -0.08 || u > 1 ? 'none' : '';
-      el.className = `aq-note m-${n.move} ${n.hit || ''}`;
+      const cls = n.hit || '';
+      if (cls !== el._cls) { el._cls = cls; el.className = `aq-note m-${n.move} ${cls}`; }
     });
     if (input.rawHit('Escape') || input.rawHit('PadB')) return this.finish(true);
     if (this.t > this.end) this.finish(false);

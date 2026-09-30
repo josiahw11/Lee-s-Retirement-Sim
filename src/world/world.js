@@ -1043,12 +1043,26 @@ export class World {
       const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
     })();
     const pbMat = new THREE.MeshStandardMaterial({ map: pbTex, roughness: 0.85 });
+    const pbNet = (() => {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 32;
+      const g = c.getContext('2d');
+      g.strokeStyle = '#141414'; g.lineWidth = 1.5;
+      for (let x = 0; x <= 256; x += 5) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 32); g.stroke(); }
+      for (let y = 0; y <= 32; y += 5) { g.beginPath(); g.moveTo(0, y); g.lineTo(256, y); g.stroke(); }
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+      return new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide, depthWrite: false });
+    })();
     for (const dx of [-5, 5]) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(9, 18).rotateX(-Math.PI / 2), pbMat);
       m.position.set(pb.x + dx, 0.05, pb.z);
       m.receiveShadow = true;
       this.root.add(m);
-      this.box(pb.x + dx, 0, pb.z, 8, 0.9, 0.06, '#222');
+      const net = new THREE.Mesh(new THREE.PlaneGeometry(8, 0.78), pbNet);
+      net.position.set(pb.x + dx, 0.5, pb.z);
+      this.root.add(net);
+      this.box(pb.x + dx, 0.86, pb.z, 8, 0.07, 0.03, '#f4f4f4'); // white tape
+      this.box(pb.x + dx, 0, pb.z, 0.05, 0.9, 0.03, '#f4f4f4'); // center strap
       this.box(pb.x + dx - 4, 0, pb.z, 0.08, 1, 0.08, '#555');
       this.box(pb.x + dx + 4, 0, pb.z, 0.08, 1, 0.08, '#555');
     }

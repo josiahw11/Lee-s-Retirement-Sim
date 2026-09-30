@@ -106,6 +106,10 @@ export class NPC {
 
   // Take a hit from something at (fx,fz). Returns true if this knocked them out.
   takeHit(dmg, fx, fz, knock, attacker = null) {
+    if (this.data.aqua) { // the pool is a no-horseplay zone, and Chad WILL stop the music
+      if (Math.random() < 0.5) this.say(pick(['NO HORSEPLAY!', 'Chad! He splashed me!', 'Not during Aqua Jazz!']), 2);
+      return false;
+    }
     if (this.state === 'ko' && !this.air) {
       // hitting a downed geezer: extra shame, no extra damage
       if (attacker === this.game.player) this.game.crime(this.x, this.z, 0.2, "Kicking a man while he's down", 15);

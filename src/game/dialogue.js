@@ -5,6 +5,7 @@ import { audio } from '../core/audio.js';
 import { testBatchOn } from './chapter2.js';
 import { casinoNode, cabinNode } from './chapter3.js';
 import { karaokeChoice } from './karaoke.js';
+import { pickleballNode } from './pickleball.js';
 
 // ---------------------------------------------------------------- helpers
 const C = (g, stat, diff, label) => ({ label: label || stat.toUpperCase().replace('INTIM', 'INT').replace('STAT', 'STA'), chance: g.chance(stat, diff) });
@@ -535,7 +536,7 @@ export function visit(g, poi) {
   if (id === 'clubhouse') return clubhouseNode(g);
   if (id === 'dumpster') return dumpsterNode(g);
   if (id === 'gate') return end('Front Gate', `"Beach is straight ahead, Mr. ${g.state.name}. Boca Beach Club. Rusty Pelican's got two-for-one Bushwackers. Don't drive on the pier. Everybody drives on the pier." — Gate Guard Hector`);
-  if (id === 'pickleball') return betNode(g, 'Pickleball Hustle', '"Twenty bucks says you can\'t return my dink shot, old man." — a 70-year-old in compression sleeves.', 'str', 4, 40);
+  if (id === 'pickleball') return pickleballNode(g);
   if (id === 'shuffle') {
     const play = (bet, skill) => () => { g.startMinigame('shuffle', { bet, skill }); g.ui.closeDialogue(); return 'keep'; };
     return {
@@ -562,26 +563,6 @@ function tikiNode(g) {
       { text: 'Challenge the regulars to a CHUG-OFF', tag: 'bet $40', disabled: g.state.money < 40, action: () => { g.startMinigame('chug', { opponent: pick(['Big Sal "The Funnel"', 'Dutch Van Houten', 'Irv the Sponge']), bet: 40 }); g.ui.closeDialogue(); return 'keep'; } },
       karaokeChoice(g),
       { text: 'Leave', action: () => null },
-    ],
-  };
-}
-
-function betNode(g, title, text, stat, diff, bet) {
-  return {
-    name: title, title: `Bet ${money(bet)}`,
-    text,
-    choices: [
-      { text: `Play for ${money(bet)}`, check: C(g, stat, diff), disabled: g.state.money < bet, action: () => {
-        g.advanceTime(30);
-        if (g.roll(stat, diff)) {
-          g.addMoney(bet, 'hustle');
-          g.xp(stat, 2);
-          return end(title, pick(['You win! Your opponent throws his paddle into the pond.', 'Victory! Someone yells "HUSTLER!" You take a bow. Your back cracks.']));
-        }
-        g.spend(bet);
-        return end(title, pick(['You lose. Badly. A small crowd gathers to laugh.', 'You lost, and pulled something. Worth it? No.']));
-      } },
-      { text: 'Walk away', action: () => null },
     ],
   };
 }
