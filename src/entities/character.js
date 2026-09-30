@@ -376,8 +376,10 @@ function buildSkinnedGeometry(parts) {
 export function makeHeld(type) {
   const parts = [];
   if (type === 'rod') {
-    parts.push([GEO.cyl, '#3a2a1a', mat4(0, -0.9, 0.35, 0, 0.018, 2.0, 0.018, 0.35)]);
-    parts.push([GEO.cyl, '#999', mat4(0, -0.1, 0.08, 0, 0.05, 0.12, 0.05, Math.PI / 2)]);
+    // butt in the fist, tip ~1.9 m out along the hand's -y (fishing.js reads the tip from there)
+    parts.push([GEO.cyl, '#c9a66b', mat4(0, 0.05, 0, 0, 0.026, 0.32, 0.026)]); // cork grip
+    parts.push([GEO.cyl, '#2a2a2a', mat4(0, -0.85, 0, 0, 0.016, 2.1, 0.016)]);
+    parts.push([GEO.cyl, '#999', mat4(0, -0.16, 0.06, 0, 0.05, 0.1, 0.05, Math.PI / 2)]); // reel
   } else if (type === 'beer') {
     parts.push([GEO.cyl, '#c9d3db', mat4(0, 0, 0, 0, 0.035, 0.12, 0.035)]);
     parts.push([GEO.cyl, '#1f5fb0', mat4(0, 0, 0, 0, 0.036, 0.06, 0.036)]);
@@ -611,6 +613,10 @@ export class Character {
         P.neck = 0.3;
       }
     } else this.koT = 0;
+    // holding a fishing rod out over the water
+    if (this.poseRod && this.mode !== 'ko' && this.mode !== 'sit') {
+      P.shR = -0.95; P.elR = -0.95; P.shRz = -0.1;
+    }
 
     // ---- action overlays
     let fast = false;

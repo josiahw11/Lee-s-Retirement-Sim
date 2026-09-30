@@ -435,6 +435,10 @@ body.touch #hint { bottom: 84px; }
 #shuttle-hud .sh-fare { color: #9fe8ff; }
 #shuttle-hud .sh-fare.low b { color: #ff4d4d; }
 @keyframes shPulse { to { transform: scale(1.15); } }
+.fi-meter { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-weight: 900; font-size: 12px; letter-spacing: 1px; }
+.fi-bar { position: relative; flex: 1; height: 14px; background: #1d1d1d; border: 2px solid #000; border-radius: 7px; overflow: hidden; }
+.fi-bar i { display: block; height: 100%; width: 0; transition: width 0.08s linear; }
+.fi-zone { position: absolute; top: 0; bottom: 0; left: 85%; right: 0; background: repeating-linear-gradient(45deg, rgba(255,77,77,0.35) 0 6px, transparent 6px 12px); }
 .bp-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 800; opacity: 0.85; margin-top: 2px; }
 #bp-q { font-size: 11px; }
 .pb-score { white-space: nowrap; font-size: 20px; font-weight: 900; letter-spacing: 1px; }

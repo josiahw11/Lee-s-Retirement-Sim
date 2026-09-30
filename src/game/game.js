@@ -23,6 +23,7 @@ import { Stunts, STUNTS } from './stunts.js';
 import { BeerPong, buildPongTable } from './beerpong.js';
 import { Shuttle, dorisNode } from './shuttle.js';
 import { Derby, buildArena, danNode, ARENA } from './derby.js';
+import { Fishing } from './fishing.js';
 import { activitiesTab, bindActivities } from './activities.js';
 import { Soundscape } from './soundscape.js';
 import { Weather } from '../gfx/weather.js';
@@ -116,6 +117,9 @@ const ACH = {
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
   scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
+  angler: ['Old Man and the Sea', 'Landed a fish off Boca Pier.'],
+  silverking: ['The Silver King', 'Landed a Tarpon off the pier. Phil still doesn\'t believe it.'],
+  dentures: ['Finders Keepers', 'Fished somebody\'s dentures out of the Gulf.'],
   derby: ['Last Cart Standing', 'Won the Bumper Brawl demolition derby.'],
   daisy: ['Driving Miss Daisy', 'Delivered 5 fares in one Senior Shuttle shift.'],
   crazyshuttle: ['Crazy Shuttle', 'Earned $400+ in a single Senior Shuttle shift.'],
@@ -1304,7 +1308,10 @@ export class Game {
     else if (n.role === 'mechanic') node = talkFingers(this, n);
     else if (n.role === 'deckhand') node = talkDeckhand(this, n);
     else if (n.role === 'patron') node = talkPatron(this, n);
-    else if (n.role === 'fisher') node = { name: n.name, title: 'Pier Fisherman', text: pick([`"Caught a grouper this big once. Wife left me the same day. Worth it."`, `"Shh. You'll scare the fish. And the fish are all I have left."`, `"Some maniac drove a golf cart off this pier last week. Beautiful arc, though."`]), choices: [] };
+    else if (n.role === 'fisher') node = { name: n.name, title: 'Pier Fisherman', text: pick([`"Caught a grouper this big once. Wife left me the same day. Worth it."`, `"Shh. You'll scare the fish. And the fish are all I have left."`, `"Some maniac drove a golf cart off this pier last week. Beautiful arc, though."`]), choices: [
+      { text: '🎣 "Mind if I borrow a rod?"', action: () => { this.startMinigame('fish', { spotX: n.x + 4 }); this.ui.closeDialogue(); return 'keep'; } },
+      { text: 'Leave', action: () => null },
+    ] };
     else if (n.role === 'lifeguard') node = { name: n.name, title: 'Retired Lifeguard (1971-2004)', text: pick([`"Rip currents, jellyfish, and Rhonda. The three dangers of this beach."`, `"If you go past the buoys, I'm not coming in after you. My knees are shot."`, `"Treasure hunters dig all over this sand. Found a Rolex last Tuesday. Real one."`]), choices: [] };
     else if (n.role === 'husband') node = { name: n.name, title: 'Resident', text: '"You lookin\' at my wife? Everybody looks at my wife. Don\'t look at my wife."', choices: [] };
     else node = D.talkResident(this, n);
@@ -1738,7 +1745,7 @@ export class Game {
   }
 
   startMinigame(kind, opts = {}) {
-    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke, pickle: Pickleball, pong: BeerPong }[kind] || ChugOff;
+    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke, pickle: Pickleball, pong: BeerPong, fish: Fishing }[kind] || ChugOff;
     if (opts.bet) this.spend(opts.bet);
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();

@@ -399,6 +399,7 @@ export class NPC {
       }
     } else if (st === 'lounge' || st === 'fish') {
       // sunbathing / fishing: stay put
+      this.char.poseRod = st === 'fish';
       if (this.data.face !== undefined) this.heading = dampAngle(this.heading, this.data.face, 3, dt);
     } else if (st === 'chat') {
       const o = this.data.chatWith;
