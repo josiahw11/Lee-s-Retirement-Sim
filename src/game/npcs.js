@@ -136,6 +136,12 @@ export class NPC {
   }
 
   provoke(attacker) {
+    if (this.role === 'streaker') {
+      this.state = 'flee';
+      this.fleeFrom = attacker;
+      this.fleeT = 999;
+      return;
+    }
     if (this.role === 'shopkeeper' || this.role === 'lady' || this.female) {
       if (this.role !== 'gang') {
         this.state = 'flee';

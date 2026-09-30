@@ -238,3 +238,16 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; fon
 #detector { position: absolute; left: 50%; bottom: 170px; transform: translateX(-50%); background: var(--panel); border: 2px solid #f2c94c; color: #f2c94c; padding: 6px 14px; border-radius: 10px; font-family: 'Courier New', monospace; font-size: 18px; font-weight: 900; }
 #detector span { opacity: .3; }
 #detector em { font-style: normal; color: #7CFC9A; animation: pulse .5s infinite; display: inline-block; }
+
+/* ---------- the morning paper ---------- */
+#gazette { position: fixed; inset: 0; z-index: 14; display: flex; align-items: center; justify-content: center; background: rgba(5,8,20,.55); cursor: pointer; }
+.gz-paper { width: min(760px, 94vw); background: #f4efe1; color: #1a1a1a; padding: 22px 28px; border: 1px solid #b9ae94; box-shadow: 12px 14px 0 rgba(0,0,0,.35); transform: rotate(-1.2deg); font-family: Georgia, 'Times New Roman', serif; animation: gzIn .5s cubic-bezier(.2,1.4,.4,1); }
+@keyframes gzIn { from { transform: rotate(-12deg) scale(.3); opacity: 0; } }
+.gz-mast { font-family: 'Old English Text MT', 'UnifrakturMaguntia', Georgia, serif; font-size: clamp(30px, 5vw, 52px); text-align: center; border-bottom: 3px double #1a1a1a; padding-bottom: 4px; }
+.gz-date { text-align: center; font-size: 12px; letter-spacing: 1px; border-bottom: 1px solid #1a1a1a; padding: 4px 0; margin-bottom: 12px; font-style: italic; }
+.gz-lead h1 { font-size: clamp(22px, 3.4vw, 34px); line-height: 1.05; margin: 4px 0 6px; text-transform: uppercase; }
+.gz-lead p { margin: 0 0 12px; font-size: 16px; font-style: italic; }
+.gz-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; border-top: 1px solid #1a1a1a; padding-top: 10px; }
+.gz-cols h2 { font-size: 15px; margin: 0 0 4px; text-transform: uppercase; line-height: 1.15; }
+.gz-cols p { font-size: 13px; margin: 0; }
+.gz-foot { text-align: center; font-size: 11px; opacity: .55; margin-top: 12px; font-family: var(--body); }

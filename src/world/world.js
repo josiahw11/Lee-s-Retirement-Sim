@@ -86,7 +86,9 @@ function makePalm(rnd) {
     const a = (i / 3) * Math.PI * 2;
     parts.push([GEO.sph, '#6b4a2a', mat4(px + Math.cos(a) * 0.25, py - 0.25, pz + Math.sin(a) * 0.25, 0, 0.2, 0.22, 0.2)]);
   }
-  return mergeParts(parts);
+  const g = mergeParts(parts);
+  g.userData.top = py;
+  return g;
 }
 
 function makePine(rnd) {
@@ -198,6 +200,7 @@ export class World {
     const g = this.palms[Math.floor(this.rnd() * this.palms.length)];
     this.batch.addPrepped(M.vc, g, mat4(x, heightAt(x, z) - 0.1, z, this.rnd() * 6.28, s, s, s));
     if (collide) this.col.addCircle(x, z, 0.45 * s, 12, 'tree');
+    if (collide) (this.palmSpots ||= []).push({ x, z, top: (g.userData.top || 9) * s });
   }
   tree(kind, x, z, s = 1) {
     const list = kind === 'pine' ? this.pines : this.oaks;

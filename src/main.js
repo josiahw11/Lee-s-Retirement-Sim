@@ -233,7 +233,7 @@ async function boot() {
         else if (ui.modal === 'menu') closeMenu();
         else if (ui.modal === 'map') closeMap();
         else if (ui.modal === 'pause') resume();
-        else if (ui.modal === 'minigame') { /* the mini-game handles Esc itself */ }
+        else if (ui.modal === 'minigame' || ui.modal === 'gazette') { /* these handle Esc themselves */ }
         else pause();
       }
       if (input.rawHit('Tab')) {
@@ -305,6 +305,7 @@ async function boot() {
   window.__game = game; // handy for debugging in the console
   // Deterministic stepping for automated testing: __sim(seconds, ['KeyW'])
   window.__tick = tick;
+  window.__errors = () => [...(tick._errs || [])];
   window.__sim = (seconds, keys = [], press = []) => {
     for (const k of keys) input.down.add(k);
     for (const k of press) input.pressed.add(k);

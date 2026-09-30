@@ -10,6 +10,7 @@ import { Race, RACE_TIERS, TRACK } from './race.js';
 import { ChugOff, Bingo, Brew } from './minigames.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
+import { Events, showGazette } from './events.js';
 import { BEACH, OCEAN, onSand } from '../world/beach.js';
 import { updateTooth, deuceConfront, spawnTooth, spawnDeuce } from './chapter2.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
@@ -75,6 +76,8 @@ const ACH = {
   blackout: ['Where Am I?', 'Drank until you blacked out.'],
   drunkDrive: ['Designated Driver? Never Heard Of Her', 'Drove hammered for 30 seconds straight.'],
   carjack: ['Grand Theft Golf Cart', 'Yanked a senior out of their own cart.'],
+  cat: ['Neighborhood Hero', 'Rescued a cat from a palm tree (by ramming the tree).'],
+  streaker: ['Indecent Exposure Unit', 'Tackled Earl, the 91-year-old streaker.'],
   pierJump: ["Ocean's Eleven Feet Deep", 'Drove a golf cart off the end of the pier.'],
   treasure: ['X Marks The Spot', 'Dug up buried treasure with a metal detector.'],
   gator: ['Gator Bait', 'Got bitten by Mr. Chompers. The sign warned you.'],
@@ -402,6 +405,8 @@ export class Game {
       this.ui.splash('SUNSET PALMS', 'Day 1. Try to behave. (You won\'t.)', 3.5);
     }
     this.quests.begin();
+    this.worldEvents = new Events(this);
+    this.yesterday = { ...state.counters };
     if (isNew) {
       this.ui.toast(`Welcome to Sunset Palms, ${state.name}.`, 'quest', 6);
       setTimeout(() => this.ui.toast('📋 HOA Notice: Your cart is parked on GRASS. That\'s a warning. — K.W.', 'heat', 7), 3500);
@@ -810,6 +815,7 @@ export class Game {
       this.heat.value = Math.max(0, this.heat.value - 2);
       this.save();
     }, 2.4, '☀️ GOOD MORNING', null);
+    this.after(3.6, () => showGazette(this));
   }
 
   election() {
@@ -993,7 +999,7 @@ export class Game {
       n.takeHit(dmg, p.x, p.z, knock, p);
       if (!koBefore) {
         this.ui.float(n.x, 2.2, n.z, `-${dmg}`, '#ffd23f', 0.9);
-        if (!wasHostile && !['rival', 'goon', 'husband'].includes(n.role)) this.crime(p.x, p.z, n.role === 'security' ? 1.5 : 0.7, n.role === 'security' ? 'Assaulting an HOA officer' : 'Assault with a golf implement', 22);
+        if (!wasHostile && !['rival', 'goon', 'husband', 'streaker'].includes(n.role)) this.crime(p.x, p.z, n.role === 'security' ? 1.5 : 0.7, n.role === 'security' ? 'Assaulting an HOA officer' : 'Assault with a golf implement', 22);
       }
       hitAny = true;
     }
@@ -1934,6 +1940,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       }
       updateTooth(this, dt);
       this.updateDetector(dt);
+      if (this.worldEvents) this.worldEvents.update(dt);
       if (this.timers && this.timers.length) {
         for (const tm of this.timers) tm.t -= dt;
         const due = this.timers.filter((tm) => tm.t <= 0);
@@ -2125,7 +2132,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
           this.ui.float(n.x, 2.5, n.z, pick(['BOWLING!', 'STRIKE!', 'FORE!!', 'YEET!']), '#ff9f1c', 1.2);
           if (spd > 9) this.slowmo = 0.4;
           if (n.state === 'ko') continue;
-          if (!wasHostile && !['rival', 'goon', 'husband'].includes(n.role)) this.crime(n.x, n.z, n.role === 'security' ? 1.5 : 1, n.role === 'security' ? 'Running over an HOA officer' : 'Vehicular senior-slaughter (attempted)', 25);
+          if (!wasHostile && !['rival', 'goon', 'husband', 'streaker'].includes(n.role)) this.crime(n.x, n.z, n.role === 'security' ? 1.5 : 1, n.role === 'security' ? 'Running over an HOA officer' : 'Vehicular senior-slaughter (attempted)', 25);
           if (n.state === 'drive') continue;
           if (n.hp > 0) n.provoke(p);
         }
