@@ -76,6 +76,11 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
   - win her over with the right topics
   - stand her up and she leaves you a one-star review
 - **Mobility scooters** putter along at 9 mph and hold up traffic. You can yank a resident off one and steal it.
+- **Karaoke Night at the Tiki Hut** (7–11PM): three original songs. Hit the bouncing ball on each word. The crowd cheers or boos, and text-to-speech croons along.
+- **Garage Sale Saturdays** (8AM–2PM): four driveways full of junk. Buy it, haggle, or pocket it. Some of it is useful: a club, shirts, free cart speakers, a detector.
+- **The Senior Games** (Sundays): Shuffleboard, Closest to the Pin and a Chug-Off, then a medal ceremony on a podium with fireworks.
+- **Florida wildlife.** Ibis flocks forage on the lawns and scatter when you approach. Residents walk poodles, chihuahuas and dachshunds, and the chihuahuas defend their owners.
+- **The phone's TO DO tab** lists every activity, shows what's open right now, and sets waypoints.
 - **Voices.** Every resident mumbles in Animal Crossing-style old-folks gibberish.
 - **Chapter 1 story** runs through 12 quest steps.
 - **Chapter 2: Rhino Rising** (7 steps): a tea shortage, a night-time antler heist, stealing a tooth from Mr. Chompers the gator, home brewing, and a boss fight with Chip's father "The Deuce".
