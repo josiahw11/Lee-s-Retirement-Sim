@@ -11,13 +11,13 @@ npm run dev
 
 Then open http://localhost:5173. Add `?play` to the URL to skip the title screen and jump straight in.
 
-**Shareable build:** `npm run build` produces `dist/index.html`, one self-contained ~850 KB file. Double-click it and it runs, no server needed.
+**Shareable build:** `npm run build` produces `dist/index.html`, one self-contained ~970 KB file. Double-click it and it runs, no server needed.
 
 ## Controls
 
 | Key | Action | Key | Action |
 |---|---|---|---|
-| WASD | Walk / drive | Mouse | Look (click to lock) |
+| WASD | Walk / drive | Mouse | Look (click to lock; click-drag where the browser blocks mouse capture) |
 | Shift | Brisk shuffle / Nitrous | Space | Hop / handbrake drift |
 | E | Interact / enter & exit carts | Click / F | Swing club / punch |
 | Right-click / G | Pocket sand (sand wedge) | Q / 1-6 | Switch club |
@@ -25,6 +25,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 | H | Horn | R | Cart radio |
 | Tab | Phone: stats, bag, romance, empire | M | Map |
 | Esc | Pause / settings | V | Photo mode (free camera, no HUD) |
+| Z / C | Rotate camera | Scroll | Zoom |
 
 **Gamepad:** left stick move/steer • right stick look • RT/LT gas & brake • A interact • X swing • Y drink • B hop/drift • LB switch club • RB pocket sand • L3 sprint/nitrous • R3 horn • D-pad: radio / pee / map • Start pause • Back phone. Menus: D-pad or arrow keys + A/Enter.
 
@@ -62,6 +63,8 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 - **Voices.** Every resident mumbles in Animal Crossing-style old-folks gibberish.
 - **Chapter 1 story** runs through 12 quest steps, then **Chapter 2: Rhino Rising** (7 steps): a tea shortage, a night-time antler heist, stealing a tooth from Mr. Chompers the gator, home brewing, and a boss fight with Chip's father "The Deuce". Free-roam goals follow.
 - 22 achievements, graphics quality presets (Low/Medium/High), auto-save when you sleep, and three procedural radio stations plus a text-to-speech talk-radio station.
+
+**Characters.** Every resident is a skinned mesh on an 18-bone skeleton (knees, elbows, ankles, blinking eyes, head tracking), with a sculpted lathe torso, pot bellies, set-and-curl bobs, horseshoe fringes, pearls, readers, and socks with sandals. Near and far LODs share one skeleton.
 
 Everything is procedural: all models, textures, music and sound effects are generated in code, with no asset files.
 

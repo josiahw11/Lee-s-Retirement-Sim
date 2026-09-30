@@ -24,7 +24,7 @@ const setLoad = async (pct, msg) => {
 const CONTROLS = [
   ['🚶 On foot', [['WASD', 'Walk'], ['Shift', 'Brisk shuffle'], ['Space', 'Hop'], ['E', 'Talk / use / enter cart'], ['Click · F', 'Swing club / punch'], ['R-click · G', 'Pocket sand (wedge)'], ['Q · 1-6', 'Switch club'], ['B', 'Drink a beer'], ['P (hold)', 'Pee. Anywhere.']]],
   ['🛺 Driving', [['W / S', 'Gas / brake'], ['A / D', 'Steer'], ['Space', 'Handbrake drift'], ['Shift', 'Nitrous (Sal mod)'], ['H', 'Horn'], ['R', 'Radio station'], ['E', 'Get out']]],
-  ['🎥 Camera', [['Mouse', 'Look (click game to lock)'], ['R-drag', 'Look (any browser)'], ['Z / C', 'Rotate camera'], ['Scroll', 'Zoom in / out'], ['V', 'Photo mode']]],
+  ['🎥 Camera', [['Mouse', 'Look (click game to lock)'], ['Drag', 'Look (any browser)'], ['Z / C', 'Rotate camera'], ['Scroll', 'Zoom in / out'], ['V', 'Photo mode']]],
   ['📱 Menus', [['Tab', 'Phone: stats, bag, romance'], ['M', 'Map'], ['Esc', 'Pause / settings'], ['1-9 · Enter', 'Pick dialogue choices (arrows move)']]],
   ['🧪 Demo keys', [[']', '+$1,000'], ['[', '+1 all stats'], ['`', 'Skip 3 hours']]],
 ];
@@ -66,7 +66,7 @@ async function boot() {
   input.onLockFailed = () => {
     if (!input._lookHinted) {
       input._lookHinted = true;
-      ui.hint('🖱️ This browser blocks mouse capture — RIGHT-CLICK + DRAG to look around • Z / C rotate • Scroll to zoom', 9);
+      ui.hint('🖱️ This browser blocks mouse capture — CLICK + DRAG to look around • quick click to swing • Z / C rotate • Scroll to zoom', 9);
     }
   };
   camRig.col = world.col;

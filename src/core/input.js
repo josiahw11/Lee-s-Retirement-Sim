@@ -24,20 +24,21 @@ export class Input {
     window.addEventListener('blur', () => this.down.clear());
 
     // Mouse look works two ways: pointer lock (click the game) where the browser allows it,
-    // and right-button (or middle) drag everywhere else. A quick right-click still counts as a click.
+    // and button-drag everywhere else (right/middle always; left too once pointer lock is known
+    // to be blocked). A quick click without much movement still counts as a click.
     this.drag = { down: false, moved: 0, t: 0 };
     this.lockFailed = false;
     canvas.addEventListener('mousedown', (e) => {
       this.mouseDown[e.button] = true;
-      if (e.button === 2 || e.button === 1) {
+      if (e.button === 2 || e.button === 1 || (e.button === 0 && this.lockFailed)) {
         this.drag = { down: true, moved: 0, t: performance.now(), button: e.button };
       } else this.mousePressed[e.button] = true;
     });
     window.addEventListener('mouseup', (e) => {
       this.mouseDown[e.button] = false;
-      if ((e.button === 2 || e.button === 1) && this.drag.down) {
+      if (this.drag.down && e.button === this.drag.button) {
         const quick = this.drag.moved < 8 && performance.now() - this.drag.t < 350;
-        if (quick && e.button === 2) this.mousePressed[2] = true;
+        if (quick && e.button !== 1) this.mousePressed[e.button] = true;
         this.drag.down = false;
       }
     });
