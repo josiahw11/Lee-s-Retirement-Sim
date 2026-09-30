@@ -7,6 +7,7 @@ import { Player } from './player.js';
 import { Driver, COURSE_LOOPS, PATROL_LOOP, nearestNode } from './traffic.js';
 import { Quests } from './quests.js';
 import { Race, RACE_TIERS, TRACK } from './race.js';
+import { ChugOff, Bingo } from './minigames.js';
 import { WEAPONS, WEAPON_ORDER, LADIES, RECRUITS, CONCESSION, BLACKOUTS, CART_MODS, SHOPS } from './data.js';
 import * as D from './dialogue.js';
 import { NODES, EDGES, HOLES, PONDS, ZONES, STREETS, HOUSES, PLAYER_HOUSE, BUILDINGS } from '../world/layout.js';
@@ -70,6 +71,8 @@ const ACH = {
   carjack: ['Grand Theft Golf Cart', 'Yanked a senior out of their own cart.'],
   gator: ['Gator Bait', 'Got bitten by Mr. Chompers. The sign warned you.'],
   raceWin: ['Geriatric Grand Prix', 'Won a golf cart race.'],
+  chug: ['Bottoms Up', 'Won a chug-off.'],
+  bingo: ['Beat the System', "Won Karen's rigged bingo."],
   raceLegend: ['Senior Speed Demon', 'Won a $500 race against The Widow Maker.'],
 };
 
@@ -1494,6 +1497,22 @@ export class Game {
     }
   }
 
+  startMinigame(kind, opts = {}) {
+    const Cls = kind === 'bingo' ? Bingo : ChugOff;
+    if (opts.bet) this.spend(opts.bet);
+    this.ui.modal = 'minigame';
+    if (this.ui.onModalOpen) this.ui.onModalOpen();
+    document.getElementById('minigame').classList.remove('hidden');
+    this.minigame = new Cls(this, opts);
+  }
+
+  endMinigame() {
+    this.minigame = null;
+    document.getElementById('minigame').classList.add('hidden');
+    if (this.ui.modal === 'minigame') this.ui.modal = null;
+    if (this.ui.onModalClose) this.ui.onModalClose();
+  }
+
   talkRon(n) {
     const inRace = this.race && this.race.running;
     const won = this.state.counters.racesWon || 0;
@@ -1730,6 +1749,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       this.quests.update(dt);
       this.checkAchievements();
     } else {
+      if (modal === 'minigame' && this.minigame) this.minigame.update(dt, input);
       // keep animating characters in dialogue so the world doesn't look frozen
       for (const n of this.npcs) if (n.talking || n.visible) n.char.update(dt * 0.5);
       p.char.update(dt);

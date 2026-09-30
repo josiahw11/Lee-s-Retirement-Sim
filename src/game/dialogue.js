@@ -188,6 +188,13 @@ export function talkLady(g, npc) {
         : pick(['"*She bats her eyelashes so hard her false lashes nearly fly off.*"', '"If you don\'t ask me out soon, I\'m asking YOU."']);
   const cool = g.state.minutes + g.state.day * 1440 - (r.last || -9999) < 45;
   const node = { name, title, text: greet, choices: [] };
+  if (def.id === 'millie') {
+    node.choices.push({ text: `"Bet you can't out-drink me, Millie."`, tag: 'chug-off $40', disabled: g.state.money < 40, action: () => {
+      g.startMinigame('chug', { opponent: 'Millie Rausch', bet: 40, oppRate: [1.9, 2.6], onWin: () => g.romance('millie', 14), onLose: () => g.romance('millie', 6) });
+      g.ui.closeDialogue();
+      return 'keep';
+    } });
+  }
   node.choices.push({ text: 'Make small talk', disabled: cool, tag: cool ? 'she needs a minute' : '', action: () => {
     r.last = g.absMinutes();
     const d = randInt(3, 6);
@@ -493,6 +500,7 @@ export function talkGolfer(g, npc) {
 // ---------------------------------------------------------------- POIs / shops
 export function visit(g, poi) {
   const id = poi.id;
+  if (id === 'tiki') return tikiNode(g);
   if (SHOPS[id]) return openShop(g, id);
   if (id === 'sal') return openSal(g);
   if (id === 'home') return homeNode(g);
@@ -505,6 +513,18 @@ export function visit(g, poi) {
   if (id === 'pool') return end('The Pool', `The clubhouse pool. 82 degrees and approximately 30% water, 70% sunscreen. ${g.state.bladder > 20 ? '\n\n(Tip: press P while standing in the water. You know you want to.)' : ''}`);
   if (id === 'gazebo') return end('Gazebo', 'Someone carved "MILDRED + ???" into the railing. The ??? has been scratched out and re-carved nine times.');
   return null;
+}
+
+function tikiNode(g) {
+  return {
+    name: 'Tiki Hut', title: 'Manny, Bartender',
+    text: pick(['"Welcome to paradise, amigo. Paradise costs six bucks a beer."', '"The regulars are looking for fresh blood. Chug-off? Winner doubles the bet."']),
+    choices: [
+      { text: 'Order drinks', action: () => { openShop(g, 'tiki'); g.ui.closeDialogue(); return 'keep'; } },
+      { text: 'Challenge the regulars to a CHUG-OFF', tag: 'bet $40', disabled: g.state.money < 40, action: () => { g.startMinigame('chug', { opponent: pick(['Big Sal "The Funnel"', 'Dutch Van Houten', 'Irv the Sponge']), bet: 40 }); g.ui.closeDialogue(); return 'keep'; } },
+      { text: 'Leave', action: () => null },
+    ],
+  };
 }
 
 function betNode(g, title, text, stat, diff, bet) {
@@ -552,13 +572,7 @@ function clubhouseNode(g) {
         g.fadeOut(() => { g.advanceTime(60); g.xp('str', 3); g.xp('cha', 1); }, 1.5, '🏊 AEROBICS', 'You were the only man. You were a god among widows.');
         return null;
       } },
-      { text: `Bingo (${money(10)} card)`, disabled: g.state.money < 10, action: () => {
-        g.spend(10);
-        g.advanceTime(60);
-        const w = Math.random();
-        if (w < 0.18) { g.addMoney(120, 'BINGO'); return end('Bingo', '"B-I-N-G-O!" You win $120. Mildred stares at you like she\'s memorizing your face for later.'); }
-        return end('Bingo', pick(['You were one number away. Karen was calling. Suspicious.', 'You fell asleep with the dauber in your mouth. Blue tongue for two days.']));
-      } },
+      { text: `Play Bingo (${money(10)} card, ${money(150)} pot)`, disabled: g.state.money < 10, action: () => { g.startMinigame('bingo', { bet: 10, pot: 150 }); g.ui.closeDialogue(); return 'keep'; } },
       { text: 'Leave', action: () => null },
     ],
   };

@@ -220,6 +220,7 @@ async function boot() {
         else if (ui.modal === 'menu') closeMenu();
         else if (ui.modal === 'map') closeMap();
         else if (ui.modal === 'pause') resume();
+        else if (ui.modal === 'minigame') { /* the mini-game handles Esc itself */ }
         else pause();
       }
       if (input.rawHit('Tab')) {

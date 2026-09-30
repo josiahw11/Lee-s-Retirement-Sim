@@ -198,3 +198,26 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; fon
   #minimap { width: 140px; height: 140px; }
   #shop-items, .grid2 { grid-template-columns: 1fr; }
 }
+
+/* ---------- mini-games ---------- */
+#minigame { position: fixed; inset: 0; z-index: 13; display: flex; align-items: center; justify-content: center; background: rgba(5,8,20,.6); }
+.mg-box { width: min(720px, 95vw); background: var(--cream); color: var(--navy); border: 4px solid var(--navy); border-radius: 18px; padding: 18px 22px; box-shadow: 10px 10px 0 var(--teal); text-align: center; user-select: none; }
+.mg-title { font-family: var(--display); font-size: 30px; color: var(--coral); }
+.mg-sub { font-weight: 800; opacity: .75; margin-bottom: 12px; }
+.mg-msg { font-weight: 900; font-size: 18px; min-height: 26px; margin-top: 12px; }
+.mg-hint { font-size: 12px; font-weight: 800; opacity: .55; margin-top: 8px; }
+.mg-dim { opacity: .18; filter: grayscale(1); }
+.chug-rows { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.chug-row { display: flex; justify-content: space-between; align-items: center; font-size: 22px; background: #fff; border: 2px solid var(--navy); border-radius: 10px; padding: 4px 12px; }
+.chug-row b { font-family: var(--display); font-size: 15px; }
+.chug-bar { position: relative; height: 34px; border-radius: 17px; background: linear-gradient(90deg, #ffb3b3, #ffe0b3, #ffb3b3); border: 3px solid var(--navy); overflow: hidden; cursor: pointer; }
+#chug-zone { position: absolute; top: 0; bottom: 0; background: #3ccf6e; box-shadow: inset 0 0 0 2px #1e8a44; }
+#chug-needle { position: absolute; top: -2px; bottom: -2px; width: 6px; margin-left: -3px; background: var(--navy); border-radius: 3px; }
+.bingo-wrap { display: flex; gap: 18px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+.bingo-head, .bingo-card { display: grid; grid-template-columns: repeat(5, 56px); gap: 4px; }
+.bingo-head span { font-family: var(--display); font-size: 24px; color: var(--coral); }
+.bingo-cell { height: 52px; font-family: var(--display); font-size: 18px; border-radius: 10px; border: 2px solid var(--navy); background: #fff; color: var(--navy); cursor: pointer; }
+.bingo-cell.on, .bingo-cell.free { background: radial-gradient(circle, #ff6fa8 55%, #fff 57%); color: #fff; }
+.bingo-side { width: 200px; display: flex; flex-direction: column; gap: 10px; }
+.bingo-call { font-family: var(--display); font-size: 44px; color: var(--navy); background: var(--sun); border-radius: 14px; border: 3px solid var(--navy); padding: 8px; }
+.bingo-called { font-size: 12px; font-weight: 800; min-height: 48px; opacity: .7; }
