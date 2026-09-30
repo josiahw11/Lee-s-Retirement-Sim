@@ -206,7 +206,7 @@ export class Race {
     for (const r of this.racers) {
       g.removeNPC(r.npc);
       g.scene.remove(r.cart.group);
-      r.cart.group.traverse((o) => { if (o.isMesh && o.geometry) o.geometry.dispose(); });
+      r.cart.group.traverse((o) => { if (o.isMesh && o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); });
       g.carts = g.carts.filter((c) => c !== r.cart);
     }
   }

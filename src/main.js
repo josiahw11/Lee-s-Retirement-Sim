@@ -207,6 +207,13 @@ async function boot() {
   ui.onModalClose = () => { if (game.running && !ui.modal) input.requestLock(); };
   ui.onModalOpen = () => input.releaseLock();
 
+  // hidden tab: the loop stops, so silence looping sounds (engine, squeal, rain) until we're back
+  document.addEventListener('visibilitychange', () => {
+    if (!audio.ctx) return;
+    if (document.hidden) audio.ctx.suspend();
+    else audio.ctx.resume();
+  });
+
   canvas.addEventListener('click', () => {
     audio.init();
     if (game.running && !ui.modal && !paused) input.requestLock();
@@ -272,7 +279,7 @@ async function boot() {
       dt *= 0.3;
     }
     input.enabled = game.running && !ui.modal && !paused && !game.cut;
-    touch.update(input.enabled, game.running);
+    touch.update(input.enabled, game.running, ui.modal);
 
     // global keys
     if (game.running) {

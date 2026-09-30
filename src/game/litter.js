@@ -76,7 +76,8 @@ export class Litter {
     const p = g.player;
     const pc = p.cart;
     this.ticketCd -= dt;
-    for (const can of [...this.cans]) {
+    for (let i = this.cans.length - 1; i >= 0; i--) {
+      const can = this.cans[i];
       const m = can.mesh;
       can.age += dt;
       if (can.rest) {
@@ -87,7 +88,8 @@ export class Litter {
         const d = Math.hypot(dx, dz);
         const sp = pc ? pc.speed : p.speed;
         if (d < kr && sp > 1.2) {
-          const vx = pc ? pc.vx : p.vx, vz = pc ? pc.vz : p.vz;
+          // on foot the player's velocity isn't stored (vx/vz is knockback only): use heading * speed
+          const vx = pc ? pc.vx : Math.sin(p.heading) * p.speed, vz = pc ? pc.vz : Math.cos(p.heading) * p.speed;
           this.kick(can, vx * 0.9 + (dx / (d || 1)) * 1.5, vz * 0.9 + (dz / (d || 1)) * 1.5, pc ? 2.2 + sp * 0.12 : 1.4);
         }
         continue;
@@ -112,7 +114,7 @@ export class Litter {
         can.vx *= -0.3; can.vz *= -0.3;
         g.crime(n.x, n.z, 0.3, 'Assault with a beer can', 8, true);
       }
-      const gy = heightAt(m.position.x, m.position.z);
+      const gy = g.surfaceY(m.position.x, m.position.z); // terrain or the road / driveway on top of it
       const wl = waterLevel(m.position.x, m.position.z);
       if (wl !== null && m.position.y < wl + 0.02) {
         g.particles.burst('drop', m.position.x, wl, m.position.z, 8, { speed: 1.2, up: 2.5, life: 0.6, size: 0.14, gravity: 9 });
@@ -120,8 +122,8 @@ export class Litter {
         this.remove(can);
         continue;
       }
-      if (m.position.y <= gy + 0.05) {
-        m.position.y = gy + 0.05;
+      if (m.position.y <= gy + 0.055) {
+        m.position.y = gy + 0.055;
         if (can.vy < -1.4) {
           can.vy = -can.vy * 0.38;
           can.vx *= 0.62; can.vz *= 0.62;

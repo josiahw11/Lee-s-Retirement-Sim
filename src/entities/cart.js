@@ -12,7 +12,7 @@ const RB = new Map();
 function rbox(w, h, d, r) {
   const k = `${w}:${h}:${d}:${r}`;
   // more bevel segments only where the curve is big enough to see
-  if (!RB.has(k)) RB.set(k, new RoundedBoxGeometry(w, h, d, r >= 0.1 ? 3 : r >= 0.04 ? 2 : 1, r));
+  if (!RB.has(k)) RB.set(k, new RoundedBoxGeometry(w, h, d, r >= 0.1 ? 2 : 1, r));
   return RB.get(k);
 }
 const FENDER = new THREE.TorusGeometry(0.34, 0.055, 6, 14, Math.PI);
@@ -25,11 +25,19 @@ function tireGeo(r, w) {
     const g = new THREE.TorusGeometry(r * 0.74, r * 0.27, 8, 18);
     g.scale(1, 1, w / (r * 0.54));
     g.rotateY(Math.PI / 2);
+    g.userData.shared = true;
     TIRE.set(k, g);
   }
   return TIRE.get(k);
 }
 const TIRE_MAT = new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.92 });
+// Geometry every cart of a kind can share (flagged so rebuild/race cleanup never disposes it)
+const SHARED = new Map();
+function shared(key, make) {
+  if (!SHARED.has(key)) { const g = make(); g.userData.shared = true; SHARED.set(key, g); }
+  return SHARED.get(key);
+}
+const GLASS_MAT = new THREE.MeshStandardMaterial({ color: 0xcfe8f5, transparent: true, opacity: 0.25, roughness: 0.05 });
 const HUB_MAT = new THREE.MeshStandardMaterial({ color: 0xa8adb2, roughness: 0.35, metalness: 0.6 });
 
 const G = 16; // arcade gravity - carts get real air but still land hard
@@ -93,6 +101,9 @@ export class Cart {
   }
 
   rebuild() {
+    // free the old model's own geometry (shared pieces stay cached)
+    this.body.traverse((o) => { if (o.isMesh && o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); });
+    if (this.headMat) this.headMat.dispose();
     this.body.clear();
     this.wheels = [];
     this.build();
@@ -110,7 +121,7 @@ export class Cart {
     b.add(chassis);
     this.chassis = chassis;
     // painted panels
-    const paint = mergeParts([
+    const paint = shared('paint', () => mergeParts([
       [rbox(1.18, 0.24, 2.3, 0.09), '#fff', mat4(0, 0.47, 0.03)], // tub
       [rbox(1.12, 0.44, 0.56, 0.12), '#fff', mat4(0, 0.69, 1.0)], // nose cowl
       [rbox(0.96, 0.08, 0.5, 0.035), '#fff', mat4(0, 0.9, 0.96, 0, 1, 1, 1, 0.1)], // sloped hood panel
@@ -122,7 +133,7 @@ export class Cart {
       [FENDER, '#fff', mat4(-0.57, 0.3, 0.85, Math.PI / 2)],
       [FENDER, '#fff', mat4(0.57, 0.3, -0.85, Math.PI / 2)],
       [FENDER, '#fff', mat4(-0.57, 0.3, -0.85, Math.PI / 2)],
-    ]);
+    ]));
     const pm = new THREE.Mesh(paint, this.paintMat);
     pm.castShadow = true;
     chassis.add(pm);
@@ -168,10 +179,11 @@ export class Cart {
       parts.push([GEO.cyl, '#2f2f2f', mat4(0, 1.2, -1.15, 0, 0.18, 0.9, 0.18, 0.25)]);
       for (let i = 0; i < 4; i++) parts.push([GEO.cyl, '#999', mat4(-0.08 + i * 0.05, 1.72, -1.05 + (i % 2) * 0.05, 0, 0.012, 0.35, 0.012, 0.25)]);
     }
-    const trim = new THREE.Mesh(mergeParts(parts), M.vc);
+    const trimKey = `trim:${this.kind === 'concession' ? 'c' : this.kind === 'player' || u.cooler ? 'p' : 'b'}:${seat}`;
+    const trim = new THREE.Mesh(shared(trimKey, () => mergeParts(parts)), M.vc);
     trim.castShadow = true;
     chassis.add(trim);
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.86), new THREE.MeshStandardMaterial({ color: 0xcfe8f5, transparent: true, opacity: 0.25, roughness: 0.05 }));
+    const glass = new THREE.Mesh(shared('glass', () => new THREE.PlaneGeometry(1.1, 0.86)), GLASS_MAT);
     glass.position.set(0, 1.52, 0.515);
     glass.rotation.x = -0.1;
     chassis.add(glass);
@@ -179,7 +191,7 @@ export class Cart {
     // lights (emissive meshes)
     this.headMat = new THREE.MeshStandardMaterial({ color: 0xbfc8cf, roughness: 0.2, metalness: 0.3, emissive: 0xfff2c0, emissiveIntensity: 0 });
     for (const x of [0.36, -0.36]) {
-      const h = new THREE.Mesh(new THREE.CircleGeometry(0.07, 10), this.headMat);
+      const h = new THREE.Mesh(shared('head', () => new THREE.CircleGeometry(0.07, 10)), this.headMat);
       h.position.set(x, 0.8, 1.318);
       chassis.add(h);
     }
@@ -250,9 +262,9 @@ export class Cart {
       const tire = new THREE.Mesh(tireGeo(r, u.lift ? 0.3 : 0.2), TIRE_MAT);
       tire.castShadow = true;
       spin.add(tire);
-      const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.52, r * 0.52, u.lift ? 0.24 : 0.16, 14).rotateZ(Math.PI / 2), u.rims ? M.chrome : HUB_MAT);
+      const hub = new THREE.Mesh(shared(`hub:${r}:${!!u.lift}`, () => new THREE.CylinderGeometry(r * 0.52, r * 0.52, u.lift ? 0.24 : 0.16, 14).rotateZ(Math.PI / 2)), u.rims ? M.chrome : HUB_MAT);
       spin.add(hub);
-      const cap = new THREE.Mesh(new THREE.SphereGeometry(r * 0.2, 10, 6).scale(0.5, 1, 1), u.rims ? M.chrome : HUB_MAT);
+      const cap = new THREE.Mesh(shared(`cap:${r}`, () => new THREE.SphereGeometry(r * 0.2, 10, 6).scale(0.5, 1, 1)), u.rims ? M.chrome : HUB_MAT);
       cap.position.x = (x > 0 ? 1 : -1) * (u.lift ? 0.12 : 0.085);
       spin.add(cap);
       void rimCol;
@@ -325,7 +337,7 @@ export class Cart {
     }
     // how hard the tires are scrubbing (skid marks + squeal): sideways slip, handbrake, hard braking
     this.skid = this.grounded && !this.sunk
-      ? clamp((Math.abs(vl) - 1.1) / 3, 0, 1) + (input.handbrake && Math.abs(vf) > 3 ? 0.6 : 0) + ((input.throttle || 0) < -0.1 && vf > 4.5 ? 0.5 : 0)
+      ? clamp((Math.abs(vl) - 1.1) / 3, 0, 1) + (input.handbrake && Math.abs(vf) > 3 ? 0.6 : 0) + ((input.throttle || 0) < -0.1 && vf > 8 ? 0.45 : 0)
       : 0;
 
     const nfx = Math.sin(this.heading), nfz = Math.cos(this.heading);

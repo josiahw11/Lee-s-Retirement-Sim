@@ -251,6 +251,7 @@ export class World {
     this.rnd = mulberry32(1987);
     this.propSpawns = [];
     this.cartSpawns = [];
+    this.pads = []; // raised paving (driveways, walks, porches): {x0, z0, x1, z1, top}
     this.lamps = [];
     this.fountains = [];
     this.waterMats = [];
@@ -286,6 +287,16 @@ export class World {
     if (collide) this.col.addCircle(x, z, 0.45 * s, 12, 'tree');
     if (collide) (this.palmSpots ||= []).push({ x, z, top: (g.userData.top || 9) * s });
   }
+  // Register a flat raised slab (Frame-local center + size) so things can rest on top of it.
+  pad(f, lx, lz, sx, sz, top) {
+    const a = f.toWorld(lx - sx / 2, lz - sz / 2), b = f.toWorld(lx + sx / 2, lz + sz / 2);
+    this.pads.push({ x0: Math.min(a.x, b.x), z0: Math.min(a.z, b.z), x1: Math.max(a.x, b.x), z1: Math.max(a.z, b.z), top });
+  }
+  padTop(x, z) {
+    for (const p of this.pads) if (x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1) return p.top;
+    return 0;
+  }
+
   // Tiled hip roof geometry for a w x d footprint (ridge runs along the longer side).
   roofGeo(w, d, h) {
     const rot = d > w;
@@ -605,8 +616,8 @@ export class World {
           for (let k = -2; k <= 2; k++) wpart(key, a + sd * (w / 2 + 0.38), y + k * (hh / 6), 0.1, 0.36, 0.03, 0.03, darker(shutters, 0.8)); // louvers
         }
       };
-      const wx = garageLeft ? 5.4 : -5.4;
-      win('front', wx, 1.75, 1.8, 1.4, door);
+      const wx = garageLeft ? 5.6 : -5.6;
+      win('front', wx, 1.75, 1.6, 1.4, door); // narrow enough that shutters clear the coach light and the corner
       for (const sz of [-3, 2.5]) { win('right', -sz, 1.8, 1.8, 1.3); win('left', sz, 1.8, 1.8, 1.3); }
       win('back', 3, 1.8, 3.5, 1.6);
       // garage door: raised panels, some with a row of windows up top
@@ -629,11 +640,12 @@ export class World {
       f.box(dx, 0.55, D / 2 + 0.1, 0.8, 0.8, 0.04, darker(door, 1.12));
       f.add(GEO.sph, '#d4af37', dx + 0.42, 1.4, D / 2 + 0.14, 0.05, 0.05, 0.05);
       for (const sd of [-1, 1]) {
-        f.box(dx + sd * 0.95, 1.8, D / 2 + 0.1, 0.2, 0.36, 0.2, '#fff', M.lamp);
-        f.box(dx + sd * 0.95, 2.18, D / 2 + 0.1, 0.26, 0.06, 0.26, '#2a2a2a');
+        f.box(dx + sd * 0.86, 1.8, D / 2 + 0.1, 0.2, 0.36, 0.2, '#fff', M.lamp);
+        f.box(dx + sd * 0.86, 2.18, D / 2 + 0.1, 0.26, 0.06, 0.26, '#2a2a2a');
       }
       // little porch
       f.box(dx, 0, D / 2 + 1, 2.8, 0.22, 2, '#e7e1d5');
+      this.pad(f, dx, D / 2 + 1, 2.8, 2, 0.22);
       f.add(GEO.cyl, trim, dx - 1.25, 1.75, D / 2 + 1.8, 0.1, 3.1, 0.1);
       f.add(GEO.cyl, trim, dx + 1.25, 1.75, D / 2 + 1.8, 0.1, 3.1, 0.1);
       f.box(dx, 3.2, D / 2 + 1.05, 3, 0.2, 1.9, trim);
@@ -658,6 +670,8 @@ export class World {
       const dLen = streetDist - D / 2;
       f.box(gx, 0, D / 2 + dLen / 2, 5.2, 0.05, dLen, '#d4cfc4');
       f.box(dx, 0, D / 2 + 2 + (dLen - 2) / 2, 1.3, 0.045, dLen - 2, '#d4cfc4');
+      this.pad(f, gx, D / 2 + dLen / 2, 5.2, dLen, 0.05);
+      this.pad(f, dx, D / 2 + 2 + (dLen - 2) / 2, 1.3, dLen - 2, 0.045);
       // landscaping
       for (let i = 0; i < 4; i++) {
         const bx = (garageLeft ? 1.2 : -6.6) + i * 1.8;

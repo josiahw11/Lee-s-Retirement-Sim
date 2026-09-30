@@ -1,4 +1,5 @@
-// On-screen controls for phones & tablets. They switch on at the first touch, and never appear on desktop.
+// On-screen controls for phones & tablets. They follow the last input used: a touch shows them, and a
+// real mouse (pointerType 'mouse') hides them again, so touchscreen laptops keep full mouse play.
 // Left half of the screen: floating joystick (walk / gas-brake-steer).
 // Right half: drag to look around. Thumb buttons press the same virtual keys the keyboard does.
 
@@ -24,7 +25,9 @@ export class TouchControls {
     this.stick = null; // { id, x0, y0 }
     this.look = null; // { id, x, y }
     this.held = new Map(); // touch id -> key
-    window.addEventListener('touchstart', () => this.enable(), { once: true, passive: true });
+    window.addEventListener('touchstart', () => this.enable(), { passive: true });
+    window.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') this.disable(); });
+    window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && (e.movementX || e.movementY)) this.disable(); });
   }
 
   enable() {
@@ -32,6 +35,7 @@ export class TouchControls {
     this.on = true;
     this.input.touchOn = true;
     document.body.classList.add('touch');
+    if (this.root) { this.root.classList.remove('off'); return; }
     const root = document.createElement('div');
     root.id = 'touch';
     const btn = (k, l, cls, hold) => `<button class="tb ${cls}" data-k="${k}" data-hold="${hold ? 1 : 0}">${l}</button>`;
@@ -142,11 +146,30 @@ export class TouchControls {
     this.knobEl.style.transform = '';
   }
 
-  // Gameplay controls only while playing; the top row (pause / phone / map) also works in menus.
-  update(playing, running) {
+  disable() {
+    if (!this.on) return;
+    this.on = false;
+    this.input.touchOn = false;
+    document.body.classList.remove('touch');
+    this.root.classList.add('off');
+    this.release();
+  }
+
+  release() {
+    if (this.stick) this.releaseStick();
+    if (this.look) { this.look = null; this.input.touchLook = false; }
+    for (const k of this.held.values()) this.input.down.delete(k);
+    this.held.clear();
+    for (const b of this.root.querySelectorAll('.tb.on')) b.classList.remove('on');
+  }
+
+  // Gameplay controls only while playing; the top row (pause / phone / map) also works in menus,
+  // except mini-games, where "pause" would send Escape and forfeit.
+  update(playing, running, modal = null) {
     if (!this.on) return;
     this.root.classList.toggle('playing', playing);
     this.root.classList.toggle('hidden', !running);
+    this.root.classList.toggle('in-minigame', modal === 'minigame');
     if (!playing) {
       if (this.stick) this.releaseStick();
       if (this.look) { this.look = null; this.input.touchLook = false; }

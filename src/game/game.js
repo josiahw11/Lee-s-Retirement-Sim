@@ -1838,13 +1838,21 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     const k = c.skid || 0;
     if (player) audio.setSkid(k > 0.25 && c.speed > 3 && this.onRoad(c.x, c.z) ? Math.min(1, k) : 0);
     if (k < 0.25 || c.speed < 2.5) return;
-    const h = c.heading, cs = Math.cos(h), sn = Math.sin(h);
-    for (const lx of [0.55, -0.55]) {
+    const cs = Math.cos(c.heading), sn = Math.sin(c.heading);
+    c._skidKeys ||= [`${c.id}:L`, `${c.id}:R`];
+    for (let w = 0; w < 2; w++) {
+      const lx = w ? -0.55 : 0.55;
       const x = c.x + lx * cs - 0.85 * sn, z = c.z - lx * sn - 0.85 * cs;
       if (waterAt(x, z)) continue;
-      const surface = onSand(x, z) ? 'sand' : this.onRoad(x, z) ? 'road' : 'grass';
-      this.skids.mark(`${c.id}:${lx}`, x, heightAt(x, z), z, k, surface);
+      const surface = this.onRoad(x, z) ? 'road' : onSand(x, z) ? 'sand' : 'grass';
+      // paved quads sit a few cm above the terrain height
+      this.skids.mark(c._skidKeys[w], x, this.surfaceY(x, z) + 0.005, z, k, surface);
     }
+  }
+
+  // Height of whatever you'd actually be standing on: terrain + road deck / driveway / porch slab.
+  surfaceY(x, z) {
+    return heightAt(x, z) + Math.max(this.onRoad(x, z) ? 0.04 : 0, this.world.padTop(x, z));
   }
 
   onRoad(x, z) {
@@ -1991,7 +1999,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
         this.skids.update(dt);
         // AI carts leave rubber too (race rivals, fleeing drivers)
         const cam = this.camera.position;
-        for (const c of this.carts) if (c !== this.player.cart && c.skid > 0.3 && Math.abs(c.x - cam.x) + Math.abs(c.z - cam.z) < 120) this.tireMarks(c, dt, false);
+        for (const c of this.carts) if (c !== this.player.cart && c.skid > 0.55 && Math.abs(c.x - cam.x) + Math.abs(c.z - cam.z) < 120) this.tireMarks(c, dt, false);
       }
       if (this.timers && this.timers.length) {
         for (const tm of this.timers) tm.t -= dt;
@@ -2356,7 +2364,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     const p = this.player;
     const c = p.cart;
     audio.setEngine(!!c && !this.ui.modal, c ? clamp(c.speed / 16, 0, 1) : 0, c ? this.input.axis(['KeyS'], ['KeyW']) : 0);
-    if (!c || this.ui.modal) audio.setSkid(0);
+    if (!c || this.ui.modal || this.cut) audio.setSkid(0);
     const partyNear = this.party && Math.hypot(p.x - this.party.center.x, p.z - this.party.center.z) < 45;
     audio.setRadio(((!!c && audio.station !== 0) || partyNear) && !this.ui.modal);
     if (c) c.bass = c.upgrades.speakers && audio.station !== 0;
