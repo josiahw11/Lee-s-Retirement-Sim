@@ -4,6 +4,7 @@ import { pick, rand, randInt, chance, money, DAYS, fmtTime } from '../core/utils
 import { audio } from '../core/audio.js';
 import { testBatchOn } from './chapter2.js';
 import { casinoNode, cabinNode } from './chapter3.js';
+import { karaokeChoice } from './karaoke.js';
 
 // ---------------------------------------------------------------- helpers
 const C = (g, stat, diff, label) => ({ label: label || stat.toUpperCase().replace('INTIM', 'INT').replace('STAT', 'STA'), chance: g.chance(stat, diff) });
@@ -559,6 +560,7 @@ function tikiNode(g) {
     choices: [
       { text: 'Order drinks', action: () => { openShop(g, 'tiki'); g.ui.closeDialogue(); return 'keep'; } },
       { text: 'Challenge the regulars to a CHUG-OFF', tag: 'bet $40', disabled: g.state.money < 40, action: () => { g.startMinigame('chug', { opponent: pick(['Big Sal "The Funnel"', 'Dutch Van Houten', 'Irv the Sponge']), bet: 40 }); g.ui.closeDialogue(); return 'keep'; } },
+      karaokeChoice(g),
       { text: 'Leave', action: () => null },
     ],
   };

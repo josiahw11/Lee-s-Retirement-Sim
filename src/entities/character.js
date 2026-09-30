@@ -381,6 +381,9 @@ export function makeHeld(type) {
   } else if (type === 'beer') {
     parts.push([GEO.cyl, '#c9d3db', mat4(0, 0, 0, 0, 0.035, 0.12, 0.035)]);
     parts.push([GEO.cyl, '#1f5fb0', mat4(0, 0, 0, 0, 0.036, 0.06, 0.036)]);
+  } else if (type === 'mic') {
+    parts.push([GEO.cyl, '#1c1c1c', mat4(0, 0, 0.02, 0, 0.025, 0.2, 0.025)]);
+    parts.push([GEO.sph, '#9aa0a6', mat4(0, 0.13, 0.02, 0, 0.045, 0.05, 0.045)]);
   } else if (type === 'fists' || !type) {
     return null;
   } else {

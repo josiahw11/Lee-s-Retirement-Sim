@@ -15,6 +15,7 @@ import { Grandr, talkDate } from './grandr.js';
 import { ClosestToPin, golferChallenge } from './golf.js';
 import { Hurricane, hurricanePartyNode } from './hurricane.js';
 import { Wildlife } from './wildlife.js';
+import { Karaoke } from './karaoke.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
@@ -106,6 +107,7 @@ const ACH = {
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
   scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
+  karaoke: ['Tiki Hut Idol', 'Got a 90%+ crowd at karaoke night.'],
   stormchaser: ['Storm Chaser', 'Caught 2.4+ seconds of air in hurricane winds.'],
   conga: ['Conga Through Mildred', 'Led a conga line at a hurricane party.'],
   flamingoRescue: ['Flamingo Rescue', 'Returned 10 hurricane-scattered flamingos to the HOA.'],
@@ -1695,7 +1697,7 @@ export class Game {
   }
 
   startMinigame(kind, opts = {}) {
-    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin }[kind] || ChugOff;
+    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke }[kind] || ChugOff;
     if (opts.bet) this.spend(opts.bet);
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();
