@@ -14,6 +14,7 @@ import { AerobicsClass, AquaAerobics, talkChad } from './aerobics.js';
 import { Grandr, talkDate } from './grandr.js';
 import { ClosestToPin, golferChallenge } from './golf.js';
 import { Hurricane, hurricanePartyNode } from './hurricane.js';
+import { Wildlife } from './wildlife.js';
 import { Weather } from '../gfx/weather.js';
 import { Party } from './party.js';
 import { Events, showGazette } from './events.js';
@@ -450,6 +451,8 @@ export class Game {
     this.grandr = new Grandr(this);
     if (this.hurricane) this.hurricane.clear();
     this.hurricane = new Hurricane(this);
+    if (this.wildlife) this.wildlife.clear();
+    this.wildlife = new Wildlife(this);
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -2047,6 +2050,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (this.aerobicsClass) this.aerobicsClass.update(dt);
       if (this.grandr) this.grandr.update();
       if (this.hurricane) this.hurricane.update(dt);
+      if (this.wildlife) this.wildlife.update(dt);
       if (this.skids) {
         this.skids.update(dt);
         // AI carts leave rubber too (race rivals, fleeing drivers)
