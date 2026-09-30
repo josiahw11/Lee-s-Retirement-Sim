@@ -286,6 +286,20 @@ export class World {
     if (collide) this.col.addCircle(x, z, 0.45 * s, 12, 'tree');
     if (collide) (this.palmSpots ||= []).push({ x, z, top: (g.userData.top || 9) * s });
   }
+  // Tiled hip roof geometry for a w x d footprint (ridge runs along the longer side).
+  roofGeo(w, d, h) {
+    const rot = d > w;
+    const key = `${(rot ? d : w).toFixed(2)}:${(rot ? w : d).toFixed(2)}:${h}`;
+    this._roofs ||= new Map();
+    if (!this._roofs.has(key)) this._roofs.set(key, hipRoof(rot ? d : w, rot ? w : d, h));
+    return { geo: this._roofs.get(key), ry: rot ? Math.PI / 2 : 0 };
+  }
+  // ...placed on a building Frame with its eaves at local height y
+  roof(f, lx, y, lz, w, d, h, color) {
+    const r = this.roofGeo(w, d, h);
+    f.add(r.geo, color, lx, y, lz, 1, 1, 1, r.ry, M.roof);
+  }
+
   tree(kind, x, z, s = 1) {
     const list = kind === 'pine' ? this.pines : this.oaks;
     const g = list[Math.floor(this.rnd() * list.length)];
@@ -700,11 +714,11 @@ export class World {
     f.box(0, 0, 0, W + 1, 0.4, D + 1, '#d8cfbf');
     f.box(0, 0.4, 0, W, 5.4, D, '#f4ead5');
     f.box(0, 5.8, 0, W + 0.4, 0.35, D + 0.4, '#ffffff');
-    f.add(GEO.pyr, '#c65a3e', 0, 6.15 + 2.3, 0, W + 3, 4.6, D + 3);
+    this.roof(f, 0, 6.15, 0, W + 3, D + 3, 4.6, '#c65a3e');
     // portico
     for (let i = 0; i < 6; i++) f.add(GEO.cyl, '#ffffff', -7.5 + i * 3, 2.9, D / 2 + 3.6, 0.35, 5, 0.35);
     f.box(0, 5.2, D / 2 + 2, 19, 0.6, 4.4, '#ffffff');
-    f.add(GEO.pyr, '#c65a3e', 0, 5.8 + 1.2, D / 2 + 2, 20, 2.4, 5.2);
+    this.roof(f, 0, 5.8, D / 2 + 2, 20, 5.2, 2.4, '#c65a3e');
     f.box(0, 0.4, D / 2 + 0.03, 6, 3.4, 0.15, '#fff', M.glass);
     for (const x of [-15, -11, 11, 15]) f.box(x, 1.4, D / 2 + 0.03, 2.4, 2.4, 0.12, '#fff', M.glass);
     for (const z of [-6, 0, 6]) {
@@ -739,7 +753,7 @@ export class World {
     const g = new Frame(this, ps.x, ps.z, Math.PI);
     g.box(0, 0, 0, ps.sx + 0.6, 0.3, ps.sz + 0.6, '#d8cfbf');
     g.box(0, 0.3, 0, ps.sx, 3.8, ps.sz, '#f4ead5');
-    g.add(GEO.pyr, '#2f6b4a', 0, 4.1 + 1.3, 0, ps.sx + 2, 2.6, ps.sz + 2);
+    this.roof(g, 0, 4.1, 0, ps.sx + 2, ps.sz + 2, 2.6, '#3f7f5a');
     g.box(0, 0.3, ps.sz / 2 + 0.03, 3, 2.6, 0.12, '#fff', M.glass);
     g.box(-4.5, 1.2, ps.sz / 2 + 0.03, 3, 1.8, 0.12, '#fff', M.glass);
     g.box(4.5, 1.2, ps.sz / 2 + 0.03, 3, 1.8, 0.12, '#fff', M.glass);
@@ -848,7 +862,7 @@ export class World {
     if (flat) {
       f.box(0, 5.3, 0, W + 0.3, 0.9, D + 0.3, roof);
     } else {
-      f.add(GEO.pyr, roof, 0, 5.3 + 1.5, 0, W + 2, 3, D + 2);
+      this.roof(f, 0, 5.3, 0, W + 2, D + 2, 3, roof);
     }
     f.box(0, 0.3, D / 2 + 0.03, 3.2, 3, 0.12, '#fff', M.glass);
     f.box(-W / 4 - 1, 1, D / 2 + 0.03, W / 2 - 5, 2.2, 0.12, '#fff', M.glass);
@@ -1167,7 +1181,8 @@ export class World {
       if (rnd() < 0.6) {
         const w = 10 + rnd() * 6;
         this.box(x, 0, z, w, 3.2, 10, ['#f6c6a8', '#fbe7a1', '#bde0fe', '#f7cad0', '#fff1e0'][Math.floor(rnd() * 5)]);
-        this.batch.add(M.vc, GEO.pyr, '#c65a3e', mat4(x, 4.3, z, 0, w + 1, 2.2, 11));
+        const r = this.roofGeo(w + 1, 11, 2.2);
+        this.batch.add(M.roof, r.geo, '#c65a3e', mat4(x, 3.2, z, r.ry));
       } else this.palm(x, z, 1.1, false);
     }
   }
