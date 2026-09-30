@@ -207,6 +207,7 @@ export class Shuttle {
       audio.play('fail', { vol: 0.5 });
       return;
     }
+    if (c.model === 'stretch') f.tips = Math.round(f.tips * 1.5 + 5); // the limo experience
     const speedy = f.t > f.t0 * 0.5;
     const pay = f.fare + f.tips + (speedy ? Math.round(f.fare * 0.3) : 0);
     g.addMoney(pay, 'Senior Shuttle fare');

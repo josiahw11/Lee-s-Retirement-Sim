@@ -69,7 +69,8 @@ export class Cart {
     this.suspY = 0; this.suspV = 0;
     this.airT = 0;
     this.wheelRot = 0;
-    this.radius = this.kind === 'scooter' ? 0.65 : 1.25;
+    this.model = opts.model || 'classic'; // classic | stretch | buggy | hearse
+    this.setModelDims();
     this.driver = null;
     this.passenger = null;
     this.sunk = false;
@@ -78,6 +79,13 @@ export class Cart {
     this.horn = 0;
     this.build();
     this.syncMesh(0);
+  }
+
+  setModelDims() {
+    const m = this.kind === 'scooter' ? 'scooter' : this.model;
+    this.radius = { scooter: 0.65, stretch: 1.6, hearse: 1.45 }[m] || 1.25;
+    this.stretch = m === 'stretch' ? 1.5 : 1; // how much longer than a classic
+    this.wheelbase = 1.7 * this.stretch;
   }
 
   get speed() {
@@ -95,11 +103,16 @@ export class Cart {
     if (this.kind === 'security') max = 12.5;
     if (this.kind === 'rival') max = 12.5;
     if (u.governor) max = 16;
+    // the showroom models: the Stretch is a barge, the Buggy loves sand, the Hearse has something to prove
+    const m = this.model;
+    const mx = m === 'stretch' ? 0.92 : m === 'hearse' ? 1.12 : m === 'buggy' ? 1.04 : 1;
+    const acc = m === 'stretch' ? 0.8 : m === 'hearse' ? 1.15 : 1;
+    max *= mx;
     return {
       max,
       turbo: u.turbo ? max * 1.45 : max,
-      accel: u.governor ? 7.5 : 5.5,
-      offroad: u.lift ? 1.0 : 0.88,
+      accel: (u.governor ? 7.5 : 5.5) * acc,
+      offroad: m === 'buggy' ? 1.08 : u.lift ? 1.0 : 0.88,
     };
   }
 
@@ -115,24 +128,29 @@ export class Cart {
 
   build() {
     if (this.kind === 'scooter') return this.buildScooter();
-    const u = this.upgrades;
+    const u = this.model === 'buggy' ? { ...this.upgrades, lift: true } : this.upgrades;
     const lift = u.lift ? 0.22 : 0;
     this.lift = lift;
     this.wheelR = u.lift ? 0.36 : 0.25;
+    this.setModelDims();
+    const S = this.stretch;
     const b = this.body;
     const chassis = new THREE.Group();
     chassis.position.y = lift;
     b.add(chassis);
     this.chassis = chassis;
     // painted panels
-    const paint = shared('paint', () => mergeParts([
+    const roofless = this.model === 'buggy';
+    const paint = shared(roofless ? 'paint:roofless' : 'paint', () => mergeParts([
       [rbox(1.18, 0.24, 2.3, 0.09), '#fff', mat4(0, 0.47, 0.03)], // tub
       [rbox(1.12, 0.44, 0.56, 0.12), '#fff', mat4(0, 0.69, 1.0)], // nose cowl
       [rbox(0.96, 0.08, 0.5, 0.035), '#fff', mat4(0, 0.9, 0.96, 0, 1, 1, 1, 0.1)], // sloped hood panel
       [rbox(1.06, 0.3, 0.12, 0.05), '#fff', mat4(0, 1.0, 0.7, 0, 1, 1, 1, -0.25)], // dash
       [rbox(1.18, 0.36, 0.64, 0.12), '#fff', mat4(0, 0.72, -0.92)], // rear body
-      [rbox(1.34, 0.07, 1.82, 0.035), '#fff', mat4(0, 2.02, -0.08)], // roof
-      [rbox(1.3, 0.05, 1.78, 0.02), '#fff', mat4(0, 1.97, -0.08)], // roof lip
+      ...(roofless ? [] : [
+        [rbox(1.34, 0.07, 1.82, 0.035), '#fff', mat4(0, 2.02, -0.08)], // roof
+        [rbox(1.3, 0.05, 1.78, 0.02), '#fff', mat4(0, 1.97, -0.08)], // roof lip
+      ]),
       [FENDER, '#fff', mat4(0.57, 0.3, 0.85, Math.PI / 2)],
       [FENDER, '#fff', mat4(-0.57, 0.3, 0.85, Math.PI / 2)],
       [FENDER, '#fff', mat4(0.57, 0.3, -0.85, Math.PI / 2)],
@@ -140,6 +158,7 @@ export class Cart {
     ]));
     const pm = new THREE.Mesh(paint, this.paintMat);
     pm.castShadow = true;
+    pm.scale.z = S;
     chassis.add(pm);
     // trim + seats + posts
     const seat = this.kind === 'security' ? '#1d2b53' : u.leather ? '#6b3a1f' : '#e9dcc0';
@@ -186,17 +205,21 @@ export class Cart {
     const trimKey = `trim:${this.kind === 'concession' ? 'c' : this.kind === 'player' || u.cooler ? 'p' : 'b'}:${seat}`;
     const trim = new THREE.Mesh(shared(trimKey, () => mergeParts(parts)), M.vc);
     trim.castShadow = true;
+    trim.scale.z = S;
     chassis.add(trim);
-    const glass = new THREE.Mesh(shared('glass', () => new THREE.PlaneGeometry(1.1, 0.86)), GLASS_MAT);
-    glass.position.set(0, 1.52, 0.515);
-    glass.rotation.x = -0.1;
-    chassis.add(glass);
+    if (!roofless) {
+      const glass = new THREE.Mesh(shared('glass', () => new THREE.PlaneGeometry(1.1, 0.86)), GLASS_MAT);
+      glass.position.set(0, 1.52, 0.515 * S);
+      glass.rotation.x = -0.1;
+      chassis.add(glass);
+    }
+    this.buildModelExtras(chassis);
 
     // lights (emissive meshes)
     this.headMat = new THREE.MeshStandardMaterial({ color: 0xbfc8cf, roughness: 0.2, metalness: 0.3, emissive: 0xfff2c0, emissiveIntensity: 0 });
     for (const x of [0.36, -0.36]) {
       const h = new THREE.Mesh(shared('head', () => new THREE.CircleGeometry(0.07, 10)), this.headMat);
-      h.position.set(x, 0.8, 1.318);
+      h.position.set(x, 0.8, 1.318 * S);
       chassis.add(h);
     }
 
@@ -258,7 +281,8 @@ export class Cart {
     // wheels
     const rimCol = u.rims ? '#eeeeee' : '#8a8f94';
     const r = this.wheelR;
-    for (const [x, z] of [[0.55, 0.85], [-0.55, 0.85], [0.55, -0.85], [-0.55, -0.85]]) {
+    const rz = this.model === 'hearse' ? 1.05 : 0.85 * S;
+    for (const [x, z] of [[0.55, 0.85 * S], [-0.55, 0.85 * S], [0.55, -rz], [-0.55, -rz]]) {
       const w = new THREE.Group();
       w.position.set(x * (u.lift ? 1.08 : 1), r, z);
       const spin = new THREE.Group();
@@ -283,6 +307,47 @@ export class Cart {
       this.wheels.push({ g: w, spin, front: z > 0 });
     }
     b.position.y = 0;
+  }
+
+  // bolt-ons that make each showroom model look like itself
+  buildModelExtras(chassis) {
+    const m = this.model;
+    if (m === 'classic') return;
+    const parts = [];
+    if (m === 'stretch') {
+      // gold pinstripes, a middle roof post pair, a JUST RETIRED plate and a champagne bucket
+      for (const s of [-1, 1]) {
+        parts.push([rbox(0.02, 0.05, 3.3, 0.01), '#d4af37', mat4(s * 0.6, 0.62, 0.02)]);
+        parts.push([GEO.cyl, '#c9ced1', mat4(s * 0.57, 1.45, -0.2, 0, 0.028, 1.1, 0.028)]);
+      }
+      parts.push([rbox(0.46, 0.16, 0.02, 0.02), '#f4f4f4', mat4(0, 0.58, -1.9)]);
+      parts.push([GEO.cyl, '#c9ced1', mat4(0.36, 1.0, -0.62, 0, 0.1, 0.22, 0.1)]);
+      parts.push([GEO.cyl, '#1f4a2a', mat4(0.36, 1.2, -0.62, 0, 0.035, 0.3, 0.035, 0.2)]);
+    } else if (m === 'buggy') {
+      // roll cage, light bar, snorkel, spare tire
+      for (const s of [-1, 1]) {
+        parts.push([GEO.cyl, '#2a2a2a', mat4(s * 0.55, 1.45, -0.72, 0, 0.035, 1.3, 0.035)]);
+        parts.push([GEO.cyl, '#2a2a2a', mat4(s * 0.55, 1.62, 0.02, 0, 0.03, 1.55, 0.03, Math.PI / 2 - 0.42)]);
+      }
+      parts.push([GEO.cyl, '#2a2a2a', mat4(0, 2.08, -0.72, 0, 0.035, 1.14, 0.035, 0, Math.PI / 2)]);
+      parts.push([rbox(0.9, 0.12, 0.12, 0.03), '#1d1d1d', mat4(0, 2.18, -0.7)]);
+      parts.push([GEO.cyl, '#1d1d1d', mat4(-0.5, 1.2, 0.95, 0, 0.04, 0.9, 0.04)]);
+      parts.push([GEO.torus, '#1c1c1c', mat4(0, 1.0, -1.32, 0, 0.3, 0.3, 0.9)]);
+    } else if (m === 'hearse') {
+      // the long box out back: dark windows, purple curtains, chrome landau bars, a wreath up front
+      parts.push([rbox(1.16, 0.78, 1.25, 0.08), '#141414', mat4(0, 1.05, -1.25)]);
+      parts.push([rbox(1.2, 0.06, 1.3, 0.03), '#141414', mat4(0, 1.46, -1.25)]);
+      for (const s of [-1, 1]) {
+        parts.push([rbox(0.02, 0.4, 0.95, 0.02), '#1a1030', mat4(s * 0.59, 1.1, -1.25)]);
+        parts.push([rbox(0.025, 0.36, 0.3, 0.02), '#5a2a7a', mat4(s * 0.595, 1.1, -0.92)]);
+        parts.push([GEO.torus, '#e8e8e8', mat4(s * 0.6, 1.1, -1.62, Math.PI / 2, 0.14, 0.14, 0.35)]);
+      }
+      parts.push([GEO.torus, '#2f6b4a', mat4(0, 0.85, 1.33, 0, 0.2, 0.2, 0.5)]);
+      for (let i = 0; i < 5; i++) parts.push([GEO.sph, ['#f4f4f4', '#e84a5f', '#f4f4f4', '#f2c94c', '#f4f4f4'][i], mat4(Math.cos(i * 1.25) * 0.2, 0.85 + Math.sin(i * 1.25) * 0.2, 1.36, 0, 0.05, 0.05, 0.05)]);
+    }
+    const mesh = new THREE.Mesh(shared(`extras:${m}`, () => mergeParts(parts)), M.vc);
+    mesh.castShadow = true;
+    chassis.add(mesh);
   }
 
   setPaint(c) {
@@ -325,7 +390,7 @@ export class Cart {
       if (!onRoad) vf *= Math.exp(-0.15 * dt);
       const hb = input.handbrake;
       if (hb) vf *= Math.exp(-0.9 * dt);
-      const wheelbase = 1.7;
+      const wheelbase = this.wheelbase;
       let yaw = (vf * Math.tan(this.steerAng)) / wheelbase;
       yaw = clamp(yaw, -2.3, 2.3);
       if (hb) yaw *= 1.5;
@@ -549,7 +614,7 @@ export class Cart {
 export function seatCharacter(ch, cart, side = 1) {
   cart.chassis.add(ch.root);
   if (cart.kind === 'scooter') ch.root.position.set(0, -0.2, -0.24); // one seat, dead center
-  else ch.root.position.set(0.28 * side, 0.9 - 0.85 + 0.0, -0.3);
+  else ch.root.position.set(0.28 * side, 0.9 - 0.85 + 0.0, -0.3 * (cart.stretch || 1));
   ch.root.rotation.set(0, 0, 0);
   ch.mode = 'sit';
 }

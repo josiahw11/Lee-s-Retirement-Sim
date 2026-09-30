@@ -26,6 +26,7 @@ import { Derby, buildArena, danNode, ARENA } from './derby.js';
 import { Fishing } from './fishing.js';
 import { BluePill } from './bluepill.js';
 import { spawnBuck, buckNode, chapter4Started } from './chapter4.js';
+import { Dealership, abeNode } from './dealer.js';
 import { activitiesTab, bindActivities } from './activities.js';
 import { Soundscape } from './soundscape.js';
 import { Weather } from '../gfx/weather.js';
@@ -122,6 +123,7 @@ const ACH = {
   angler: ['Old Man and the Sea', 'Landed a fish off Boca Pier.'],
   silverking: ['The Silver King', 'Landed a Tarpon off the pier. Phil still doesn\'t believe it.'],
   dentures: ['Finders Keepers', 'Fished somebody\'s dentures out of the Gulf.'],
+  dealer: ['Pre-Owned', 'Bought a cart from Honest Abe. No refunds. No questions.'],
   crashcourse: ['Crash Course', 'Beat Buck Thunderhill and finished Chapter 4.'],
   derby: ['Last Cart Standing', 'Won the Bumper Brawl demolition derby.'],
   daisy: ['Driving Miss Daisy', 'Delivered 5 fares in one Senior Shuttle shift.'],
@@ -434,6 +436,7 @@ export class Game {
     this.state = state;
     const ph = PLAYER_HOUSE;
     this.playerCart.upgrades = { ...state.cart.upgrades };
+    this.playerCart.model = state.cart.model || 'classic';
     this.playerCart.setPaint(state.cart.color);
     this.playerCart.rebuild();
     const sp = state.pos || { x: ph.frontPos.x, z: ph.frontPos.z, h: ph.facing };
@@ -501,6 +504,9 @@ export class Game {
     if (this.bluePill) this.bluePill.clear();
     this.bluePill = new BluePill(this);
     if (chapter4Started(this, STEPS)) spawnBuck(this);
+    if (this.dealer) this.dealer.clear();
+    this.dealer = new Dealership(this);
+    this.world.poi('dealer', -214, 49, "Honest Abe's Carts", 0); // map icon only
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -1311,6 +1317,7 @@ export class Game {
     else if (n.role === 'dispatcher') node = dorisNode(this);
     else if (n.role === 'derbyman') node = danNode(this);
     else if (n.role === 'buck') node = buckNode(this);
+    else if (n.role === 'dealer') node = abeNode(this);
     else if (n.role === 'captain') node = talkCaptain(this, n);
     else if (n.role === 'mechanic') node = talkFingers(this, n);
     else if (n.role === 'deckhand') node = talkDeckhand(this, n);
@@ -2064,6 +2071,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (this.shuttle) this.shuttle.update(dt);
       if (this.derby) this.derby.update(dt);
       if (this.bluePill) this.bluePill.update(dt);
+      if (this.dealer) this.dealer.update();
       this.updateHeat(dt);
       this.updateEvents(dt);
       this.updateDrones(dt);
@@ -2448,6 +2456,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       else if (n.role === 'dispatcher') icon = '🚐';
       else if (n.role === 'derbyman') icon = '💥';
       else if (n.role === 'buck') icon = '🏁';
+      else if (n.role === 'dealer') icon = '🚙';
       else if (n.role === 'recruit') icon = '⭐';
       else if (n.role === 'gang') icon = '🟢';
       else if (n.role === 'operator') icon = this.concession.find((c) => c.operator === n)?.state.owned ? '✅' : '🛺';
