@@ -94,6 +94,7 @@ export class Minimap {
       else if (n.data.wants) dot(n.x, n.z, '#4cc9f0', 3);
     }
     for (const c of game.concession) dot(c.cart.x, c.cart.z, c.state.owned ? '#7CFC9A' : '#f2c94c', 4.5);
+    if (game.shuttle && game.shuttle.on) for (const h of game.shuttle.hailers) dot(h.n.x, h.n.z, { green: '#5dff7a', yellow: '#ffd23f', red: '#ff4d4d' }[h.kind], 5.5, true);
     for (const e of game.eventMarkers) dot(e.x, e.z, '#ff3b3b', 6, true);
     if (game.playerCart && !p.cart) dot(game.playerCart.x, game.playerCart.z, '#ffd23f', 4.5, true, '🛺');
     if (game.markerPos) dot(game.markerPos.x, game.markerPos.z, '#f2c94c', 7, true);

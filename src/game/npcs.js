@@ -193,6 +193,25 @@ export class NPC {
   update(dt) {
     const g = this.game;
     const p = g.player;
+    if (this.data.riding) { // in the back of Lee's shuttle cart
+      const c = this.data.riding;
+      this.x = c.x; this.z = c.z; this.y = c.y;
+      this.char.mode = 'sit';
+      if (this.visible) this.char.update(dt);
+      return;
+    }
+    if (this.data.hail && this.state !== 'ko' && !this.air) { // flagging down the shuttle
+      const dx = p.x - this.x, dz = p.z - this.z;
+      this.heading = Math.atan2(dx, dz);
+      this.char.root.position.set(this.x, heightAt(this.x, this.z), this.z);
+      this.char.root.rotation.y = this.heading;
+      this.char.mode = 'idle';
+      this.char.speed = 0;
+      this.data.waveT = (this.data.waveT || 0) - dt;
+      if (this.data.waveT <= 0 && dx * dx + dz * dz < 3600) { this.data.waveT = 1.5; this.char.play('cheer', 1.2); }
+      if (this.visible) this.char.update(dt);
+      return;
+    }
     if (this.data.stand) { // posed somewhere special (a podium) for a few seconds
       const st = this.data.stand;
       st.t -= dt;

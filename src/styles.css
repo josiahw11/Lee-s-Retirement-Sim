@@ -425,6 +425,12 @@ body.touch #hint { bottom: 84px; }
 
 /* ---------- Closest to the Pin ---------- */
 .gf-info { font-weight: 900; font-size: 13px; }
+#shuttle-hud { position: absolute; top: 136px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; padding: 6px 14px; background: rgba(20, 28, 48, 0.88); color: #fff; border-radius: 999px; font-weight: 800; font-size: 14px; white-space: nowrap; box-shadow: 0 3px 0 rgba(0,0,0,0.35); pointer-events: none; }
+#shuttle-hud .sh-clock { color: #5dff7a; font-size: 18px; font-variant-numeric: tabular-nums; }
+#shuttle-hud.low .sh-clock { color: #ff4d4d; animation: shPulse 0.5s infinite alternate; }
+#shuttle-hud .sh-fare { color: #9fe8ff; }
+#shuttle-hud .sh-fare.low b { color: #ff4d4d; }
+@keyframes shPulse { to { transform: scale(1.15); } }
 .bp-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 800; opacity: 0.85; margin-top: 2px; }
 #bp-q { font-size: 11px; }
 .pb-score { white-space: nowrap; font-size: 20px; font-weight: 900; letter-spacing: 1px; }

@@ -21,6 +21,7 @@ import { SeniorGames, commishNode } from './seniorgames.js';
 import { Pickleball } from './pickleball.js';
 import { Stunts, STUNTS } from './stunts.js';
 import { BeerPong, buildPongTable } from './beerpong.js';
+import { Shuttle, dorisNode } from './shuttle.js';
 import { activitiesTab, bindActivities } from './activities.js';
 import { Soundscape } from './soundscape.js';
 import { Weather } from '../gfx/weather.js';
@@ -114,6 +115,8 @@ const ACH = {
   robinhood: ['Robin Hood of Boca', 'Returned $48,211 in stolen pensions.'],
   kingpin: ['Retirement Kingpin', 'Kept every cent of the pensions. Monster.'],
   scooterjack: ['Grand Theft Mobility', 'Stole a mobility scooter from its rightful, elderly owner. At 9 mph.'],
+  daisy: ['Driving Miss Daisy', 'Delivered 5 fares in one Senior Shuttle shift.'],
+  crazyshuttle: ['Crazy Shuttle', 'Earned $400+ in a single Senior Shuttle shift.'],
   pong: ['Pong God', 'Won a game of beer pong at the Tiki Hut. Your liver lost.'],
   stuntman: ['Stuntman', 'Completed a Unique Stunt Jump.'],
   knievel: ['Evel Knievel Jr.', 'Completed every Unique Stunt Jump in Sunset Palms.'],
@@ -480,6 +483,8 @@ export class Game {
     if (this.stunts) this.stunts.clear();
     this.stunts = new Stunts(this);
     buildPongTable(this);
+    if (this.shuttle) this.shuttle.clear();
+    this.shuttle = new Shuttle(this);
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -1287,6 +1292,7 @@ export class Game {
     else if (n.role === 'date') node = talkDate(this, n);
     else if (n.role === 'seller') node = sellerNode(this, n);
     else if (n.role === 'commissioner') node = commishNode(this);
+    else if (n.role === 'dispatcher') node = dorisNode(this);
     else if (n.role === 'captain') node = talkCaptain(this, n);
     else if (n.role === 'mechanic') node = talkFingers(this, n);
     else if (n.role === 'deckhand') node = talkDeckhand(this, n);
@@ -2034,6 +2040,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       }
       this.updateCarts(dt);
       if (this.stunts) this.stunts.update(dt);
+      if (this.shuttle) this.shuttle.update(dt);
       this.updateHeat(dt);
       this.updateEvents(dt);
       this.updateDrones(dt);
@@ -2267,7 +2274,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       }
       // run over people
       for (const n of this.npcs) {
-        if (n.cart || n.air || n.role === 'gang' || n.data.aqua) continue;
+        if (n.cart || n.air || n.role === 'gang' || n.data.aqua || n.data.riding) continue;
         const d = Math.hypot(n.x - pc.x, n.z - pc.z);
         if (d < 1.45 && spd > 3) {
           const wasHostile = n.hostile;
@@ -2413,6 +2420,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       else if (n.role === 'date') { icon = '💘'; cls = 'lady'; }
       else if (n.role === 'seller') icon = '🏷️';
       else if (n.role === 'commissioner') icon = '🏅';
+      else if (n.role === 'dispatcher') icon = '🚐';
       else if (n.role === 'recruit') icon = '⭐';
       else if (n.role === 'gang') icon = '🟢';
       else if (n.role === 'operator') icon = this.concession.find((c) => c.operator === n)?.state.owned ? '✅' : '🛺';
