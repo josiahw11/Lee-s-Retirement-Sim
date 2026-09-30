@@ -31,7 +31,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 
 **Gamepad:** left stick move/steer • right stick look • RT/LT gas & brake • A interact • X swing • Y drink • B hop/drift • LB switch club • RB pocket sand • L3 sprint/nitrous • R3 horn • D-pad: radio / pee / map • Start pause • Back phone. Menus: D-pad or arrow keys + A/Enter.
 
-**Reviewer shortcuts:** `]` = +$1,000 • `[` = +1 to all stats • `` ` `` (backtick) = skip 3 hours. The pause menu (Esc) also has **Jump to Chapter 2 / Chapter 3** and **Summon Hurricane** buttons.
+**Reviewer shortcuts:** `]` = +$1,000 • `[` = +1 to all stats • `` ` `` (backtick) = skip 3 hours. The pause menu (Esc) also has **Jump to Chapter 2 / 3 / 4** and **Summon Hurricane** buttons.
 
 ## What's in the demo
 
@@ -49,7 +49,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
 - **Unique Stunt Jumps.** Nine ramps around town, from the Grandkids Ramp to clearing the whole Duck Pond, a leap over Palm Blvd, porta-potties on the beach and a Pool Party Plunge (land it *in* the pool). Each has a slow-motion side camera, a verdict (short, clipped, in the drink, crooked) and a cash reward. They come in three tiers: stock cart, governor removed, governor plus nitrous. Hold Space and steer in the air to spin the cart, and land a clean 360 or 720 for a bonus.
 - **Beer.** Buzz raises CHA and STR as liquid courage, then you start to slur. The screen wobbles, doubles and tilts. At 100 you black out and wake up somewhere embarrassing. Your bladder fills; press P.
 - **Legal money.** Golf balls go from pockets (1 ball) to a bucket (20) to a cart vacuum hopper (200) to autonomous drones. Gus buys them at $2 each. Golfers keep slicing new ones into the ponds.
-- **Illegal money.** Doc sells Blue Boys and Rhino Horn Tea wholesale. Sell them to residents marked 💊/🍵. Stat checks show their odds up front: upsell with CHA, strong-arm with INT.
+- **Illegal money.** Doc sells Blue Boys (side effects include a bow-legged waddle and a *very* strategically held newspaper) and Rhino Horn Tea wholesale. Sell them to residents marked 💊/🍵. Stat checks show their odds up front: upsell with CHA, strong-arm with INT.
 - **Beverage cart empire.** Take over Chip's 3 course carts by undercutting him ($) or intimidating the operator. Keep them stocked and they pay out every hour.
 - **Romance.** Seven ladies across 3 tiers, each with likes, hates, pickup lines, dates and perks. Married ones come with jealous husbands: stare them down for loot, or brawl. The top tier is Tammy the Cart Girl.
 - **Brawling.** Fists, putter, sand wedge (with pocket sand), 7-iron, driver, and Frank's titanium driver. Knockback, launches, hit-stop, KO stars. Nobody dies; they nap. You can loot their wallets.
@@ -96,6 +96,7 @@ Then open http://localhost:5173. Add `?play` to the URL to skip the title screen
   - bribe "Fingers" Fanucci to rig machine #3, then hit the jackpot
   - face Captain Dom Moretti: a blackjack duel where the loser goes overboard, a boss brawl, or a bluff
   - crack his safe, then decide the fate of $48,211 in stolen pensions: return them, split them, or keep them all
+- **Chapter 4: Crash Course** (5 steps): Karen hires Buck Thunderhill, a washed-up stock-car driver, as "Head of Cart Safety". He's impounding carts, including Earl's scooter, with Earl still on it. Beat him at the Bumper Brawl, win the neighborhood back with a Senior Shuttle shift, clear the Duck Pond jump, and take him down in the $500 Grand Prix.
 - Free-roam goals follow.
 - 55+ achievements, graphics quality presets (Low/Medium/High), auto-save when you sleep, and three procedural radio stations plus a text-to-speech talk-radio station.
 
