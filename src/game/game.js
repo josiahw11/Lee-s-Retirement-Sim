@@ -2500,8 +2500,8 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       this.headlight.intensity = 60;
     } else this.headlight.intensity = 0;
     if (pc && pc.upgrades.neon) {
-      this.neonLight.position.set(pc.x, pc.y + 0.3, pc.z);
-      this.neonLight.intensity = 6 + night * 20;
+      this.neonLight.position.set(pc.x, pc.y + 0.15, pc.z);
+      this.neonLight.intensity = 2 + night * 7; // a wash on the ground, not a pink spotlight on the cart
     } else this.neonLight.intensity = 0;
   }
 

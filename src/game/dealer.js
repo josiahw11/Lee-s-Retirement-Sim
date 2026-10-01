@@ -19,6 +19,7 @@ export const MODELS = {
 const LOT = { x: -214, z: 42 };
 const SPOTS = { buggy: -219, stretch: -214, hearse: -209 };
 const ABE = { x: -212, z: 49.5 };
+const NEW_SPOT = { x: -208.2, z: 50.8, ry: Math.PI / 2 }; // the curb beside Abe, nose toward Pelican Way
 let lotBuilt = false;
 
 export class Dealership {
@@ -82,18 +83,27 @@ export class Dealership {
     }
   }
 
-  // make `m` the player's cart (bought or swapped)
+  // make `m` the player's cart (bought or swapped): the old one goes back on Abe's lot and a brand-new
+  // one rolls out right beside him, with Lee already behind the wheel so there's no mistaking whose it is
   switchTo(m) {
-    const g = this.g, st = g.state.cart, pc = g.playerCart;
-    if (g.player.cart === pc) g.player.exitCart();
+    const g = this.g, st = g.state.cart, old = g.playerCart, p = g.player;
+    if (p.cart) p.exitCart();
     st.model = m;
-    pc.model = m;
-    if (st.color === '#ffffff' || Object.values(MODELS).some((x) => x.color === st.color)) { st.color = MODELS[m].color; pc.setPaint(st.color); }
-    pc.rebuild();
-    pc.x = LOT.x + 2; pc.z = LOT.z + 7.5; pc.y = heightAt(pc.x, pc.z); pc.heading = Math.PI / 2; pc.vx = pc.vz = 0; pc.sunk = false;
-    pc.syncMesh(0);
+    if (st.color === '#ffffff' || Object.values(MODELS).some((x) => x.color === st.color)) st.color = MODELS[m].color;
+    if (old) {
+      g.scene.remove(old.group);
+      old.paintMat?.dispose();
+      old.headMat?.dispose();
+      g.carts = g.carts.filter((c) => c !== old);
+    }
+    const c = g.addCart({ x: NEW_SPOT.x, z: NEW_SPOT.z, ry: NEW_SPOT.ry, kind: 'player', model: m, color: st.color, upgrades: { ...st.upgrades } });
+    c.y = heightAt(c.x, c.z);
+    c.syncMesh(0);
+    g.playerCart = c;
+    g.enterCart(c);
     audio.play('buy');
-    g.celebrate?.(4, pc.x, pc.z);
+    g.celebrate?.(4, c.x, c.z);
+    return c;
   }
 
   clear() {
@@ -115,7 +125,7 @@ export function abeNode(g) {
       action: () => {
         if (!has) { g.spend(info.price); st.owned = [...owned, m]; g.achievement('dealer'); }
         d.switchTo(m);
-        return { name: 'Honest Abe', title: info.name, text: `${has ? '"Back in the saddle."' : pick(['"Pleasure doing business. No refunds. No questions. No, I don\'t know where the previous owner is."', '"She\'s all yours. Runs great. Mostly. Sal\'s mods carry right over."'])} \n\nYour ${info.name} is parked at the curb.`, choices: [{ text: 'Leave', action: () => null }] };
+        return { name: 'Honest Abe', title: info.name, text: `${has ? '"Back in the saddle. I kept her warm for you."' : pick(['"Pleasure doing business. No refunds. No questions. No, I don\'t know where the previous owner is."', '"She\'s all yours. Runs great. Mostly. Sal\'s mods carry right over."'])}\n\nYour brand-new ${info.name} is right here beside Abe, and you're already in the driver's seat.${m === 'classic' ? '' : ' Your old cart goes back on the lot; swap back any time for free.'}`, choices: [{ text: 'Drive it off the lot', action: () => null }] };
       },
     };
   });

@@ -1,6 +1,7 @@
 // Golf carts: model + upgrades + arcade physics (drift, air, suspension, splashdown).
 import * as THREE from 'three';
 import { mergeParts, mat4 } from '../gfx/batch.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { M } from '../gfx/materials.js';
 import { GEO } from '../world/world.js';
@@ -33,6 +34,25 @@ function tireGeo(r, w) {
 const TIRE_MAT = new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.92 });
 // Geometry every cart of a kind can share (flagged so rebuild/race cleanup never disposes it)
 const SHARED = new Map();
+// a soft elliptical pool of light (white; the material tints it)
+let glowTex = null;
+function glowTexture() {
+  if (!glowTex) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(64, 64, 4, 64, 64, 64);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.35, 'rgba(255,255,255,0.75)');
+    g.addColorStop(0.7, 'rgba(255,255,255,0.25)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, 128, 128);
+    glowTex = new THREE.CanvasTexture(c);
+  }
+  return glowTex;
+}
+
 function shared(key, make) {
   if (!SHARED.has(key)) { const g = make(); g.userData.shared = true; SHARED.set(key, g); }
   return SHARED.get(key);
@@ -120,6 +140,10 @@ export class Cart {
     // free the old model's own geometry (shared pieces stay cached)
     this.body.traverse((o) => { if (o.isMesh && o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); });
     if (this.headMat) this.headMat.dispose();
+    // the underglow pool hangs off the group, not the body
+    if (this.neonMesh) { this.group.remove(this.neonMesh); this.neonMesh = null; }
+    if (this.neonMat) { this.neonMat.dispose(); this.neonMat = null; }
+    if (this.neonTubeMat) { this.neonTubeMat.dispose(); this.neonTubeMat = null; }
     this.body.clear();
     this.wheels = [];
     this.build();
@@ -271,11 +295,21 @@ export class Cart {
       chassis.add(this.nuts);
     }
     if (u.neon) {
-      this.neonMat = new THREE.MeshBasicMaterial({ color: u.neonColor || 0xff2bd6, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
-      const n = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 3.2).rotateX(-Math.PI / 2), this.neonMat);
-      n.position.y = 0.04 - lift;
-      b.add(n);
+      // underglow: neon tubes along the frame + a soft pool of light on the ground beneath. The pool
+      // lives on the group (not the pitching body) and is placed at the ground every frame in syncMesh,
+      // floating just above the road deck so it never z-fights with it.
+      const col = u.neonColor || 0xff2bd6;
+      this.neonMat = new THREE.MeshBasicMaterial({ color: col, map: glowTexture(), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4, toneMapped: false });
+      const n = new THREE.Mesh(shared(`glow:${this.stretch}`, () => new THREE.PlaneGeometry(2.5, 3.6 * this.stretch).rotateX(-Math.PI / 2)), this.neonMat);
+      n.renderOrder = 2;
+      this.group.add(n);
       this.neonMesh = n;
+      this.neonTubeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(col).multiplyScalar(0.85) });
+      const tubes = new THREE.Mesh(shared(`tubes:${this.stretch}`, () => mergeGeometries([
+        new THREE.CylinderGeometry(0.018, 0.018, 2.0 * this.stretch, 8).rotateX(Math.PI / 2).translate(0.5, 0.27, 0),
+        new THREE.CylinderGeometry(0.018, 0.018, 2.0 * this.stretch, 8).rotateX(Math.PI / 2).translate(-0.5, 0.27, 0),
+      ])), this.neonTubeMat);
+      chassis.add(tubes);
     }
 
     // wheels
@@ -489,6 +523,17 @@ export class Cart {
   syncMesh(dt, vf = this.forwardSpeed) {
     this.group.position.set(this.x, this.y, this.z);
     this.group.rotation.y = this.heading + this.spin;
+    if (this.neonMesh) {
+      // keep the glow pool on the ground under the cart: it spreads and fades as the cart gets air,
+      // and goes out underwater
+      const ground = heightAt(this.x, this.z);
+      const h = Math.max(0, this.y - ground);
+      this.neonMesh.position.y = ground - this.y + 0.09;
+      this.neonMesh.rotation.y = -this.spin;
+      this.neonMesh.scale.setScalar(1 + h * 0.18);
+      this.neonMesh.visible = !this.sunk && h < 4;
+      this.neonMat.opacity = (0.5 + Math.sin(this.t * 3) * 0.1) * Math.max(0, 1 - h / 4);
+    }
     if (dt > 0) {
       // pitch/roll from terrain under the wheels
       if (this.grounded) {
@@ -525,7 +570,7 @@ export class Cart {
       } else if (this.sirenR) {
         this.sirenR.emissiveIntensity = this.sirenB.emissiveIntensity = 0.2;
       }
-      if (this.neonMat) this.neonMat.opacity = 0.55 + Math.sin(this.t * 3) * 0.15;
+
       if (this.speakers && this.bass) this.speakers.scale.setScalar(1 + Math.max(0, Math.sin(this.t * 15)) * 0.08);
     }
     this.body.rotation.set(this.pitch, 0, this.roll);
