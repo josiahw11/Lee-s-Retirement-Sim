@@ -141,7 +141,9 @@ This is the way to go if you want the newest version or plan to change the game.
 
 **Characters.** Every resident is a skinned mesh on an 18-bone skeleton (knees, elbows, ankles, blinking eyes, head tracking).
 - **Limbs** are single continuous shapes with smooth joint weights: deltoids, biceps, forearm swell, a visible knee and a calf that bulges at the back. Elbows and knees bend instead of two capsules poking through each other.
-- **Heads** are one sculpted shape (cranium, cheekbones, jowls, chin, brow), with curly set-and-curl bobs and horseshoe fringes carved as hair shells.
+- **Heads** are one sculpted shape (cranium, cheekbones, jowls, chin, brow).
+- **Hair** is its own textured layer. Each style is a shaped shell wearing a hand-painted strand texture: hundreds of strands with highlights, a sheen band and darker roots. The ends and hairlines break into wisps, and a darker under-layer gives it depth.
+- **Hairstyles:** jaw-length bobs with bangs, tight blue-rinse perms, horseshoe fringes thinning on top, and combed-back dye jobs with a receding hairline. Hats sit on the hair.
 - **Clothes and hands:** Hawaiian shirts with folded, untucked hems; pleated dresses; tapered shorts; socks that hug the leg; sculpted sneakers and sandals; relaxed hands with a thumb.
 - **Detail:** pot bellies, pearls, readers, and socks with sandals.
 - **Performance:** near and far LODs share one skeleton, and limb meshes are cached across the crowd.

@@ -6,6 +6,7 @@ import { mergeParts, mat4 } from '../gfx/batch.js';
 import { M, shirtMaterial } from '../gfx/materials.js';
 import { GEO } from '../world/world.js';
 import { clamp, lerp, damp, pick } from '../core/utils.js';
+import { makeHair } from './hair.js';
 
 export const SKINS = ['#f1c7a5', '#e8b996', '#d9a07c', '#c68863', '#9a6545', '#f5d3b8', '#eab8a0', '#7a4a32'];
 export const HAIR_M = ['#f2f2f2', '#d9d9d9', '#bdbdbd', '#9a9a9a', '#1c1c1c', '#f2f2f2', '#e8e4dc'];
@@ -209,45 +210,6 @@ function beltGeo(lod) {
     return g;
   });
 }
-// Hair as one closed, sculpted shell around the skull. fn(nx, ny, nz) returns a radius multiplier:
-// ~1 is the hair surface, below ~0.88 sinks under the scalp (that's how hairlines and bald spots are
-// carved). A little 3D curl noise keeps it from reading as a plastic helmet.
-const curl = (x, y, z) => Math.sin(x * 13 + y * 5) * Math.sin(y * 11 - z * 7) * Math.sin(z * 12 + x * 6);
-function hairShell(key, lod, dims, fn) {
-  return template(`hair:${key}:${lod}`, () => {
-    const g = new THREE.SphereGeometry(1, lod ? 12 : 32, lod ? 9 : 22);
-    const p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      const m = fn(x, y, z);
-      p.setXYZ(i, x * dims[0] * m, y * dims[1] * m, z * dims[2] * m);
-    }
-    return g;
-  });
-}
-// ladies: a set-and-curl bob, teased high on top, the ends flipped under in little scallops
-function bobShell(vol, lod) {
-  return hairShell(`bob:${vol}`, lod, [0.19 * vol, 0.198, 0.184], (x, y, z) => {
-    const ang = Math.atan2(z, x);
-    let m = 1 + 0.035 * curl(x, y, z);
-    m += 0.05 * smooth(0.45, 0.95, y); // teased crown
-    m += (0.06 + 0.035 * Math.sin(ang * 11)) * Math.exp(-(((y + 0.42) / 0.13) ** 2)); // flipped-under, scalloped ends
-    m -= 0.3 * smooth(0.12, 0.45, z) * smooth(0.52, 0.22, y); // the face, carved out under the bangs
-    m -= 0.4 * smooth(-0.52, -0.7, y); // the cut line
-    m += 0.03 * smooth(0.3, 0.6, z) * Math.exp(-(((y - 0.55) / 0.12) ** 2)); // bangs swept forward
-    return m;
-  });
-}
-// gents: the horseshoe fringe around the back and sides, sideburns, bald on top
-function fringeShell(full, lod) {
-  return hairShell(`fringe:${full}:${lod}`, lod, [0.162, 0.18, 0.17], (x, y, z) => {
-    const band = full
-      ? smooth(0.62, 0.3, z) * smooth(-0.42, -0.2, y) * (1 - smooth(0.4, 0.75, z) * smooth(0.45, 0.2, y)) + smooth(0.55, 0.8, y)
-      : smooth(0.4, 0.12, z) * smooth(-0.42, -0.22, y) * smooth(0.36, 0.16, y) + smooth(0.75, 0.9, Math.abs(x)) * smooth(0.5, 0.2, z) * smooth(-0.45, -0.25, y) * smooth(0.2, 0.0, y);
-    return 0.86 + Math.min(1, band) * (0.15 + 0.03 * curl(x, y, z));
-  });
-}
-
 // a whole head from one sphere: cranium, cheekbones, sagging jowls, a chin, a brow
 function headGeo(female, lod) {
   return template(`head:${female}:${lod}`, () => {
@@ -393,15 +355,9 @@ function bodyParts(o, lod = false) {
     const mc = o.hair === '#1c1c1c' ? '#d9d9d9' : o.hair;
     for (const s of [1, -1]) cap(at(0, -0.05, 0.164), at(s * 0.052, -0.07, 0.146), 0.017, mc, 'head');
   }
-  // hair
-  if (o.female) {
-    const h = o.hair;
-    const vol = o.hat ? 1 : 1.06; // no hat = maximum hairspray
-    add(bobShell(vol, lod), h, mat4(C.x, C.y + 0.022, C.z - 0.018), 'head');
-  } else {
-    const h = o.hair;
-    add(fringeShell(o.hair === '#1c1c1c', lod), h, mat4(C.x, C.y + 0.012, C.z - 0.016), 'head'); // dyed black = full head, suspicious
-    if (o.combover && o.hair !== '#1c1c1c') for (let i = 0; i < 5; i++) cap(at(-0.1 + i * 0.012, 0.15 - i * 0.003, 0.08 - i * 0.04), at(0.11, 0.145 - i * 0.004, 0.06 - i * 0.04), 0.006, h, 'head');
+  // hair is its own textured mesh (hair.js); only the combover's few heroic strands live here
+  if (!o.female && o.combover && o.hair !== '#1c1c1c') {
+    for (let i = 0; i < 5; i++) cap(at(-0.1 + i * 0.012, 0.15 - i * 0.003, 0.08 - i * 0.04), at(0.11, 0.145 - i * 0.004, 0.06 - i * 0.04), 0.006, o.hair, 'head');
   }
   // glasses
   const gl = o.glasses;
@@ -416,7 +372,7 @@ function bodyParts(o, lod = false) {
   }
   // hats
   const hc = o.hatColor || '#ffffff';
-  const hy = o.female ? 0.06 : 0;
+  const hy = o.female ? 0.035 : 0; // hats sit on the set, not on the scalp
   if (o.hat === 'visor') {
     sc(T.cyl, hc, at(0, 0.1 + hy, 0), 0.162, 0.045, 0.17);
     sc(T.cyl, hc, at(0, 0.085 + hy, 0.16), 0.13, 0.012, 0.11, 'head', -0.1);
@@ -697,6 +653,13 @@ export class Character {
     this.skinLo.bind(skeleton);
     this.near = true;
 
+    // hair: textured strand shells on the head bone (near and far versions)
+    const headC = { x: 0, y: 0.15, z: 0.01 }; // head centre relative to the head bone
+    this.hairHi = makeHair(o, false, headC);
+    this.hairLo = makeHair(o, true, headC);
+    this.hairLo.visible = false;
+    this.b.head.add(this.hairHi, this.hairLo);
+
     // shirt / dress (patterned texture) rides on the spine
     this.torso = new THREE.Mesh(torsoGeometry(o), shirtMaterial(o.shirt));
     this.torso.castShadow = true;
@@ -744,6 +707,8 @@ export class Character {
     this.near = near;
     this.skin.visible = near;
     this.skinLo.visible = !near;
+    this.hairHi.visible = near;
+    this.hairLo.visible = !near;
   }
 
   setHeld(type) {
@@ -978,7 +943,7 @@ export class Character {
   dispose() {
     this.root.removeFromParent();
     // geometry is unique per character; materials are shared, keep them
-    this.root.traverse((o) => { if (o.isMesh && o.geometry) o.geometry.dispose(); });
+    this.root.traverse((o) => { if (o.isMesh && o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); }); // hair is shared
     if (this.skin.skeleton) this.skin.skeleton.dispose();
   }
 }
