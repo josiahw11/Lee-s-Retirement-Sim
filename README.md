@@ -47,6 +47,8 @@ This is the way to go if you want the newest version or plan to change the game.
 - *Black or blank screen:* turn on hardware acceleration in the browser settings, update your graphics drivers, or try Chrome or Edge. In the game's Esc menu, the **Low** graphics preset helps older laptops.
 - *The mouse doesn't turn the camera:* some browsers and embedded panes block mouse capture. Click and drag to look around instead, or use Z / C to rotate the camera.
 
+**Play online / releases:** publishing a GitHub Release (Releases → Draft a new release → pick a tag like `v0.2.0` → Publish) runs `.github/workflows/release.yml`, which builds the game, attaches `sunset-palms-<tag>.html` to the release, and deploys it to GitHub Pages. One-time setup: Settings → Pages → Source: **GitHub Actions**.
+
 ## Controls
 
 | Key | Action | Key | Action |
