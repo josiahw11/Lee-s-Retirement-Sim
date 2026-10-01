@@ -133,7 +133,7 @@ export class Player {
     }
     const moving = Math.hypot(mx, mz) > 0.05;
     const sprint = moving && (input.key('ShiftLeft') || input.key('ShiftRight')) && this.stamina > 2;
-    let spd = sprint ? 5.2 : 2.9;
+    let spd = sprint ? 6.25 : 3.5; // a brisk retiree
     if (g.state.buffs.rhino > 0) spd *= 1.3;
     spd *= 1 - drunk * 0.2;
     const wl = waterLevel(this.x, this.z);

@@ -6,6 +6,9 @@ import { clamp, damp, dampAngle, rand, pick, chance, wrapAngle } from '../core/u
 import { audio } from '../core/audio.js';
 import { routineZone, ROUTINE_ZONES } from './life.js';
 
+// everyone's on-foot pace (walk, run, Security's foot chase) scales together so chases stay fair
+export const PACE = 1.2;
+
 let NEXT_ID = 1;
 
 const HIT_BARKS_M = ['OW! My sciatica!', "That's my good hip!", 'You broke my dentures!', 'I fought in Korea for THIS?', "I'm calling my son-in-law! He's a lawyer!", 'My pacemaker!', 'I just had that knee done!'];
@@ -44,8 +47,8 @@ export class NPC {
     this.aggro = null;
     this.attackCd = rand(0.5, 1.5);
     this.windup = 0;
-    this.walkSpeed = o.walkSpeed || rand(0.95, 1.35);
-    this.runSpeed = o.runSpeed || rand(2.3, 2.9);
+    this.walkSpeed = (o.walkSpeed || rand(0.95, 1.35)) * PACE;
+    this.runSpeed = (o.runSpeed || rand(2.3, 2.9)) * PACE;
     this.icon = null;
     this.data = o.data || {};
     this.static = !!o.static;
@@ -348,7 +351,7 @@ export class NPC {
           }
         } else if (d > (this.weapon ? 1.8 : 1.3)) {
           moveX = dx / d; moveZ = dz / d;
-          spd = st === 'chaseFoot' ? 3.0 : this.runSpeed;
+          spd = st === 'chaseFoot' ? 3.0 * PACE : this.runSpeed;
           if (t === p && p.cart) spd = this.runSpeed;
         } else if (this.attackCd <= 0 && !(t === p && p.cart)) {
           this.windup = 0.45;

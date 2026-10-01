@@ -139,7 +139,12 @@ This is the way to go if you want the newest version or plan to change the game.
 - Free-roam goals follow.
 - 55+ achievements, graphics quality presets (Low/Medium/High), auto-save when you sleep, and three procedural radio stations plus a text-to-speech talk-radio station.
 
-**Characters.** Every resident is a skinned mesh on an 18-bone skeleton (knees, elbows, ankles, blinking eyes, head tracking), with a sculpted lathe torso, pot bellies, set-and-curl bobs, horseshoe fringes, pearls, readers, and socks with sandals. Near and far LODs share one skeleton.
+**Characters.** Every resident is a skinned mesh on an 18-bone skeleton (knees, elbows, ankles, blinking eyes, head tracking).
+- **Limbs** are single continuous shapes with smooth joint weights: deltoids, biceps, forearm swell, a visible knee and a calf that bulges at the back. Elbows and knees bend instead of two capsules poking through each other.
+- **Heads** are one sculpted shape (cranium, cheekbones, jowls, chin, brow), with curly set-and-curl bobs and horseshoe fringes carved as hair shells.
+- **Clothes and hands:** Hawaiian shirts with folded, untucked hems; pleated dresses; tapered shorts; socks that hug the leg; sculpted sneakers and sandals; relaxed hands with a thumb.
+- **Detail:** pot bellies, pearls, readers, and socks with sandals.
+- **Performance:** near and far LODs share one skeleton, and limb meshes are cached across the crowd.
 
 Everything is procedural: all models, textures, music and sound effects are generated in code, with no asset files.
 

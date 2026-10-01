@@ -47,38 +47,228 @@ function between(a, b, sx = 1, sz = 1, sy = 1) {
 }
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
-// Short sleeve / shorts leg with a domed top so the fabric caps the shoulder joint
-// (local +y runs from the joint toward the elbow, matching between()).
-const sleeveCache = new Map();
-function sleeveGeo(len, r, dome, lod) {
-  const k = `${len.toFixed(3)}:${r}:${dome}:${lod}`;
-  if (!sleeveCache.has(k)) {
-    const h = len / 2;
-    const prof = dome > 0
-      ? [[0, -h - dome], [r * 0.5, -h - dome * 0.87], [r * 0.8, -h - dome * 0.55], [r * 0.96, -h - dome * 0.2], [r, -h], [r * 0.97, h - 0.012], [r * 0.99, h]]
-      : [[r, -h], [r * 0.97, h - 0.012], [r * 0.99, h]];
-    sleeveCache.set(k, lathe(prof, lod ? 9 : 14));
+// ---------------------------------------------------------------- smooth skinned tubes (limbs)
+// A tube swept through rings in rest pose. Each ring carries its own colour and bone weights, so one
+// continuous limb bends smoothly at the elbow/knee instead of two rigid capsules poking through each
+// other. Where the colour changes (sock tops) the ring is doubled so the edge stays crisp.
+const _tt = new THREE.Vector3(), _tn = new THREE.Vector3(), _tb = new THREE.Vector3(), _fwd = new THREE.Vector3(0, 0, 1);
+function tube(rings, segs, { capStart = true, capEnd = true } = {}) {
+  const R = [];
+  rings.forEach((r, i) => { if (i && rings[i - 1].col !== r.col) R.push({ ...r, col: rings[i - 1].col }); R.push(r); });
+  const nr = R.length;
+  const P = [], meta = [];
+  for (let i = 0; i < nr; i++) {
+    const a = R[Math.max(0, i - 1)].c, b = R[Math.min(nr - 1, i + 1)].c;
+    _tt.subVectors(b, a);
+    if (_tt.lengthSq() < 1e-12) _tt.set(0, -1, 0);
+    _tt.normalize();
+    _tn.copy(_fwd).addScaledVector(_tt, -_fwd.dot(_tt)).normalize(); // toward the front
+    _tb.crossVectors(_tt, _tn).normalize(); // across
+    const r = R[i];
+    for (let k = 0; k < segs; k++) {
+      const ang = (k / segs) * Math.PI * 2;
+      // a touch flatter at the back so calves and forearms read as muscle, not pipes
+      const rz = r.rz * (Math.cos(ang) < 0 ? r.back ?? 1 : 1);
+      P.push(r.c.x + _tn.x * Math.cos(ang) * rz + _tb.x * Math.sin(ang) * r.rx, r.c.y + _tn.y * Math.cos(ang) * rz + _tb.y * Math.sin(ang) * r.rx, r.c.z + _tn.z * Math.cos(ang) * rz + _tb.z * Math.sin(ang) * r.rx);
+      meta.push(r);
+    }
   }
-  return sleeveCache.get(k);
+  const idx = [];
+  for (let i = 0; i < nr - 1; i++) {
+    for (let k = 0; k < segs; k++) {
+      const a = i * segs + k, b = i * segs + ((k + 1) % segs), c = (i + 1) * segs + k, d = (i + 1) * segs + ((k + 1) % segs);
+      idx.push(a, b, c, b, d, c);
+    }
+  }
+  const cap = (ring, flip) => {
+    const ci = P.length / 3, r = R[ring];
+    P.push(r.c.x, r.c.y, r.c.z);
+    meta.push(r);
+    for (let k = 0; k < segs; k++) {
+      const a = ring * segs + k, b = ring * segs + ((k + 1) % segs);
+      if (flip) idx.push(ci, b, a); else idx.push(ci, a, b);
+    }
+  };
+  if (capStart) cap(0, false);
+  if (capEnd) cap(nr - 1, true);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  g.setIndex(idx);
+  // make sure the faces point outward (the frame's handedness depends on the limb direction)
+  const p0 = V(P[0], P[1], P[2]), p1 = V(P[3], P[4], P[5]), p2 = V(P[segs * 3], P[segs * 3 + 1], P[segs * 3 + 2]);
+  const nrm = new THREE.Vector3().subVectors(p1, p0).cross(new THREE.Vector3().subVectors(p2, p0));
+  if (nrm.dot(new THREE.Vector3().subVectors(p0, R[0].c)) < 0) { const ix = g.index.array; for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; } }
+  g.computeVertexNormals();
+  // flatten to the raw per-vertex layout buildSkinnedGeometry writes
+  const ix = g.index.array, nor = g.attributes.normal.array, n = ix.length;
+  const raw = { n, pos: new Float32Array(n * 3), nor: new Float32Array(n * 3), col: new Float32Array(n * 3), si: new Uint16Array(n * 4), sw: new Float32Array(n * 4) };
+  const cc = new THREE.Color();
+  for (let j = 0; j < n; j++) {
+    const v = ix[j], m = meta[v];
+    raw.pos.set([P[v * 3], P[v * 3 + 1], P[v * 3 + 2]], j * 3);
+    raw.nor.set([nor[v * 3], nor[v * 3 + 1], nor[v * 3 + 2]], j * 3);
+    cc.set(m.col);
+    raw.col.set([cc.r, cc.g, cc.b], j * 3);
+    m.w.forEach(([bone, wt], q) => { raw.si[j * 4 + q] = bone; raw.sw[j * 4 + q] = wt; });
+  }
+  g.dispose();
+  return raw;
 }
 
-// Hair shells hug the skull instead of stacking balls on it.
-// Men: horseshoe fringe around the back and sides (the classic retiree pattern).
-const FRINGE = new THREE.SphereGeometry(1, 20, 6, Math.PI - 0.42, Math.PI + 0.84, 1.12, 0.68);
-// Women: one sculpted set-and-curl bob with the face left open and the ends flipped under.
-const bobCache = new Map();
-function bobGeo(volume, lod) {
-  const k = `${volume}:${lod}`;
-  if (!bobCache.has(k)) {
-    const v = volume;
-    const prof = [[0.148, -0.118], [0.176, -0.132], [0.198 * v, -0.112], [0.204 * v, -0.05], [0.198 * v, 0.03], [0.182 * v, 0.1], [0.148 * v, 0.158], [0.09 * v, 0.19], [0.0, 0.2]];
-    const g = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(Math.max(0.0001, r), y)), lod ? 12 : 22, 0.95, Math.PI * 2 - 1.9);
+// Limb tubes depend only on a handful of look values (gender, skin/sock/cloth colours, sock height),
+// so a crowd of 100 residents shares a few dozen of them instead of rebuilding each one.
+const tubeCache = new Map();
+const cachedTube = (key, make) => { if (!tubeCache.has(key)) tubeCache.set(key, make()); return tubeCache.get(key); };
+
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+
+// Rings for a two-segment limb J0 -> J1 -> J2 (shoulder/elbow/wrist or hip/knee/ankle).
+// prof: [[s, r, opts], ...] with s = metres along the limb from J0 (negative runs back past J0).
+// Weights blend upper -> lower bone across the middle joint, and into `end` near J2 if given.
+function limbRings(J0, J1, J2, bones, prof, { blend = 0.055, colorAt, extra } = {}) {
+  const [b0, b1, b2] = bones;
+  const L1 = J0.distanceTo(J1), L2 = J1.distanceTo(J2);
+  const d1 = new THREE.Vector3().subVectors(J1, J0).normalize(), d2 = new THREE.Vector3().subVectors(J2, J1).normalize();
+  return prof.map(([s, r, o = {}]) => {
+    const c = s <= L1 ? J0.clone().addScaledVector(d1, s) : J1.clone().addScaledVector(d2, s - L1);
+    if (o.dz) c.z += o.dz;
+    const lower = smooth(L1 - blend, L1 + blend, s);
+    let w = [[BI[b0], 1 - lower], [BI[b1], lower]];
+    if (b2 && s > L1 + L2 - 0.035) { const e = smooth(L1 + L2 - 0.035, L1 + L2 + 0.01, s); w = [[BI[b0], (1 - lower) * (1 - e)], [BI[b1], lower * (1 - e)], [BI[b2], e]]; }
+    if (o.top) w = [[BI[o.top], 1 - smooth(-0.06, 0.06, s)], [BI[b0], smooth(-0.06, 0.06, s)]]; // anchor the top to the parent
+    const ring = { c, rx: r * (o.sx || 1), rz: r * (o.sz || 1), back: o.back, col: colorAt ? colorAt(s) : o.col, w };
+    return extra ? extra(ring, s) : ring;
+  });
+}
+
+// ---------------------------------------------------------------- sculpted templates (hands, shoes, head)
+// One deformed mesh each, so they read as a hand / a sneaker / a face instead of stacked balls.
+const tplCache = new Map();
+function template(key, make) {
+  if (!tplCache.has(key)) { const g = make(); g.computeVertexNormals(); tplCache.set(key, g); }
+  return tplCache.get(key);
+}
+// relaxed hand: a mitten with knuckles and gently curled fingers (the thumb is its own capsule)
+function handGeo(lod) {
+  return template(`hand:${lod}`, () => {
+    const g = new THREE.SphereGeometry(1, lod ? 8 : 14, lod ? 6 : 12);
     const p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) * 0.96);
-    g.computeVertexNormals();
-    bobCache.set(k, g);
-  }
-  return bobCache.get(k);
+    for (let i = 0; i < p.count; i++) {
+      let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const fing = smooth(0.1, -0.6, y); // 0 at the palm, 1 toward the fingertips
+      x *= 0.041 * (1 + 0.12 * Math.max(0, -y) - 0.25 * fing * fing);
+      z *= 0.024 * (1 - 0.25 * fing);
+      y *= 0.06;
+      if (!lod) z += Math.sin(x * 140) * 0.0025 * fing * (z > 0 ? 1 : 0); // finger grooves on the back
+      z += fing * fing * 0.018; // curl
+      p.setXYZ(i, x, y, z);
+    }
+    return g;
+  });
+}
+// sneaker / loafer upper: rounded toe, narrower heel, flat bottom
+function shoeGeo(lod) {
+  return template(`shoe:${lod}`, () => {
+    const g = new THREE.SphereGeometry(1, lod ? 9 : 16, lod ? 6 : 10);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const toe = Math.max(0, z);
+      let X = x * 0.056 * (z < 0 ? 0.86 : 1 - 0.1 * toe * toe);
+      let Y = y * 0.048 * (1 - 0.35 * toe * toe); // lower at the toe
+      const Z = z * 0.128;
+      if (Y < -0.022) Y = -0.022 + (Y + 0.022) * 0.15; // flat sole
+      Y += 0.012 * toe * toe; // slight toe spring
+      p.setXYZ(i, X, Y, Z);
+    }
+    return g;
+  });
+}
+function soleGeo(lod) {
+  return template(`sole:${lod}`, () => {
+    const g = shoeGeo(lod).clone();
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) * 1.07, Math.max(-0.028, Math.min(-0.012, p.getY(i) - 0.008)), p.getZ(i) * 1.05);
+    return g;
+  });
+}
+// the seat of the shorts: hips that round under into the legs
+function pelvisGeo(lod) {
+  return template(`pelvis:${lod}`, () => {
+    const g = lathe([[0.0, -0.118], [0.1, -0.112], [0.165, -0.092], [0.203, -0.055], [0.218, 0.0], [0.222, 0.045], [0.22, 0.075]], lod ? 12 : 26);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) * 0.84);
+    return g;
+  });
+}
+function beltGeo(lod) {
+  return template(`belt:${lod}`, () => {
+    const g = lathe([[0.221, 0.04], [0.227, 0.044], [0.227, 0.069], [0.221, 0.073]], lod ? 12 : 26);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) * 0.84);
+    return g;
+  });
+}
+// Hair as one closed, sculpted shell around the skull. fn(nx, ny, nz) returns a radius multiplier:
+// ~1 is the hair surface, below ~0.88 sinks under the scalp (that's how hairlines and bald spots are
+// carved). A little 3D curl noise keeps it from reading as a plastic helmet.
+const curl = (x, y, z) => Math.sin(x * 13 + y * 5) * Math.sin(y * 11 - z * 7) * Math.sin(z * 12 + x * 6);
+function hairShell(key, lod, dims, fn) {
+  return template(`hair:${key}:${lod}`, () => {
+    const g = new THREE.SphereGeometry(1, lod ? 12 : 32, lod ? 9 : 22);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const m = fn(x, y, z);
+      p.setXYZ(i, x * dims[0] * m, y * dims[1] * m, z * dims[2] * m);
+    }
+    return g;
+  });
+}
+// ladies: a set-and-curl bob, teased high on top, the ends flipped under in little scallops
+function bobShell(vol, lod) {
+  return hairShell(`bob:${vol}`, lod, [0.19 * vol, 0.198, 0.184], (x, y, z) => {
+    const ang = Math.atan2(z, x);
+    let m = 1 + 0.035 * curl(x, y, z);
+    m += 0.05 * smooth(0.45, 0.95, y); // teased crown
+    m += (0.06 + 0.035 * Math.sin(ang * 11)) * Math.exp(-(((y + 0.42) / 0.13) ** 2)); // flipped-under, scalloped ends
+    m -= 0.3 * smooth(0.12, 0.45, z) * smooth(0.52, 0.22, y); // the face, carved out under the bangs
+    m -= 0.4 * smooth(-0.52, -0.7, y); // the cut line
+    m += 0.03 * smooth(0.3, 0.6, z) * Math.exp(-(((y - 0.55) / 0.12) ** 2)); // bangs swept forward
+    return m;
+  });
+}
+// gents: the horseshoe fringe around the back and sides, sideburns, bald on top
+function fringeShell(full, lod) {
+  return hairShell(`fringe:${full}:${lod}`, lod, [0.162, 0.18, 0.17], (x, y, z) => {
+    const band = full
+      ? smooth(0.62, 0.3, z) * smooth(-0.42, -0.2, y) * (1 - smooth(0.4, 0.75, z) * smooth(0.45, 0.2, y)) + smooth(0.55, 0.8, y)
+      : smooth(0.4, 0.12, z) * smooth(-0.42, -0.22, y) * smooth(0.36, 0.16, y) + smooth(0.75, 0.9, Math.abs(x)) * smooth(0.5, 0.2, z) * smooth(-0.45, -0.25, y) * smooth(0.2, 0.0, y);
+    return 0.86 + Math.min(1, band) * (0.15 + 0.03 * curl(x, y, z));
+  });
+}
+
+// a whole head from one sphere: cranium, cheekbones, sagging jowls, a chin, a brow
+function headGeo(female, lod) {
+  return template(`head:${female}:${lod}`, () => {
+    const g = new THREE.SphereGeometry(1, lod ? 12 : 30, lod ? 9 : 22);
+    const p = g.attributes.position;
+    const bump = (x, y, z, cx, cy, cz, r) => Math.exp(-(((x - cx) ** 2 + (y - cy) ** 2 + (z - cz) ** 2) / (r * r)));
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      let X = x, Y = y, Z = z;
+      const low = smooth(-0.15, -0.85, y); // jaw region
+      X *= 1 + (female ? 0.02 : 0.1) * low * (1 - smooth(-0.75, -1, y) * 0.6); // jowls widen, then tuck in
+      Z *= z < 0 ? 0.93 : 1; // flatter back of the skull
+      Z += (female ? 0.05 : 0.1) * bump(x, y, z, 0, -0.82, 0.55, 0.35); // chin
+      Z += 0.05 * bump(x, y, z, 0, 0.38, 0.92, 0.28); // brow
+      Z += 0.03 * (bump(x, y, z, 0.62, -0.05, 0.75, 0.3) + bump(x, y, z, -0.62, -0.05, 0.75, 0.3)); // cheekbones
+      Z -= 0.035 * (bump(x, y, z, 0.37, 0.2, 0.93, 0.18) + bump(x, y, z, -0.37, 0.2, 0.93, 0.18)); // eye sockets
+      Y -= (female ? 0.02 : 0.06) * low * (1 - Math.abs(x)); // a little sag
+      p.setXYZ(i, X * 0.15, Y * 0.17, Z * 0.158);
+    }
+    return g;
+  });
 }
 
 // ---------------------------------------------------------------- torso & dress (lathe)
@@ -91,7 +281,7 @@ function torsoGeometry(o) {
   const prof = o.female
     ? [[0.0, -0.06], [0.19, -0.05], [0.2, 0.05], [0.205, 0.16], [0.215, 0.3], [0.22, 0.4], [0.2, 0.49], [0.14, 0.56], [0.075, 0.59]]
     : [[0.0, -0.06], [0.2, -0.05], [0.225, 0.03], [0.24 + (b - 1) * 0.07, 0.15], [0.245 + (b - 1) * 0.04, 0.26], [0.235, 0.37], [0.235, 0.45], [0.205, 0.52], [0.13, 0.565], [0.075, 0.59]];
-  const g = lathe(prof);
+  const g = lathe(prof, 34);
   const p = g.attributes.position;
   const bellyAmt = o.female ? 0 : Math.max(0, b - 0.9) * 0.24; // a pot belly sticks out front, not sideways
   for (let i = 0; i < p.count; i++) {
@@ -100,15 +290,24 @@ function torsoGeometry(o) {
     const front = Math.max(0, z / 0.2);
     z += bellyAmt * Math.exp(-(((y - 0.17) / 0.13) ** 2)) * front;
     if (o.female) z += 0.055 * Math.exp(-(((y - 0.37) / 0.07) ** 2)) * front; // bust
-    p.setXYZ(i, x * 1.0, y, z);
+    // untucked shirt: soft folds that flare a little at the hem
+    const hem = o.female ? 0 : smooth(0.06, -0.05, y);
+    const fold = 1 + hem * (0.035 + 0.02 * Math.sin(Math.atan2(z, x) * 7));
+    p.setXYZ(i, x * fold, y, z * fold);
   }
   g.computeVertexNormals();
   const parts = [g];
   if (o.female) {
     // lathe profiles must run bottom -> top so the surface faces outward
-    const skirt = lathe([[0.34, -0.5], [0.33, -0.44], [0.29, -0.26], [0.24, -0.08], [0.2, 0.04]], 22);
+    const skirt = lathe([[0.33, -0.5], [0.335, -0.47], [0.33, -0.44], [0.29, -0.26], [0.24, -0.08], [0.2, 0.04]], 54);
     const sp = skirt.attributes.position;
-    for (let i = 0; i < sp.count; i++) sp.setZ(i, sp.getZ(i) * 0.88);
+    for (let i = 0; i < sp.count; i++) {
+      // soft pleats that open up toward a wavy hem
+      const x = sp.getX(i), y = sp.getY(i), z = sp.getZ(i);
+      const down = smooth(0.0, -0.5, y);
+      const f = 1 + down * down * (0.06 * Math.sin(Math.atan2(z, x) * 9) + 0.02 * Math.sin(Math.atan2(z, x) * 23));
+      sp.setXYZ(i, x * f, y + down * 0.012 * Math.sin(Math.atan2(z, x) * 9), z * f * 0.88);
+    }
     skirt.computeVertexNormals();
     parts.push(skirt);
   }
@@ -157,11 +356,11 @@ function bodyParts(o, lod = false) {
   const tiny = (g, color, p, sx, sy, sz, bone = 'head') => sc(g, color, p, sx, sy, sz, bone, 0, 0, 0, true);
   const cap = (a, b, r, color, bone, detail = false) => { const { m, len } = between(a, b); add(capsule(r, len, lod), color, m, bone, detail); };
 
-  // ---- head
-  sc(T.hi, skin, C, 0.15, 0.172, 0.158);
-  sc(T.sph, skin, at(0, 0.02, -0.035), 0.142, 0.152, 0.14);
-  sc(T.sph, skin, at(0, -0.085, 0.018), 0.128, 0.088, 0.128); // jowls
-  sc(T.lo, skin, at(0, -0.112, 0.098), 0.048, 0.034, 0.036); // chin
+  const raw = (r) => parts.push({ raw: r });
+  const segs = lod ? 7 : 14;
+
+  // ---- head: one sculpted shape (cranium, cheekbones, jowls, chin) instead of stacked spheres
+  add(headGeo(!!o.female, lod), skin, mat4(C.x, C.y, C.z), 'head');
   if (o.female) {
     const blush = new THREE.Color(skin).lerp(new THREE.Color('#e8828a'), 0.45).getStyle();
     sc(T.sph, blush, at(0.07, -0.03, 0.104), 0.034, 0.024, 0.02);
@@ -196,16 +395,13 @@ function bodyParts(o, lod = false) {
   }
   // hair
   if (o.female) {
-    const h = o.hair, hd = darker(o.hair, 0.9);
+    const h = o.hair;
     const vol = o.hat ? 1 : 1.06; // no hat = maximum hairspray
-    add(bobGeo(vol, lod), h, mat4(C.x, C.y + 0.03, C.z - 0.03), 'head');
-    add(T.hi, hd, mat4(C.x, C.y + 0.07, C.z - 0.05, 0, 0.17 * vol, 0.15 * vol, 0.16), 'head'); // crown volume inside the shell
-    sc(T.sph, h, at(0, 0.13, 0.08), 0.142, 0.056, 0.08, 'head', 0.25); // swept bangs
+    add(bobShell(vol, lod), h, mat4(C.x, C.y + 0.022, C.z - 0.018), 'head');
   } else {
     const h = o.hair;
-    add(FRINGE, h, mat4(C.x, C.y + 0.012, C.z - 0.022, 0, 0.162, 0.178, 0.17), 'head');
-    if (o.hair === '#1c1c1c') sc(T.hi, h, at(0, 0.11, -0.01), 0.158, 0.078, 0.164); // dyed, full, suspicious
-    else if (o.combover) for (let i = 0; i < 5; i++) cap(at(-0.1 + i * 0.012, 0.15 - i * 0.003, 0.08 - i * 0.04), at(0.11, 0.145 - i * 0.004, 0.06 - i * 0.04), 0.006, h, 'head');
+    add(fringeShell(o.hair === '#1c1c1c', lod), h, mat4(C.x, C.y + 0.012, C.z - 0.016), 'head'); // dyed black = full head, suspicious
+    if (o.combover && o.hair !== '#1c1c1c') for (let i = 0; i < 5; i++) cap(at(-0.1 + i * 0.012, 0.15 - i * 0.003, 0.08 - i * 0.04), at(0.11, 0.145 - i * 0.004, 0.06 - i * 0.04), 0.006, h, 'head');
   }
   // glasses
   const gl = o.glasses;
@@ -278,49 +474,71 @@ function bodyParts(o, lod = false) {
     cap(V(-0.18, HIP + 0.53, -0.02), V(-0.03, HIP + 0.44, 0.17), 0.04, o.sweater, 'spine');
     sc(T.sph, darker(o.sweater, 0.9), V(0, HIP + 0.43, 0.18), 0.045, 0.04, 0.03, 'spine');
   }
-  // ---- shorts / belt (men)
+  // ---- shorts (men): a rounded seat instead of a drum, plus the belt
   if (!o.female) {
-    const sh = o.shorts;
-    add(T.cyl, sh, mat4(0, HIP - 0.02, 0, 0, 0.228, 0.16, 0.19), 'hips');
-    add(T.cyl, '#3a2a1a', mat4(0, HIP + 0.055, 0, 0, 0.232, 0.03, 0.194), 'hips');
-    sc(T.box, '#c9a64a', V(0, HIP + 0.055, 0.19), 0.035, 0.024, 0.01, 'hips');
+    add(pelvisGeo(lod), o.shorts, mat4(0, HIP, 0), 'hips');
+    add(beltGeo(lod), '#3a2a1a', mat4(0, HIP, 0), 'hips');
+    sc(T.box, '#c9a64a', V(0, HIP + 0.056, 0.186), 0.035, 0.024, 0.01, 'hips');
   }
-  // ---- arms
+  // ---- arms: one continuous limb each (deltoid, biceps, soft elbow, forearm, slim wrist)
   for (const [side, sh, el, ha] of [[1, 'shL', 'elL', 'haL'], [-1, 'shR', 'elR', 'haR']]) {
     const A = ABS[sh], E = ABS[el], H = ABS[ha];
-    cap(A, E, 0.058, skin, sh);
-    const sl = between(A, A.clone().lerp(E, 0.58));
-    add(sleeveGeo(sl.len, 0.084, 0.07, lod), sleeve, sl.m, sh);
-    cap(E, H, 0.045, skin, el);
-    // hand: palm + fingers block + thumb
-    sc(T.sph, skin, V(H.x, H.y - 0.05, H.z + 0.006), 0.04, 0.058, 0.028, ha);
-    sc(T.sph, darker(skin, 0.96), V(H.x, H.y - 0.098, H.z + 0.012), 0.034, 0.03, 0.024, ha);
-    cap(V(H.x - side * 0.02, H.y - 0.03, H.z + 0.025), V(H.x - side * 0.03, H.y - 0.07, H.z + 0.04), 0.012, skin, ha, true);
-    if (!o.female && side > 0) sc(T.cylLo, '#c9a64a', V(H.x, H.y + 0.035, H.z), 0.05, 0.022, 0.05, el); // gold watch
-    if (o.female && side < 0) add(T.torus, '#f2c94c', mat4(H.x, H.y + 0.04, H.z, 0, 0.05, 0.05, 0.3, Math.PI / 2), el);
+    const L1 = A.distanceTo(E), L2 = E.distanceTo(H);
+    const k = o.female ? 0.88 : 1;
+    raw(cachedTube(`arm:${side}:${!!o.female}:${skin}:${lod}`, () => tube(limbRings(A, E, H, [sh, el], [
+      [-0.045, 0.05 * k], [0, 0.058 * k], [0.05, 0.058 * k], [0.11, 0.054 * k], [0.18, 0.048 * k], [L1 - 0.03, 0.043 * k],
+      [L1, 0.041 * k], [L1 + 0.03, 0.043 * k, { sz: 0.9 }], [L1 + 0.08, 0.045 * k, { sz: 0.85 }], [L1 + 0.15, 0.037 * k, { sz: 0.84 }],
+      [L1 + L2 - 0.035, 0.03 * k, { sz: 0.8 }], [L1 + L2 + 0.008, 0.028 * k, { sz: 0.8 }],
+    ], { colorAt: () => skin }), segs)));
+    // short sleeve: domed over the shoulder, open hem
+    const SL = L1 * 0.58;
+    raw(cachedTube(`sleeve:${side}:${sleeve}:${lod}`, () => tube(limbRings(A, E, H, [sh, el], [
+      [-0.08, 0.012], [-0.075, 0.04], [-0.062, 0.06], [-0.038, 0.073], [0, 0.078], [SL * 0.55, 0.076], [SL - 0.008, 0.074], [SL, 0.076],
+    ], { colorAt: () => sleeve }), segs, { capEnd: false })));
+    // relaxed hand, palm toward the thigh, thumb forward
+    add(handGeo(lod), skin, mat4(H.x - side * 0.004, H.y - 0.056, H.z + 0.004, -side * Math.PI / 2), ha);
+    cap(V(H.x - side * 0.014, H.y - 0.026, H.z + 0.026), V(H.x - side * 0.024, H.y - 0.066, H.z + 0.042), 0.012, skin, ha, true);
+    if (!o.female && side > 0) sc(T.cylLo, '#c9a64a', V(H.x, H.y + 0.035, H.z), 0.042, 0.022, 0.038, el); // gold watch
+    if (o.female && side < 0) add(T.torus, '#f2c94c', mat4(H.x, H.y + 0.04, H.z, 0, 0.042, 0.042, 0.3, Math.PI / 2), el);
   }
-  // ---- legs
+  // ---- legs: thigh, a knee you can see, a calf that bulges at the back, ankles; socks painted on
   for (const [side, hp, kn, an] of [[1, 'hipL', 'knL', 'anL'], [-1, 'hipR', 'knR', 'anR']]) {
     const Hh = ABS[hp], K = ABS[kn], A = ABS[an];
-    cap(Hh, K, 0.07, skin, hp);
-    if (!o.female) {
-      const leg = between(Hh, Hh.clone().lerp(K, 0.62), 0.1, 0.095, 1);
-      add(T.cylLo, o.shorts, leg.m.multiply(new THREE.Matrix4().makeScale(1, leg.len, 1)), hp);
-    }
-    cap(K, A, 0.05, skin, kn);
-    tiny(T.lo, darker(skin, 0.96), V(K.x, K.y - 0.12, K.z - 0.035), 0.05, 0.08, 0.045, kn); // calf
+    const L1 = Hh.distanceTo(K), L2 = K.distanceTo(A), end = L1 + L2;
+    const k = o.female ? 0.88 : 1;
     const sockH = o.sock === '#141414' ? 0.24 : 0.13;
-    add(T.cylLo, o.sock, mat4(A.x, A.y + sockH / 2 - 0.01, A.z, 0, 0.058, sockH, 0.058), kn);
-    // shoes: sandals (with the socks, obviously) or sneakers/loafers
+    const sockFrom = end - sockH + 0.01;
+    const prof = [
+      [-0.06, 0.072 * k, { top: 'hips' }], [0, 0.082 * k, { top: 'hips' }], [0.07, 0.081 * k], [0.15, 0.075 * k], [0.24, 0.066 * k], [0.32, 0.058 * k],
+      [L1, 0.054 * k, { sz: 1.06 }], [L1 + 0.04, 0.054 * k], [L1 + 0.1, 0.058 * k, { back: 1.28 }], [L1 + 0.16, 0.054 * k, { back: 1.22 }],
+      [L1 + 0.24, 0.044 * k, { back: 1.08 }], [L1 + 0.31, 0.037 * k], [end - 0.035, 0.033 * k], [end + 0.012, 0.034 * k],
+    ];
+    if (!prof.some(([q]) => Math.abs(q - sockFrom) < 0.004)) {
+      // a ring exactly at the sock top so the colour edge is crisp
+      const after = prof.findIndex(([q]) => q > sockFrom);
+      const [s0, r0, o0] = prof[after - 1], [s1, r1] = prof[after];
+      prof.splice(after, 0, [sockFrom, r0 + (r1 - r0) * ((sockFrom - s0) / (s1 - s0)), { back: o0?.back }]);
+    }
+    raw(cachedTube(`leg:${side}:${!!o.female}:${skin}:${o.sock}:${sockH}:${lod}`, () => tube(limbRings(Hh, K, A, [hp, kn, an], prof, {
+      colorAt: (q) => (q >= sockFrom - 1e-4 ? o.sock : skin),
+      extra: (ring, q) => { if (q >= sockFrom - 1e-4) { ring.rx += 0.004; ring.rz += 0.004; } return ring; },
+    }), segs)));
+    if (!o.female) {
+      // shorts leg: loose, slightly flared at the hem, anchored to the hips at the top
+      const SH = L1 * 0.62;
+      raw(cachedTube(`shorts:${side}:${o.shorts}:${lod}`, () => tube(limbRings(Hh, K, A, [hp, kn], [
+        [-0.08, 0.098, { top: 'hips' }], [0, 0.104, { top: 'hips' }], [0.07, 0.103, { sz: 0.94 }], [SH * 0.6, 0.097, { sz: 0.92 }], [SH - 0.012, 0.094, { sz: 0.92 }], [SH, 0.1, { sz: 0.94 }],
+      ], { colorAt: () => o.shorts }), segs, { capStart: false, capEnd: false })));
+    }
+    // shoes: sculpted upper + sole (sandals are a sock foot + straps, obviously)
     const sandal = o.shoe === '#6b4a2a';
-    sc(T.box, darker(o.shoe, 0.8), V(A.x, A.y - 0.062, A.z + 0.045), 0.1, 0.022, 0.25, an);
+    add(soleGeo(lod), darker(o.shoe, 0.75), mat4(A.x, A.y - 0.04, A.z + 0.045), an);
     if (sandal) {
-      sc(T.sph, o.sock, V(A.x, A.y - 0.035, A.z + 0.06), 0.052, 0.035, 0.11, an);
-      sc(T.box, o.shoe, V(A.x, A.y - 0.03, A.z + 0.1), 0.108, 0.014, 0.035, an);
-      sc(T.box, o.shoe, V(A.x, A.y - 0.03, A.z + 0.0), 0.108, 0.014, 0.03, an);
+      add(shoeGeo(lod), o.sock, mat4(A.x, A.y - 0.042, A.z + 0.045, 0, 0.9, 0.8, 0.94), an);
+      sc(T.box, o.shoe, V(A.x, A.y - 0.03, A.z + 0.1), 0.1, 0.014, 0.035, an);
+      sc(T.box, o.shoe, V(A.x, A.y - 0.03, A.z + 0.0), 0.1, 0.014, 0.03, an);
     } else {
-      sc(T.sph, o.shoe, V(A.x, A.y - 0.03, A.z + 0.055), 0.058, 0.042, 0.125, an);
-      sc(T.lo, darker(o.shoe, 0.9), V(A.x, A.y - 0.02, A.z - 0.04), 0.05, 0.04, 0.05, an);
+      add(shoeGeo(lod), o.shoe, mat4(A.x, A.y - 0.04, A.z + 0.045), an);
     }
   }
   return parts;
@@ -345,12 +563,18 @@ const _v = new THREE.Vector3();
 const _c = new THREE.Color();
 function buildSkinnedGeometry(parts) {
   let total = 0;
-  const flats = parts.map((p) => { const f = flat(p.geo); total += f.n; return f; });
+  const flats = parts.map((p) => { const f = p.raw || flat(p.geo); total += f.n; return f; });
   const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), col = new Float32Array(total * 3);
   const si = new Uint16Array(total * 4), sw = new Float32Array(total * 4);
   let o = 0;
   parts.forEach((p, k) => {
     const f = flats[k];
+    if (p.raw) { // pre-built, pre-weighted (smooth limbs): copy straight in
+      pos.set(f.pos, o * 3); nor.set(f.nor, o * 3); col.set(f.col, o * 3);
+      si.set(f.si, o * 4); sw.set(f.sw, o * 4);
+      o += f.n;
+      return;
+    }
     _nm.getNormalMatrix(p.m);
     _c.set(p.color);
     for (let i = 0; i < f.n; i++, o++) {
