@@ -484,3 +484,14 @@ body.touch #hint { bottom: 84px; }
 .act-go { padding: 4px 10px; font-size: 12px; }
 .act-wp { background: #fff5d6; border-radius: 10px; padding: 6px 10px; margin-bottom: 8px; font-weight: 800; }
 .act-wp .btn { padding: 2px 8px; font-size: 11px; margin-left: 6px; }
+
+/* Amateur Night at the Golden Garter: moves slide in from the right to the ring */
+.an-track { position: relative; height: 58px; margin: 8px 2px 4px; border-radius: 10px; border: 2px solid #1d2b53; overflow: hidden; background: linear-gradient(90deg, #2a0f2e, #4a1650 60%, #2a0f2e); }
+.an-hit { position: absolute; left: 10%; top: 5px; width: 46px; height: 44px; margin-left: -23px; border-radius: 50%; border: 3px dashed #ffd23f; box-sizing: border-box; box-shadow: 0 0 12px #ffb000 inset; }
+.an-note { position: absolute; top: 6px; width: 46px; margin-left: -23px; text-align: center; color: #fff; font-weight: 900; line-height: 1; pointer-events: none; }
+.an-note b { display: block; font-size: 28px; text-shadow: 0 0 8px #ff4fa3, 0 0 2px #000; }
+.an-note small { display: block; position: relative; left: 50%; transform: translateX(-50%); width: max-content; font-size: 9px; letter-spacing: .3px; opacity: .85; margin-top: 2px; }
+.an-note.hit b { color: #7cfc9a; transform: scale(1.3); transition: transform .12s; }
+.an-note.miss b { color: #e84a5f; opacity: .45; }
+.an-meter { height: 10px; border-radius: 5px; background: #e6e1d6; border: 2px solid #1d2b53; overflow: hidden; }
+.an-meter b { display: block; height: 100%; width: 30%; background: linear-gradient(90deg, #ff4fa3, #ffd23f); transition: width .15s; }

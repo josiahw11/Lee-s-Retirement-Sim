@@ -28,6 +28,8 @@ import { BluePill } from './bluepill.js';
 import { spawnBuck, buckNode, buckAround } from './chapter4.js';
 import { Dealership, abeNode } from './dealer.js';
 import { KegStand } from './kegstand.js';
+import { StripClub, AmateurNight, insideClub, talkDancer, talkBouncer, talkClubBar, talkDJ, talkClubber } from './stripclub.js';
+import { Chapter5, tripNode, garyNode, addPetition } from './chapter5.js';
 import { activitiesTab, bindActivities } from './activities.js';
 import { Soundscape } from './soundscape.js';
 import { Weather } from '../gfx/weather.js';
@@ -128,6 +130,12 @@ const ACH = {
   kegking: ['Keg King', 'Held a keg stand for 20+ seconds. Your liver has filed for divorce.'],
   dealer: ['Pre-Owned', 'Bought a cart from Honest Abe. No refunds. No questions.'],
   crashcourse: ['Crash Course', 'Beat Buck Thunderhill and finished Chapter 4.'],
+  paradise: ['Paradise Saved', 'Stopped Trip Vandermeer and finished Chapter 5.'],
+  dozer: ['Heavy Equipment', 'Drove a bulldozer through a condo sales trailer.'],
+  makeitrain: ['Make It Rain', 'Threw $50 in singles at the Golden Garter. Bunny caught most of it in her cardigan.'],
+  regular: ['Regular', 'Tipped $100 total at the Golden Garter. They named a stool after you.'],
+  champagne: ['Champagne Room', 'Bought a private dance. It was mostly about her grandkids.'],
+  amateur: ['Amateur Night Champion', 'Won Amateur Night at the Golden Garter. Your hip will never be the same.'],
   derby: ['Last Cart Standing', 'Won the Bumper Brawl demolition derby.'],
   daisy: ['Driving Miss Daisy', 'Delivered 5 fares in one Senior Shuttle shift.'],
   crazyshuttle: ['Crazy Shuttle', 'Earned $400+ in a single Senior Shuttle shift.'],
@@ -511,6 +519,10 @@ export class Game {
     if (this.dealer) this.dealer.clear();
     this.dealer = new Dealership(this);
     this.world.poi('dealer', -214, 49, "Honest Abe's Carts", 0); // map icon only
+    if (this.club) this.club.clear();
+    this.club = new StripClub(this);
+    if (this.chapter5) this.chapter5.clear();
+    this.chapter5 = new Chapter5(this, STEPS);
     if (this.skids) this.skids.clear();
     else this.skids = new SkidMarks(this.scene);
     this.yesterday = { ...state.counters };
@@ -1221,16 +1233,16 @@ export class Game {
     const consider = (d, c) => { if (d < bd) { bd = d; best = c; } };
     for (const c of this.carts) {
       const d = Math.hypot(c.x - p.x, c.z - p.z);
-      if (d > 2.6) continue;
-      if (c.sunk) continue;
+      if (d > (c.kind === 'dozer' ? 3.6 : 2.6)) continue;
+      if (c.sunk || c.locked) continue;
       const drv = c.driver;
       if (drv && drv !== p) {
         if (drv.role === 'lady' || drv.role === 'operator') continue; // talk instead
         if (drv.role === 'security' || drv.role === 'racer') continue;
-        consider(d + 0.3, { label: `Yank ${drv.name.split(' ')[0]} ${c.kind === 'scooter' ? 'off the scooter' : 'out of the cart'}`, cls: 'bad', action: () => this.carjack(c) });
+        consider(d + 0.3, { label: `Yank ${drv.name.split(' ')[0]} ${c.kind === 'scooter' ? 'off the scooter' : c.kind === 'dozer' ? 'out of the bulldozer' : 'out of the cart'}`, cls: 'bad', action: () => this.carjack(c) });
       } else {
         const own = c === this.playerCart;
-        consider(d + 0.2, { label: own ? 'Drive your cart' : c.kind === 'scooter' ? "Borrow somebody's mobility scooter" : `Borrow ${c.kind === 'club' ? 'a club' : "somebody's"} cart`, action: () => this.enterCart(c) });
+        consider(d + 0.2, { label: own ? 'Drive your cart' : c.kind === 'dozer' ? 'Climb into the bulldozer' : c.kind === 'scooter' ? "Borrow somebody's mobility scooter" : `Borrow ${c.kind === 'club' ? 'a club' : "somebody's"} cart`, action: () => this.enterCart(c) });
       }
     }
     for (const n of this.npcs) {
@@ -1259,7 +1271,7 @@ export class Game {
     if (c.kind === 'security') {
       this.addHeat(1.5, "Commandeering Dale's cart");
       this.ui.hint('You stole a Security cart. Press H for the siren. Dale is going to cry.', 5);
-    } else if (c !== this.playerCart && c.kind !== 'club') this.crime(c.x, c.z, 0.5, 'Unauthorized cart usage', 16);
+    } else if (c !== this.playerCart && c.kind !== 'club' && c.kind !== 'dozer') this.crime(c.x, c.z, 0.5, 'Unauthorized cart usage', 16);
     p.enterCart(c);
     audio.play('click');
     if (c.sunk) c.sunk = false;
@@ -1281,6 +1293,7 @@ export class Game {
     drv.say(pick(['HEY! I\'M DRIVING HERE!', 'HELP! CARJACKING!', 'That\'s MY CART, you hooligan!']), 2.5);
     this.player.enterCart(c);
     this.announceRadio();
+    if (c.kind === 'dozer') { this.chapter5?.onCarjack(c, drv); return; } // a citizen's arrest, technically
     this.achievement(c.kind === 'scooter' ? 'scooterjack' : 'carjack');
     this.crime(c.x, c.z, 1.1, c.kind === 'scooter' ? 'Grand Theft Mobility Scooter' : 'Grand Theft Golf Cart', 25);
     audio.play('oof');
@@ -1323,6 +1336,13 @@ export class Game {
     else if (n.role === 'derbyman') node = danNode(this);
     else if (n.role === 'buck') node = buckNode(this);
     else if (n.role === 'dealer') node = abeNode(this);
+    else if (n.role === 'dancer') node = talkDancer(this, n);
+    else if (n.role === 'bouncer') node = talkBouncer(this);
+    else if (n.role === 'clubbar') node = talkClubBar(this);
+    else if (n.role === 'clubdj') node = talkDJ(this);
+    else if (n.role === 'clubber') node = talkClubber(this, n);
+    else if (n.role === 'developer') node = tripNode(this, n);
+    else if (n.role === 'guard') node = garyNode(this, n);
     else if (n.role === 'captain') node = talkCaptain(this, n);
     else if (n.role === 'mechanic') node = talkFingers(this, n);
     else if (n.role === 'deckhand') node = talkDeckhand(this, n);
@@ -1334,6 +1354,7 @@ export class Game {
     else if (n.role === 'lifeguard') node = { name: n.name, title: 'Retired Lifeguard (1971-2004)', text: pick([`"Rip currents, jellyfish, and Rhonda. The three dangers of this beach."`, `"If you go past the buoys, I'm not coming in after you. My knees are shot."`, `"Treasure hunters dig all over this sand. Found a Rolex last Tuesday. Real one."`]), choices: [] };
     else if (n.role === 'husband') node = { name: n.name, title: 'Resident', text: '"You lookin\' at my wife? Everybody looks at my wife. Don\'t look at my wife."', choices: [] };
     else node = D.talkResident(this, n);
+    addPetition(this, n, node);
     if (node) {
       const prev = node.onClose;
       node.onClose = () => { n.talking = false; if (prev) prev(); };
@@ -1764,7 +1785,7 @@ export class Game {
   }
 
   startMinigame(kind, opts = {}) {
-    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke, pickle: Pickleball, pong: BeerPong, fish: Fishing, keg: KegStand }[kind] || ChugOff;
+    const Cls = { bingo: Bingo, brew: Brew, shuffle: Shuffleboard, blackjack: Blackjack, slots: Slots, safe: SafeCrack, aqua: AquaAerobics, ctp: ClosestToPin, karaoke: Karaoke, pickle: Pickleball, pong: BeerPong, fish: Fishing, keg: KegStand, amateur: AmateurNight }[kind] || ChugOff;
     if (opts.bet) this.spend(opts.bet);
     this.ui.modal = 'minigame';
     if (this.ui.onModalOpen) this.ui.onModalOpen();
@@ -2077,6 +2098,8 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (this.derby) this.derby.update(dt);
       if (this.bluePill) this.bluePill.update(dt);
       if (this.dealer) this.dealer.update();
+      if (this.club) this.club.update(dt);
+      if (this.chapter5) this.chapter5.update(dt);
       this.updateHeat(dt);
       this.updateEvents(dt);
       this.updateDrones(dt);
@@ -2178,6 +2201,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       p.char.update(dt);
     }
 
+    if (this.club) this.club.animate(dt);
     // ----- camera + visuals (always)
     const c = p.cart;
     this.camRig.update(dt, input, {
@@ -2225,17 +2249,20 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       for (let j = i + 1; j < list.length; j++) {
         const b = list[j];
         const dx = b.x - a.x, dz = b.z - a.z;
-        if (Math.abs(dx) > 2.6 || Math.abs(dz) > 2.6 || Math.abs(a.y - b.y) > 1.2) continue; // one's flying over the other
-        const d = Math.hypot(dx, dz), rr = a.radius + b.radius - 0.1; // 2.4 for two carts, less for skinny scooters
+        const reach = a.radius + b.radius;
+        if (Math.abs(dx) > reach || Math.abs(dz) > reach || Math.abs(a.y - b.y) > 1.2) continue; // one's flying over the other
+        const d = Math.hypot(dx, dz), rr = reach - 0.1; // 2.4 for two carts, less for skinny scooters
         if (d >= rr || d < 0.001) continue;
         const nx = dx / d, nz = dz / d, pen = rr - d;
-        a.x -= nx * pen / 2; a.z -= nz * pen / 2;
-        b.x += nx * pen / 2; b.z += nz * pen / 2;
+        // heavier vehicles win the shoving match (a bulldozer barely notices a golf cart)
+        const wa = (b.mass || 1) / ((a.mass || 1) + (b.mass || 1)), wb = 1 - wa;
+        a.x -= nx * pen * wa; a.z -= nz * pen * wa;
+        b.x += nx * pen * wb; b.z += nz * pen * wb;
         const rv = (b.vx - a.vx) * nx + (b.vz - a.vz) * nz;
         if (rv < 0) {
-          const imp = -rv * 0.9;
-          a.vx -= nx * imp; a.vz -= nz * imp;
-          b.vx += nx * imp; b.vz += nz * imp;
+          const imp = -rv * 1.8;
+          a.vx -= nx * imp * wa; a.vz -= nz * imp * wa;
+          b.vx += nx * imp * wb; b.vz += nz * imp * wb;
           if (a.derby && b.derby && this.derby) this.derby.impact(a, b, -rv, nx, nz);
           if (-rv > 3 && (a === p.cart || b === p.cart)) {
             audio.play('crash', { vol: clamp(-rv / 10, 0.3, 1) });
@@ -2448,6 +2475,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       if (!n.visible) continue;
       const d = Math.hypot(n.x - p.x, n.z - p.z);
       if (d > 32) continue;
+      if (n.data.spot && this.club && !this.club.inside && insideClub(n.x, n.z)) continue; // no x-ray vision into the club
       let icon = null, label = null, cls = '';
       const y = (n.cart ? n.y + 3 : n.y + (n.state === 'ko' ? 1.0 : 2.3));
       if (n.state === 'ko') icon = '💤';
@@ -2462,12 +2490,17 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
       else if (n.role === 'derbyman') icon = '💥';
       else if (n.role === 'buck') icon = '🏁';
       else if (n.role === 'dealer') icon = '🚙';
+      else if (n.role === 'dancer') icon = '💃';
+      else if (n.role === 'clubdj') icon = '🎧';
+      else if (n.role === 'clubbar') icon = '🍸';
+      else if (n.role === 'developer') icon = '🏗️';
+      else if (n.role === 'guard') icon = n.data.asleep ? '💤' : '🔦';
       else if (n.role === 'recruit') icon = '⭐';
       else if (n.role === 'gang') icon = '🟢';
       else if (n.role === 'operator') icon = this.concession.find((c) => c.operator === n)?.state.owned ? '✅' : '🛺';
       else if (n.role === 'security') icon = this.heat.level > 0 ? '🚨' : null;
       else if (n.role === 'karen') icon = '📋';
-      if (d < 13 && n.role !== 'resident' && n.role !== 'driver' && n.role !== 'goon') label = n.name;
+      if (d < 13 && n.role !== 'resident' && n.role !== 'driver' && n.role !== 'goon' && n.role !== 'clubber') label = n.name;
       if (n.role === 'recruit' && d < 13) label = `${n.name} — Recruit`;
       if (!icon && !label) continue;
       tags.push({ key: n.id, x: n.x, y, z: n.z, icon, label, cls });
@@ -2511,7 +2544,7 @@ ${this.playerCart.upgrades.governor ? '' : '(Tip: a stock cart tops out at 25 mp
     audio.setEngine(!!c && !this.ui.modal, c ? clamp(c.speed / 16, 0, 1) : 0, c ? this.input.axis(['KeyS'], ['KeyW']) : 0);
     if (!c || this.ui.modal || this.cut) audio.setSkid(0);
     const partyNear = this.party && Math.hypot(p.x - this.party.center.x, p.z - this.party.center.z) < 45;
-    audio.setRadio(((!!c && audio.station !== 0) || partyNear) && !this.ui.modal);
+    audio.setRadio(((!!c && audio.station !== 0) || partyNear || (this.club && this.club.inside)) && !this.ui.modal);
     if (c) c.bass = c.upgrades.speakers && audio.station !== 0;
     audio.ambientTick(dt, this.sky.night > 0.6);
     if (this.soundscape) this.soundscape.update(dt);

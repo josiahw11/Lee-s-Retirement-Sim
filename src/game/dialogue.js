@@ -4,6 +4,8 @@ import { pick, rand, randInt, chance, money, DAYS, fmtTime } from '../core/utils
 import { audio } from '../core/audio.js';
 import { testBatchOn } from './chapter2.js';
 import { casinoNode, cabinNode } from './chapter3.js';
+import { vistaNode, meetingChoices } from './chapter5.js';
+import { vipNode } from './stripclub.js';
 import { karaokeChoice } from './karaoke.js';
 import { pickleballNode } from './pickleball.js';
 import { pongNode } from './beerpong.js';
@@ -532,6 +534,8 @@ export function visit(g, poi) {
   if (id === 'tiki') return tikiNode(g);
   if (id === 'casino') return casinoNode(g);
   if (id === 'cabin') return cabinNode(g);
+  if (id === 'vista') return vistaNode(g);
+  if (id === 'gg_vip') return vipNode(g);
   if (SHOPS[id]) return openShop(g, id);
   if (id === 'sal') return openSal(g);
   if (id === 'home') return homeNode(g);
@@ -643,6 +647,7 @@ function clubhouseNode(g) {
     name: 'Sunset Palms Clubhouse', title: `${fmtTime(g.state.minutes)}`,
     text: 'The clubhouse smells like coffee, chlorine and quiet desperation. A bulletin board advertises: WATER AEROBICS • BINGO WEDNESDAY • GRIEF SUPPORT (BYOB).',
     choices: [
+      ...meetingChoices(g),
       ...(g.state.quest.flags.teaShortage && !g.state.inv.antler ? [{ text: 'Sneak into the Grill Room and shave the moose antlers', disabled: hour > 5 && hour < 21, tag: hour > 5 && hour < 21 ? 'night only (9PM–5AM)' : 'heist', tagCls: 'bad', action: () => {
         g.state.inv.antler = 1;
         g.advanceTime(15);

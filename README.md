@@ -65,7 +65,7 @@ This is the way to go if you want the newest version or plan to change the game.
 
 **Gamepad:** left stick move/steer • right stick look • RT/LT gas & brake • A interact • X swing • Y drink • B hop/drift • LB switch club • RB pocket sand • L3 sprint/nitrous • R3 horn • D-pad: radio / pee / map • Start pause • Back phone. Menus: D-pad or arrow keys + A/Enter.
 
-**Reviewer shortcuts:** `]` = +$1,000 • `[` = +1 to all stats • `` ` `` (backtick) = skip 3 hours. The pause menu (Esc) also has **Jump to Chapter 2 / 3 / 4** and **Summon Hurricane** buttons.
+**Reviewer shortcuts:** `]` = +$1,000 • `[` = +1 to all stats • `` ` `` (backtick) = skip 3 hours. The pause menu (Esc) also has **Jump to Chapter 2 / 3 / 4 / 5** and **Summon Hurricane** buttons.
 
 ## What's in the demo
 
@@ -107,6 +107,11 @@ This is the way to go if you want the newest version or plan to change the game.
   - the power goes out, and the neighbors throw a hurricane party at the clubhouse
   - afterwards, the HOA pays a bounty for every stray flamingo you bring back
 - **The Lucky Lady casino boat** (moored off the Boca pier, 6PM–2AM): blackjack at Bernadette's table (charm her and she flashes her hole card; drink and you fumble), the Golden Gam-Gam slots with a progressive jackpot, and a bar.
+- **The Golden Garter** (Beach Rd, north of the Rusty Pelican, 4PM–2AM): Boca's "premier gentlemen's AND gentlewomen's club, est. 1958". It's all innuendo, with cardigans firmly on.
+  - **The place:** a walk-in neon club with a kicking neon leg on the roof, a runway and brass pole, tip-rail stools, red booths, a disco ball, a bar and a velvet-roped Champagne Room.
+  - **The staff:** the headliners are Dolores "Hip Replacement" Fontaine (78), Bunny Kowalski (84, ex-Rockette) and Rex "The Silver Stallion" Delgado (79). Moose Malone (91) works the door, and the cover is $10.
+  - **Things to do:** tip singles or make it rain, and drink a Prune Daiquiri at Lorraine's bar. A private dance is mostly about her grandkids.
+  - **Amateur Night** (9PM–1AM) puts *you* on the pole. Hit the Sprinkler, Cardigan Twirl, Drop It (Slowly) and Hip Thrust on the beat for tips and a $200 prize.
 - **Keg stands at the Tiki Hut.** Two regulars hoist you upside-down over the keg while the crowd counts. Balance with A/D; it gets twitchier as the buzz climbs. Every second is a real gulp. Beat Manny's house record for a free tab.
 - **Senior Shuttle.** Crazy Taxi, but it's a golf cart and everyone is 80. Dispatcher Doris puts you on a shift clock. Residents wave you down under green, yellow and red light pillars (short, medium and long fares). Race them to the Golden Coral or Doc's van before they bail ("I'll walk! It's faster!"). Air, drifts and near misses earn tips, and the back seat reviews your driving.
 - **Bumper Brawl** (nightly, 5PM–1AM): a golf-cart demolition derby in a floodlit hay-bale arena. Five rivals try to T-bone you. Front bumpers are armored and sides crumple. Damaged carts smoke, then burn, and the last cart running takes the purse.
@@ -136,8 +141,13 @@ This is the way to go if you want the newest version or plan to change the game.
   - face Captain Dom Moretti: a blackjack duel where the loser goes overboard, a boss brawl, or a bluff
   - crack his safe, then decide the fate of $48,211 in stolen pensions: return them, split them, or keep them all
 - **Chapter 4: Crash Course** (5 steps): Karen hires Buck Thunderhill, a washed-up stock-car driver, as "Head of Cart Safety". He's impounding carts, including Earl's scooter, with Earl still on it. Beat him at the Bumper Brawl, win the neighborhood back with a Senior Shuttle shift, clear the Duck Pond jump, and take him down in the $500 Grand Prix.
+- **Chapter 5: Paradise Paved** (6 steps): Trip Vandermeer, a spray-tanned developer, parks bulldozers by the 3rd tee to turn Palmetto Links into luxury condos, and Karen's zoning committee (a committee of one) is on the take.
+  - rally 8 signatures for a petition (some voters want a beer first)
+  - break into his sales trailer at night without waking Gary the rent-a-cop, and crack the bribe ledger out of his safe
+  - read the ledger aloud at the HOA zoning meeting
+  - stop Trip's bulldozer rampage across the course: catch the D9, yank him out of the cab, then drive it through his sales trailer
 - Free-roam goals follow.
-- 55+ achievements, graphics quality presets (Low/Medium/High), auto-save when you sleep, and three procedural radio stations plus a text-to-speech talk-radio station.
+- 66 achievements, graphics quality presets (Low/Medium/High), auto-save when you sleep, and three procedural radio stations plus a text-to-speech talk-radio station.
 
 **Characters.** Every resident is a skinned mesh on an 18-bone skeleton (knees, elbows, ankles, blinking eyes, head tracking).
 - **Limbs** are single continuous shapes with smooth joint weights: deltoids, biceps, forearm swell, a visible knee and a calf that bulges at the back. Elbows and knees bend instead of two capsules poking through each other.

@@ -58,7 +58,8 @@ M.neon.userData.noShadow = true;
 const shirtMats = new Map();
 export function shirtMaterial(idx) {
   if (!shirtMats.has(idx)) {
-    shirtMats.set(idx, new THREE.MeshStandardMaterial({ map: makeShirtTexture(idx), roughness: 0.9 }));
+    const sparkle = idx >= 8 && idx <= 10; // sequins and lame catch the stage lights
+    shirtMats.set(idx, new THREE.MeshStandardMaterial({ map: makeShirtTexture(idx), roughness: sparkle ? 0.32 : 0.9, metalness: sparkle ? 0.55 : 0 }));
   }
   return shirtMats.get(idx);
 }

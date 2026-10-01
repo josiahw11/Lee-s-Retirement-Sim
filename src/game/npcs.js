@@ -216,11 +216,12 @@ export class NPC {
       if (this.visible) this.char.update(dt);
       return;
     }
-    if (this.data.stand) { // posed somewhere special (a podium) for a few seconds
+    if (this.data.stand && (this.state === 'ko' || this.air || this.hostile)) delete this.data.stand; // a punch ends any pose
+    if (this.data.stand) { // posed somewhere special (a podium, a stage, a bar stool)
       const st = this.data.stand;
       st.t -= dt;
       if (st.t > 0) {
-        this.char.mode = 'idle';
+        this.char.mode = st.mode || 'idle';
         this.char.speed = 0;
         this.char.root.position.set(this.x, st.y, this.z);
         this.char.root.rotation.y = st.ry;

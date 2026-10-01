@@ -54,6 +54,10 @@ export function gazette(g) {
   if (d('overboard') >= 1) add(`MAN THROWN OFF CASINO BOAT, WASHES UP ON BOCA BEACH`, `"The Captain cheats," the man told a seagull. The seagull took his shoe.`);
   if ((g.state.achievements || []).includes('crashcourse')) once('gazBuck', 'BUCK THUNDERHILL RESIGNS AS "HEAD OF CART SAFETY"', 'Impound lot emptied. Earl reunited with scooter (was still on it). Karen "exploring legal options," "and a new jacket for Buck."');
   if ((g.state.achievements || []).includes('silverking')) once('gazTarpon', `${name} LANDS THE SILVER KING OFF BOCA PIER`, `Fishin' Phil: "I was there. I saw it. I'm telling everyone I caught it." Captain Roy has ordered a bigger cooler.`);
+  if (qf.c5Exposed) once('gazKaren', 'HOA ZONING CHAIR CAUGHT ON THE TAKE', 'Ledger reveals $25,000 in "consulting," $4,100 in veneers and a vintage racing jacket. Karen Whitmore: "The veneers were for the COMMUNITY."');
+  if (qf.c5Wrecked) once('gazVista', 'DEVELOPER\'S BULLDOZER FLATTENS DEVELOPER\'S SALES TRAILER', `Palmetto Links saved. Trip Vandermeer last seen hitchhiking to Naples. Witnesses say ${g.state.name} "drove a D9 like a golf cart, which is to say badly and with joy."`);
+  if (d('amateurWins') >= 1) add(`${name} WINS GOLDEN GARTER AMATEUR NIGHT`, 'Witnesses describe the hip thrust as "medically inadvisable" and "frankly inspiring." Rex Delgado: "The student has become the Stallion."');
+  else if (d('clubTips') >= 40) add('GOLDEN GARTER REPORTS RECORD "SINGLES NIGHT"', 'Bunny Kowalski, 84, plans to put the money toward "a hip, a cruise, or a hip on a cruise."');
   if ((c.kegBest || 0) >= 20) once('gazKeg', `TIKI HUT KEG STAND RECORD SHATTERED`, `${Math.floor(c.kegBest)} seconds upside down. Bartender Manny: "I've seen things. I've never seen THAT." Paramedics were "on standby, mostly for us."`);
   // the new sports pages
   if (d('derbyWins') >= 1) add(`${name} WINS BUMPER BRAWL, ${d('derbyKills') || 'SEVERAL'} CARTS "NO LONGER CARTS"`, `Derby Dan: "Never seen a man T-bone like that. And I was in Korea."`);

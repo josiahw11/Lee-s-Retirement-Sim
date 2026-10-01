@@ -877,6 +877,40 @@ export class Character {
         P.knL = P.knR = 0.25 + Math.abs(Math.sin(a.t * 8)) * 0.3;
         P.hipL = P.hipR = -0.15;
         P.hipsY -= Math.abs(Math.sin(a.t * 8)) * 0.05;
+      } else if (a.type === 'pole') {
+        // one hand high on the pole, slow hip circles, and a squat that takes its time coming back up
+        const w = a.t * 2.6, sq = (1 - Math.cos(a.t * 1.3)) / 2;
+        P.shRz = -2.75; P.shR = -0.1; P.elR = -0.15;
+        P.shLz = 0.9 + Math.sin(w) * 0.3; P.shL = -0.4; P.elL = -0.9;
+        P.hipsYaw = Math.sin(w) * 0.35; P.spineZ = Math.sin(w + 1.2) * 0.14; P.spineY = -Math.sin(w) * 0.2;
+        P.knL = P.knR = 0.15 + sq; P.hipL = P.hipR = -0.1 - sq * 0.75; P.hipsY -= sq * 0.3; P.spine = 0.1 + sq * 0.25;
+      } else if (a.type === 'shimmy') {
+        P.shLz = 1.25; P.shRz = -1.25; P.shL = P.shR = -0.2; P.elL = P.elR = -0.35;
+        P.spineY = Math.sin(a.t * 24) * 0.16; P.spine = -0.08;
+        P.knL = P.knR = 0.25 + Math.abs(Math.sin(a.t * 5)) * 0.25; P.hipsY -= Math.abs(Math.sin(a.t * 5)) * 0.06;
+        P.hipsYaw = Math.sin(a.t * 2.5) * 0.25;
+      } else if (a.type === 'thrust') {
+        const k = Math.max(0, Math.sin(a.t * 9)); // hands behind the head, hips forward on the beat
+        P.shL = P.shR = -2.8; P.elL = P.elR = -2.1; P.shLz = 0.35; P.shRz = -0.35;
+        P.spine = -0.3 * k; P.knL = P.knR = 0.35 + k * 0.2; P.hipL = P.hipR = 0.15 * k; P.hipsY -= 0.06;
+      } else if (a.type === 'sprinkler') {
+        const st = Math.floor(a.t * 7) % 7; // tick, tick, tick... and back
+        P.shL = -1.55; P.elL = 0; P.shLz = 0.25;
+        P.shR = -2.2; P.elR = -2.0; P.shRz = -0.2;
+        P.spineY = -0.5 + (st < 6 ? st * 0.18 : 0);
+        P.knL = P.knR = 0.2;
+      } else if (a.type === 'twirl') {
+        P.shLz = 2.7; P.shRz = -2.7; P.shL = P.shR = 0; P.elL = P.elR = -0.5;
+        P.hipsY += Math.sin(p * Math.PI) * 0.05;
+      } else if (a.type === 'dropit') {
+        const k = Math.sin(Math.min(1, p * 1.25) * Math.PI); // down... and (eventually) back up
+        P.hipL = P.hipR = -1.0 * k; P.knL = P.knR = 1.35 * k; P.hipsY -= 0.36 * k; P.spine = 0.45 * k;
+        P.shL = P.shR = -0.7 * k; P.elL = P.elR = -0.2; P.hipLz = 0.25 * k; P.hipRz = -0.25 * k;
+      } else if (a.type === 'snooze') {
+        // chin on chest, arms limp, the deep breathing of a man paid by the hour
+        P.neck = 0.55 + Math.sin(a.t * 1.3) * 0.05; P.head = 0.25;
+        P.shL = P.shR = -0.3; P.elL = P.elR = -0.4; P.shLz = 0.22; P.shRz = -0.22;
+        P.spine = 0.18 + Math.sin(a.t * 1.3) * 0.03;
       } else if (a.type === 'aqua') {
         // water aerobics: reach, lean left/right, squat — with a bounce on the beat
         const k = Math.sin(Math.min(1, p * 1.6) * Math.PI * 0.5);

@@ -86,6 +86,11 @@ export const SHIRT_PALETTES = [
   { bg: '#6a4c93', flower: '#f4d35e', leaf: '#3f2b5b', center: '#ee964b' }, // purple
   { bg: '#f4f1de', flower: '#e07a5f', leaf: '#81b29a', center: '#3d405b' }, // cream
   { bg: '#3a86ff', flower: '#ffbe0b', leaf: '#1d4fa0', center: '#fb5607' }, // electric blue
+  // stage wear (never rolled for random residents, who only get 0-7)
+  { bg: '#9a7414', sequin: ['#6e520c', '#d4af37', '#fff3b0'] }, // 8: gold sequins
+  { bg: '#a3125f', sequin: ['#6e0b40', '#e0218a', '#ffc2e2'] }, // 9: hot-pink sequins
+  { bg: '#7c838c', sequin: ['#545a62', '#b8bec6', '#ffffff'] }, // 10: silver lame
+  { bg: '#d9a441', leopard: ['#2a1a0a', '#b5741f'] }, // 11: leopard print
 ];
 
 const shirtCache = new Map();
@@ -101,34 +106,62 @@ export function makeShirtTexture(idx) {
     // draw wrapped so the texture tiles seamlessly
     for (const ox of [-128, 0, 128]) for (const oy of [-128, 0, 128]) fn(x + ox, y + oy);
   };
-  for (let i = 0; i < 7; i++) {
-    const x = rnd() * 128, y = rnd() * 128, a = rnd() * Math.PI;
-    drawAt((X, Y) => {
-      g.save();
-      g.translate(X, Y);
-      g.rotate(a);
-      g.fillStyle = p.leaf;
+  if (p.sequin) {
+    // offset rows of little discs; a few catch the light
+    for (let y = 0; y < 128; y += 5) for (let x = (y / 5) % 2 ? 2.5 : 0; x < 128; x += 5) {
+      const b = rnd();
+      g.fillStyle = p.sequin[b > 0.86 ? 2 : b > 0.35 ? 1 : 0];
       g.beginPath();
-      g.ellipse(0, 0, 22, 7, 0, 0, Math.PI * 2);
+      g.arc(x, y, 2.3, 0, Math.PI * 2);
       g.fill();
-      g.restore();
-    }, x, y);
-  }
-  for (let i = 0; i < 6; i++) {
-    const x = rnd() * 128, y = rnd() * 128, r = 8 + rnd() * 6;
-    drawAt((X, Y) => {
-      g.fillStyle = p.flower;
-      for (let k = 0; k < 5; k++) {
-        const a = (k / 5) * Math.PI * 2;
+    }
+  } else if (p.leopard) {
+    for (let i = 0; i < 22; i++) {
+      const x = rnd() * 128, y = rnd() * 128, r = 5 + rnd() * 4, rot = rnd() * 3;
+      drawAt((X, Y) => {
+        g.fillStyle = p.leopard[1];
         g.beginPath();
-        g.arc(X + Math.cos(a) * r * 0.6, Y + Math.sin(a) * r * 0.6, r * 0.55, 0, Math.PI * 2);
+        g.ellipse(X, Y, r, r * 0.8, rot, 0, Math.PI * 2);
         g.fill();
-      }
-      g.fillStyle = p.center;
-      g.beginPath();
-      g.arc(X, Y, r * 0.3, 0, Math.PI * 2);
-      g.fill();
-    }, x, y);
+        g.strokeStyle = p.leopard[0];
+        g.lineWidth = 2.5;
+        for (let k = 0; k < 4; k++) {
+          g.beginPath();
+          g.arc(X, Y, r + 1, k * 1.6 + 0.2, k * 1.6 + 1.1);
+          g.stroke();
+        }
+      }, x, y);
+    }
+  } else {
+    for (let i = 0; i < 7; i++) {
+      const x = rnd() * 128, y = rnd() * 128, a = rnd() * Math.PI;
+      drawAt((X, Y) => {
+        g.save();
+        g.translate(X, Y);
+        g.rotate(a);
+        g.fillStyle = p.leaf;
+        g.beginPath();
+        g.ellipse(0, 0, 22, 7, 0, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+      }, x, y);
+    }
+    for (let i = 0; i < 6; i++) {
+      const x = rnd() * 128, y = rnd() * 128, r = 8 + rnd() * 6;
+      drawAt((X, Y) => {
+        g.fillStyle = p.flower;
+        for (let k = 0; k < 5; k++) {
+          const a = (k / 5) * Math.PI * 2;
+          g.beginPath();
+          g.arc(X + Math.cos(a) * r * 0.6, Y + Math.sin(a) * r * 0.6, r * 0.55, 0, Math.PI * 2);
+          g.fill();
+        }
+        g.fillStyle = p.center;
+        g.beginPath();
+        g.arc(X, Y, r * 0.3, 0, Math.PI * 2);
+        g.fill();
+      }, x, y);
+    }
   }
   const t = toTex(c);
   t.repeat.set(2, 2);

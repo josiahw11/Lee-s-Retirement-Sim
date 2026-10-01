@@ -4,6 +4,7 @@
 import { BOAT } from '../world/casinoboat.js';
 import { audio } from '../core/audio.js';
 import { pick, money, chance } from '../core/utils.js';
+import { resetChapter5 } from './chapter5.js';
 
 const F = (g) => g.state.quest.flags;
 const poi = (id) => (g) => g.world.pois[id];
@@ -285,7 +286,7 @@ function vaultChoiceNode(g) {
 export function jumpToChapter(g, n, STEPS) {
   const s = g.state;
   const f = s.quest.flags;
-  const ids = { 2: 'c2_doc', 3: 'c3_board', 4: 'c4_buck' };
+  const ids = { 2: 'c2_doc', 3: 'c3_board', 4: 'c4_buck', 5: 'c5_vista' };
   const idx = STEPS.findIndex((x) => x.id === ids[n]);
   if (idx < 0) return;
   Object.assign(f, { metGus: true, metDoc: true, beatChip: true, boughtBeer: true });
@@ -316,6 +317,11 @@ export function jumpToChapter(g, n, STEPS) {
     if (g.playerCart) { g.playerCart.upgrades = { ...s.cart.upgrades }; g.playerCart.rebuild?.(); }
     s.money = Math.max(s.money, 2500);
     s.minutes = 16 * 60 + 30; // the Bumper Brawl opens at 5
+  }
+  resetChapter5(g);
+  if (n >= 5) {
+    f.c4Met = true;
+    s.minutes = 10 * 60; // Trip's at his sales trailer during business hours
   }
   g.quests.begin();
   g.ui.toast(`⏭️ Jumped to Chapter ${n}. Progress before it was filled in.`, 'quest', 5);

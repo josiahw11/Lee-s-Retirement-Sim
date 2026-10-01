@@ -288,6 +288,7 @@ export function buildBeach(world, GEO, heightAt) {
   for (let i = 0; i < 220; i++) {
     const x = 327 + rnd() * 20, z = BEACH.z0 + 6 + rnd() * (BEACH.z1 - BEACH.z0 - 12);
     if (Math.abs(x - 358) < 4.5 || Math.abs(z - 60) < 14 || Math.hypot(x - BEACH.lot.x, z - BEACH.lot.z) < 26) continue;
+    if (Math.abs(x - 342) < 13 && z > 133 && z < 160) continue; // the Golden Garter and its rope line (game/stripclub.js)
     const y = heightAt(x, z);
     const n = 7 + Math.floor(rnd() * 5);
     for (let k = 0; k < n; k++) {

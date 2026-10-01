@@ -1342,6 +1342,7 @@ export class World {
       if (x > BEACH.shore + 2) return Math.abs(z - BEACH.pier.z) < 4 && x < BEACH.pier.x1 ? 'The Pier' : 'Atlantic Ocean';
       if (Math.abs(z - BEACH.pier.z) < 4 && x > BEACH.pier.x0) return 'The Pier';
       if (Math.hypot(x - BEACH.bar.x, z - BEACH.bar.z) < 16) return 'The Rusty Pelican';
+      if (Math.abs(x - 342) < 11 && Math.abs(z - 150) < 8) return 'The Golden Garter'; // see game/stripclub.js CLUB
       return x < 318 ? 'Beach Rd' : 'Boca Beach Club';
     }
     if (z < -52) {

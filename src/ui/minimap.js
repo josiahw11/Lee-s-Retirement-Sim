@@ -4,7 +4,7 @@ import { HALF } from '../world/layout.js';
 import { paintBeachMap } from '../world/beach.js';
 
 export const POI_ICONS = {
-  home: '🏠', pelican: '🍻', bait: '🎣', liquor: '🍺', buffet: '🍗', hoa: '🏛️', proshop: '⛳', sal: '🔧', doc: '💊', tiki: '🍹', pool: '🏊', pickleball: '🎾', pong: '🥤', derby: '💥', dealer: '🚙', clubhouse: '🌴', gate: '🚧',
+  home: '🏠', pelican: '🍻', bait: '🎣', liquor: '🍺', buffet: '🍗', hoa: '🏛️', proshop: '⛳', sal: '🔧', doc: '💊', tiki: '🍹', pool: '🏊', pickleball: '🎾', pong: '🥤', derby: '💥', dealer: '🚙', clubhouse: '🌴', gate: '🚧', garter: '💃', vista: '🏗️',
 };
 
 export class Minimap {

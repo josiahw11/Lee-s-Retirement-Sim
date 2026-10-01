@@ -85,6 +85,7 @@ export class CameraRig {
     const wl = waterLevel(px, pz);
     const gy = Math.max(heightAt(px, pz), wl === null ? -Infinity : wl) + 0.6;
     if (py < gy) py = gy;
+    if (this.ceiling != null && py > this.ceiling) py = this.ceiling; // indoors (the Golden Garter): stay under the roof
     if (this.shake > 0) {
       const s = this.shake * this.shake * 0.35;
       px += rand(-s, s); py += rand(-s, s); pz += rand(-s, s);

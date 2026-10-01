@@ -7,6 +7,7 @@ import { M } from '../gfx/materials.js';
 import { GEO } from '../world/world.js';
 import { heightAt, waterLevel, rampHeight } from '../world/terrain.js';
 import { clamp, damp, lerp, wrapAngle } from '../core/utils.js';
+import { makeSignTexture } from '../gfx/textures.js';
 
 // Shared cart primitives (rounded fiberglass panels, fender arcs, tires)
 const RB = new Map();
@@ -68,7 +69,8 @@ export class Cart {
   constructor(opts = {}) {
     this.id = Cart.nextId = (Cart.nextId || 0) + 1;
     this.opts = opts;
-    this.kind = opts.kind || 'resident'; // player | resident | security | concession | rival | club
+    this.kind = opts.kind || 'resident'; // player | resident | security | concession | rival | club | scooter | dozer
+    this.mass = { dozer: 14, scooter: 0.5 }[this.kind] || 1; // for shoving matches between vehicles
     this.color = opts.color || CART_COLORS[Math.floor(Math.random() * CART_COLORS.length)];
     this.upgrades = { ...(opts.upgrades || {}) };
     this.group = new THREE.Group();
@@ -102,10 +104,10 @@ export class Cart {
   }
 
   setModelDims() {
-    const m = this.kind === 'scooter' ? 'scooter' : this.model;
-    this.radius = { scooter: 0.65, stretch: 1.6, hearse: 1.45 }[m] || 1.25;
+    const m = this.kind === 'scooter' || this.kind === 'dozer' ? this.kind : this.model;
+    this.radius = { scooter: 0.65, stretch: 1.6, hearse: 1.45, dozer: 2.0 }[m] || 1.25;
     this.stretch = m === 'stretch' ? 1.5 : 1; // how much longer than a classic
-    this.wheelbase = 1.7 * this.stretch;
+    this.wheelbase = m === 'dozer' ? 2.6 : 1.7 * this.stretch;
   }
 
   get speed() {
@@ -119,6 +121,7 @@ export class Cart {
   stats() {
     const u = this.upgrades;
     if (this.kind === 'scooter') return { max: 4.2, turbo: 4.2, accel: 3, offroad: 0.95 }; // 9 mph of pure menace
+    if (this.kind === 'dozer') return { max: 5.2, turbo: 5.2, accel: 2.4, offroad: 1 }; // slow, and nothing stops it
     let max = 11;
     if (this.kind === 'security') max = 12.5;
     if (this.kind === 'rival') max = 12.5;
@@ -152,6 +155,7 @@ export class Cart {
 
   build() {
     if (this.kind === 'scooter') return this.buildScooter();
+    if (this.kind === 'dozer') return this.buildDozer();
     const u = this.model === 'buggy' ? { ...this.upgrades, lift: true } : this.upgrades;
     const lift = u.lift ? 0.22 : 0;
     this.lift = lift;
@@ -426,6 +430,8 @@ export class Cart {
       if (hb) vf *= Math.exp(-0.9 * dt);
       const wheelbase = this.wheelbase;
       let yaw = (vf * Math.tan(this.steerAng)) / wheelbase;
+      // tracks skid-steer: a dozer turns on the spot, whatever its speed
+      if (this.kind === 'dozer') yaw = (this.steerAng / 0.55) * 0.9 * (vf < -0.3 ? -1 : 1);
       yaw = clamp(yaw, -2.3, 2.3);
       if (hb) yaw *= 1.5;
       this.heading = wrapAngle(this.heading + yaw * dt);
@@ -649,9 +655,86 @@ export class Cart {
     }
   }
 
+  // A D9-ish bulldozer: twin tracks with road wheels, an engine deck, an open ROPS cab with a
+  // vinyl seat, an exhaust stack and a big curved blade up front. Trip Vandermeer's pride and joy.
+  buildDozer() {
+    this.lift = 0;
+    this.wheelR = 0.22;
+    const b = this.body;
+    const chassis = new THREE.Group();
+    b.add(chassis);
+    this.chassis = chassis;
+    const paint = new THREE.Mesh(shared('dozer:paint', () => mergeParts([
+      [rbox(1.7, 0.95, 2.5, 0.12), '#fff', mat4(0, 1.2, 0.15)], // hull
+      [rbox(1.32, 0.62, 1.7, 0.12), '#fff', mat4(0, 1.92, 0.7)], // engine hood
+      [rbox(1.75, 0.12, 1.55, 0.05), '#fff', mat4(0, 3.36, -0.8)], // cab roof
+      [rbox(0.24, 0.28, 1.35, 0.06), '#fff', mat4(1.07, 0.62, 1.3, 0, 1, 1, 1, -0.12)], // push arms
+      [rbox(0.24, 0.28, 1.35, 0.06), '#fff', mat4(-1.07, 0.62, 1.3, 0, 1, 1, 1, -0.12)],
+      [rbox(3.1, 1.15, 0.2, 0.05), '#fff', mat4(0, 0.78, 2.12, 0, 1, 1, 1, -0.16)], // blade
+      [rbox(0.62, 0.12, 0.62, 0.04), '#fff', mat4(0, 1.69, -0.22)], // floor plate by the seat
+    ])), this.paintMat);
+    paint.castShadow = true;
+    chassis.add(paint);
+    const parts = [];
+    for (const x of [1.05, -1.05]) {
+      parts.push([rbox(0.58, 0.82, 3.35, 0.36), '#1f1f1f', mat4(x, 0.42, 0.1)]); // track
+      for (let z = -1.4; z <= 1.6; z += 0.3) parts.push([SPOKE, '#2c2c2c', mat4(x, 0.85, z, 0, 0.6, 0.05, 0.08)]); // grousers on top
+      parts.push([SPOKE, '#3a3a3a', mat4(x, 0.86, 0.1, 0, 0.36, 0.05, 2.6)]); // track frame
+    }
+    for (const x of [0.75, -0.75]) for (const z of [-0.2, -1.4]) parts.push([GEO.cyl, '#1d1d1d', mat4(x, 2.5, z, 0, 0.05, 1.72, 0.05)]); // ROPS posts
+    parts.push(
+      [rbox(3.2, 0.1, 0.16, 0.03), '#3a3a3a', mat4(0, 0.2, 2.24)], // cutting edge
+      [GEO.cyl, '#2a2a2a', mat4(0.45, 2.62, 1.05, 0, 0.07, 0.75, 0.07)], // exhaust stack
+      [GEO.cyl, '#111', mat4(0.45, 3.0, 1.05, 0, 0.085, 0.05, 0.085)],
+      [rbox(0.62, 0.16, 0.56, 0.06), '#1b1b1b', mat4(0, 1.83, -0.95)], // seat
+      [rbox(0.62, 0.62, 0.14, 0.06), '#1b1b1b', mat4(0, 2.15, -1.25, 0, 1, 1, 1, -0.12)], // backrest
+      [GEO.cyl, '#1b1b1b', mat4(0.25, 2.1, -0.45, 0, 0.025, 0.5, 0.025, -0.3)], // control levers
+      [GEO.cyl, '#1b1b1b', mat4(-0.25, 2.1, -0.45, 0, 0.025, 0.5, 0.025, -0.3)],
+      [SPOKE, '#2a2a2a', mat4(0, 1.92, 1.56, 0, 1.1, 0.5, 0.04)], // radiator grille
+      [rbox(0.5, 0.5, 0.5, 0.05), '#1d1d1d', mat4(0, 0.9, -1.25)], // rear ripper mount
+      [SPOKE, '#2a2a2a', mat4(0, 0.45, -1.55, 0, 0.12, 0.85, 0.12, 0.3)], // ripper shank
+    );
+    const trim = new THREE.Mesh(shared('dozer:trim', () => mergeParts(parts)), M.vc);
+    trim.castShadow = true;
+    chassis.add(trim);
+    // the developer's name, both sides of the hull
+    if (!Cart.dozerDecal) {
+      const t = makeSignTexture('VANDERMEER', { w: 512, h: 112, bg: null, fg: '#1d1d1d', font: 'bold 74px Impact, sans-serif', sub: 'DEVELOPMENT GROUP', subFont: 'bold 24px sans-serif' });
+      Cart.dozerDecal = new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: 0.6 });
+    }
+    for (const sd of [1, -1]) {
+      const d = new THREE.Mesh(shared('dozer:decal', () => new THREE.PlaneGeometry(1.7, 0.38)), Cart.dozerDecal);
+      d.position.set(sd * 0.862, 1.25, 0.2);
+      d.rotation.y = sd * Math.PI / 2;
+      chassis.add(d);
+    }
+    this.headMat = new THREE.MeshStandardMaterial({ color: 0xbfc8cf, roughness: 0.2, metalness: 0.3, emissive: 0xfff2c0, emissiveIntensity: 0 });
+    for (const x of [0.6, -0.6]) {
+      const h = new THREE.Mesh(shared('dozer:head', () => new THREE.BoxGeometry(0.18, 0.14, 0.1)), this.headMat);
+      h.position.set(x, 3.32, -0.02);
+      chassis.add(h);
+    }
+    // road wheels that turn with the tracks
+    for (const x of [1.36, -1.36]) {
+      for (const z of [-1.2, -0.6, 0, 0.6, 1.2]) {
+        const w = new THREE.Group();
+        w.position.set(x, 0.3, z);
+        const spin = new THREE.Group();
+        w.add(spin);
+        const hub = new THREE.Mesh(shared('dozer:wheel', () => new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12).rotateZ(Math.PI / 2)), HUB_MAT);
+        spin.add(hub);
+        const bolt = new THREE.Mesh(shared('dozer:bolt', () => new THREE.BoxGeometry(0.07, 0.3, 0.05)), TIRE_MAT);
+        bolt.position.x = x > 0 ? 0.035 : -0.035;
+        spin.add(bolt);
+        b.add(w);
+        this.wheels.push({ g: w, spin, front: false });
+      }
+    }
+  }
+
   exitPoint(side = 1) {
     const s = Math.sin(this.heading), c = Math.cos(this.heading);
-    const lx = (this.kind === 'scooter' ? 0.9 : 1.5) * side;
+    const lx = (this.kind === 'scooter' ? 0.9 : this.kind === 'dozer' ? 2.2 : 1.5) * side;
     return { x: this.x + lx * c, z: this.z - lx * s };
   }
 }
@@ -659,6 +742,7 @@ export class Cart {
 export function seatCharacter(ch, cart, side = 1) {
   cart.chassis.add(ch.root);
   if (cart.kind === 'scooter') ch.root.position.set(0, -0.2, -0.24); // one seat, dead center
+  else if (cart.kind === 'dozer') ch.root.position.set(0, 1.0, -0.98); // up in the cab
   else ch.root.position.set(0.28 * side, 0.9 - 0.85 + 0.0, -0.3 * (cart.stretch || 1));
   ch.root.rotation.set(0, 0, 0);
   ch.mode = 'sit';
